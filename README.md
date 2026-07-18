@@ -53,15 +53,6 @@ Ensure you have [Node.js](https://nodejs.org/) (version 18 or higher recommended
   - `pdfBuilder.jsx`: Generates the `.pdf` file using `@react-pdf/renderer`.
   - `htmlBuilder.js`: Generates the Google Docs compatible HTML output.
 
-## Deploying (Vercel)
-
-This project is optimized for deployment on Vercel:
-
-1. Push your code to a GitHub repository.
-2. Import the repository into [Vercel](https://vercel.com/new).
-3. Vercel will automatically detect the Next.js framework and configure the build settings.
-4. Click **Deploy**. No external databases or API keys are required for the core functionality.
-
 ## Legal Disclaimer
 
 This tool generates non-binding letters of intent and is not a substitute for formal legal advice. Please consult a qualified attorney before executing any binding agreements.
