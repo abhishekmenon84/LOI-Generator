@@ -61,7 +61,7 @@ function GDocIcon() {
 }
 
 /* ── Main form component ─────────────────────────────────── */
-export default function LOIForm({ data, onChange, onExport, exportState }) {
+export default function LOIForm({ data, onChange, onExport, onClearDraft, exportState }) {
   function set(patch) {
     onChange({ ...data, ...patch });
   }
@@ -110,7 +110,19 @@ export default function LOIForm({ data, onChange, onExport, exportState }) {
         <div>
           <h1 className="form-panel-title">LOI Workspace Engine</h1>
           <p className="form-panel-subtitle">
-            Fill in the fields below — the document preview updates live.
+            Fill in the fields below — the document preview updates live. Your progress is
+            saved automatically and restored if you refresh.{" "}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Clear your saved draft and start over? This can't be undone.")) {
+                  onClearDraft();
+                }
+              }}
+              style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-light)', fontSize: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Clear draft
+            </button>
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -425,10 +437,65 @@ export default function LOIForm({ data, onChange, onExport, exportState }) {
             placeholder={data.commType === "%" ? "e.g. 2.5" : "e.g. 15000"}
           />
         </div>
+
+        <div className="card-divider" />
+
+        <p className="custom-clauses-header">Agency / Representation Disclosure (optional)</p>
+        <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+          Fill in any that apply — each one adds an Agency Disclosure section to the exported document.
+        </p>
+
+        <div className="form-group">
+          <label htmlFor="buyerRepText">Buyer&apos;s Representative</label>
+          <input
+            id="buyerRepText"
+            type="text"
+            value={data.buyerRepText}
+            onChange={(e) => set({ buyerRepText: e.target.value })}
+            placeholder="e.g. Jane Doe, ABC Realty, represents the Buyer exclusively"
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="sellerRepText">Seller&apos;s Representative</label>
+          <input
+            id="sellerRepText"
+            type="text"
+            value={data.sellerRepText}
+            onChange={(e) => set({ sellerRepText: e.target.value })}
+            placeholder="e.g. John Roe, XYZ Brokerage, represents the Seller exclusively"
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="dualAgencyText">Dual Agency</label>
+          <input
+            id="dualAgencyText"
+            type="text"
+            value={data.dualAgencyText}
+            onChange={(e) => set({ dualAgencyText: e.target.value })}
+            placeholder="e.g. Both parties consent to dual agency representation by ABC Realty"
+          />
+        </div>
       </SectionCard>
 
       {/* ── §Last Risk Protection Clauses ────────────────── */}
       <SectionCard icon="🛡️" title="Transaction Risk Protection Clauses" accent="risk" stepNum="§">
+        <div
+          className="checkbox-group"
+          onClick={() => set({ edgeInspection: !data.edgeInspection })}
+          role="checkbox"
+          aria-checked={data.edgeInspection}
+          tabIndex={0}
+          onKeyDown={(e) => e.key === ' ' && set({ edgeInspection: !data.edgeInspection })}
+        >
+          <input
+            type="checkbox"
+            id="edgeInspection"
+            checked={data.edgeInspection}
+            onChange={(e) => set({ edgeInspection: e.target.checked })}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <label htmlFor="edgeInspection">Contingency on Structural Inspection &amp; Financial Due Diligence</label>
+        </div>
         <div
           className="checkbox-group"
           onClick={() => set({ edgeLicense: !data.edgeLicense })}

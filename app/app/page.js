@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/Navbar";
 import LOIForm from "../../components/LOIForm";
 import LOIPreview from "../../components/LOIPreview";
@@ -10,6 +10,16 @@ const STORAGE_KEY = "loi_form_data_v1";
 
 function todayLabel() {
   return new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function loadDraft() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
 function downloadBlob(blob, filename) {
@@ -24,10 +34,14 @@ function downloadBlob(blob, filename) {
 }
 
 export default function Page() {
-  const [data, setData] = useState(() => ({
-    ...DEFAULT_FORM_DATA,
-    currentDate: todayLabel(),
-  }));
+  const [data, setData] = useState(() => {
+    const draft = loadDraft();
+    if (draft) return draft;
+    return {
+      ...DEFAULT_FORM_DATA,
+      currentDate: todayLabel(),
+    };
+  });
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -36,6 +50,18 @@ export default function Page() {
   });
 
   const model = useMemo(() => buildLOIModel(data), [data]);
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
+
+  function handleClearDraft() {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setData({
+      ...DEFAULT_FORM_DATA,
+      currentDate: todayLabel(),
+    });
+  }
 
   async function handleExport(format) {
     setExportState({ loading: true, format, error: null, success: null });
@@ -74,6 +100,7 @@ export default function Page() {
           data={data}
           onChange={setData}
           onExport={handleExport}
+          onClearDraft={handleClearDraft}
           exportState={exportState}
         />
         <LOIPreview model={model} />

@@ -129,12 +129,17 @@ function LOIPdfDocument({ model }) {
           finalized, formal Purchase and Sale agreements executed later by explicit signatures.
         </Text>
 
-        <View style={styles.sigBlock}>
-          <Text>Sincerely,</Text>
-          <Text style={{ marginTop: 24 }}>___________________________</Text>
-          <Text style={styles.bold}>{model.buyerName}</Text>
-          <Text>Buyer Authorized Representative</Text>
-        </View>
+        {model.agencyDisclosures.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>7. AGENCY DISCLOSURE</Text>
+            {model.agencyDisclosures.map((d, i) => (
+              <Text key={i} style={styles.para}>
+                <Text style={styles.bold}>{d.label}: </Text>
+                {d.text}
+              </Text>
+            ))}
+          </>
+        )}
 
         <View style={styles.sigBlock}>
           <Text>Accepted and Agreed:</Text>
@@ -145,6 +150,13 @@ function LOIPdfDocument({ model }) {
               <Text>{s.title}</Text>
             </View>
           ))}
+        </View>
+
+        <View style={styles.sigBlock}>
+          <Text>Sincerely,</Text>
+          <Text style={{ marginTop: 24 }}>___________________________</Text>
+          <Text style={styles.bold}>{model.buyerName}</Text>
+          <Text>Buyer Authorized Representative</Text>
         </View>
       </Page>
     </Document>

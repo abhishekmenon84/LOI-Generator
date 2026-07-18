@@ -116,21 +116,23 @@ export default function LOIPreview({ model }) {
             finalized, formal Purchase and Sale agreements executed later by explicit signatures.
           </p>
 
+          {model.agencyDisclosures.length > 0 && (
+            <p>
+              <strong>7. AGENCY DISCLOSURE</strong>
+              <br />
+              {model.agencyDisclosures.map((d, i) => (
+                <span key={i}>
+                  <strong>{d.label}:</strong> {d.text}
+                  {i < model.agencyDisclosures.length - 1 && <br />}
+                </span>
+              ))}
+            </p>
+          )}
+
           <br />
           <table style={{ width: "100%", border: "none" }}>
             <tbody>
               <tr>
-                <td style={{ width: "50%", border: "none", verticalAlign: "top" }}>
-                  <p>Sincerely,</p>
-                  <br />
-                  <p>
-                    ___________________________
-                    <br />
-                    <strong>{model.buyerName}</strong>
-                    <br />
-                    Buyer Authorized Representative
-                  </p>
-                </td>
                 <td style={{ width: "50%", border: "none", verticalAlign: "top" }}>
                   <p>Accepted and Agreed:</p>
                   <br />
@@ -143,6 +145,17 @@ export default function LOIPreview({ model }) {
                       {s.title}
                     </p>
                   ))}
+                </td>
+                <td style={{ width: "50%", border: "none", verticalAlign: "top" }}>
+                  <p>Sincerely,</p>
+                  <br />
+                  <p>
+                    ___________________________
+                    <br />
+                    <strong>{model.buyerName}</strong>
+                    <br />
+                    Buyer Authorized Representative
+                  </p>
                 </td>
               </tr>
             </tbody>
