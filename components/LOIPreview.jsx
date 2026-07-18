@@ -149,12 +149,6 @@ export default function LOIPreview({ model }) {
           </table>
         </div>
       </div>
-
-      {/* ── Footer CTA ───────────────────────────────────── */}
-      <div className="preview-footer-cta" role="complementary">
-        <span aria-hidden="true">✨</span>
-        Preview is live — export your final document using the buttons at the top
-      </div>
     </div>
   );
 }
