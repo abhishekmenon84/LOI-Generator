@@ -77,9 +77,7 @@ export default function Page() {
         throw new Error(body.error || "Export failed.");
       }
       const blob = await res.blob();
-      const filename = format === "docx" ? "Letter_of_Intent.docx"
-        : format === "pdf" ? "Letter_of_Intent.pdf"
-        : "Letter_of_Intent.doc";
+      const filename = format === "pdf" ? "Letter_of_Intent.pdf" : "Letter_of_Intent.docx";
       downloadBlob(blob, filename);
       setExportState({
         loading: false,
