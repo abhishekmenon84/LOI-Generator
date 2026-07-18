@@ -1,0 +1,22 @@
+{
+  "name": "loi-generator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Free Letter of Intent generator for business + real estate acquisitions.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "3.4.4",
+    "docx": "8.5.0",
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}
