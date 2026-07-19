@@ -4,3 +4,7 @@ node_modules/
 .env.local
 .vercel
 *.log
+
+# Roadmap / internal planning docs — kept local, not pushed to the repo
+26-07-16-loi-builder-roadmap-and-market-analysis.md
+docs/
