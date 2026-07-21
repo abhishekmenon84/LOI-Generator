@@ -280,3 +280,97 @@ function LeasePdfDocument({ model }) {
 export async function buildLeasePdf(model) {
   return renderToBuffer(<LeasePdfDocument model={model} />);
 }
+
+function ResidentialLeasePdfDocument({ model }) {
+  return (
+    <Document>
+      <Page size="LETTER" style={styles.page}>
+        <Text style={styles.header}>RESIDENTIAL LEASE</Text>
+        <Text style={{ textAlign: "center", marginBottom: 16, fontStyle: "italic" }}>
+          (Standard Form of Lease — New Brunswick, Form 6)
+        </Text>
+        <Text style={styles.para}>
+          <Text style={styles.bold}>Date: </Text>
+          {model.date}
+        </Text>
+
+        <Text style={styles.sectionTitle}>SECTION 1 — PARTIES</Text>
+        <Text style={styles.para}>
+          <Text style={styles.bold}>Landlord: </Text>
+          {model.landlordName}, {model.landlordAddress}, {model.landlordPhone}, {model.landlordEmail}
+        </Text>
+        {model.landlordHasAgent && (
+          <Text style={styles.para}>
+            <Text style={styles.bold}>Landlord&apos;s Agent: </Text>
+            {model.landlordAgentName}
+          </Text>
+        )}
+        <Text style={styles.para}>
+          <Text style={styles.bold}>Tenant(s): </Text>
+          {model.tenantNamesText}
+        </Text>
+        {model.tenantWantsEmergencyContacts && model.emergencyContacts.length > 0 && (
+          <Text style={styles.para}>
+            <Text style={styles.bold}>Emergency Contacts: </Text>
+            {model.emergencyContacts.map((c) => `${c.name} — ${c.phone}`).join("; ")}
+          </Text>
+        )}
+
+        <Text style={styles.sectionTitle}>SECTION 2 — PREMISES</Text>
+        <Text style={styles.para}>
+          Address: {model.premisesAddressText}. Type of premises: {model.premisesTypeText}.
+        </Text>
+
+        <Text style={styles.sectionTitle}>SECTION 3 — LENGTH OF TENANCY</Text>
+        <Text style={styles.para}>{model.tenancyText}</Text>
+
+        <Text style={styles.sectionTitle}>SECTION 4 — RENT</Text>
+        <Text style={styles.para}>{model.rentText}</Text>
+        {model.rentIncreaseText ? <Text style={styles.para}>{model.rentIncreaseText}</Text> : null}
+        <Text style={styles.para}>{model.lateFeeText}</Text>
+        <Text style={styles.para}>{model.servicesText}</Text>
+        <Text style={styles.para}>{model.furnishingsText}</Text>
+
+        <Text style={styles.sectionTitle}>SECTION 5 — SECURITY DEPOSIT</Text>
+        <Text style={styles.para}>{model.securityDepositText}</Text>
+
+        <Text style={styles.sectionTitle}>SECTION 6 — ASSIGNMENT</Text>
+        <Text style={styles.para}>{model.assignmentText}</Text>
+
+        {model.conditions.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>ADDITIONAL NOTES</Text>
+            {model.conditions.map((c, i) => (
+              <View style={styles.bullet} key={i}>
+                <Text style={styles.bulletDot}>•</Text>
+                <RichText html={c} style={styles.bulletText} />
+              </View>
+            ))}
+          </>
+        )}
+
+        <Text style={styles.para}>
+          The Landlord and Tenant have read this lease including Attachment A, provided separately as required by
+          The Residential Tenancies Act. This lease is binding on and is for the benefit of the heirs, executors
+          and administrators, successors and assigns of the Landlord and the Tenant.
+        </Text>
+
+        <Text style={styles.sectionTitle}>SECTION 7 — SIGNATURES</Text>
+        <View style={styles.sigBlock}>
+          <Text>Signature of Landlord: ___________________________  Date: ___________</Text>
+        </View>
+        {model.signatureBlocks.map((s, i) => (
+          <View style={styles.sigBlock} key={i}>
+            <Text>
+              Signature of {s.title} ({s.name}): ___________________________  Date: ___________
+            </Text>
+          </View>
+        ))}
+      </Page>
+    </Document>
+  );
+}
+
+export async function buildResidentialLeasePdf(model) {
+  return renderToBuffer(<ResidentialLeasePdfDocument model={model} />);
+}
