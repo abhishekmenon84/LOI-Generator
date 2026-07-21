@@ -166,3 +166,117 @@ function LOIPdfDocument({ model }) {
 export async function buildLOIPdf(model) {
   return renderToBuffer(<LOIPdfDocument model={model} />);
 }
+
+function LeasePdfDocument({ model }) {
+  return (
+    <Document>
+      <Page size="LETTER" style={styles.page}>
+        <Text style={styles.header}>LETTER OF INTENT TO LEASE</Text>
+
+        <Text style={styles.para}>
+          <Text style={styles.bold}>Date: </Text>
+          {model.date}
+        </Text>
+        <Text style={styles.para}>
+          This Letter of Intent (&quot;LOI&quot;) outlines the preliminary terms and conditions under which{" "}
+          {model.tenantName} (&quot;Tenant&quot;) proposes to lease the premises described herein from{" "}
+          {model.landlordName} (&quot;Landlord&quot;).
+        </Text>
+
+        <Text style={styles.sectionTitle}>1. PARTIES & PREMISES</Text>
+        <Text style={styles.para}>
+          Landlord: {model.landlordName}. Tenant: {model.tenantName}. Premises: {model.premisesAddress},
+          approximately {model.squareFootage} square feet.
+        </Text>
+
+        <Text style={styles.sectionTitle}>2. LEASE TERM & COMMENCEMENT</Text>
+        <Text style={styles.para}>
+          The Lease Term shall be {model.leaseTermYears} year(s), with a target Lease Commencement Date of{" "}
+          {model.commencementDate}.
+        </Text>
+
+        <Text style={styles.sectionTitle}>3. BASE RENT & ESCALATIONS</Text>
+        <Text style={styles.para}>
+          Base Monthly Rent: ${model.baseMonthlyRent.toLocaleString("en-US", { minimumFractionDigits: 2 })}.
+        </Text>
+        <Text style={styles.para}>{model.escalationText}</Text>
+
+        <Text style={styles.sectionTitle}>4. SECURITY DEPOSIT</Text>
+        <Text style={styles.para}>
+          Tenant shall deposit ${model.securityDeposit.toLocaleString("en-US", { minimumFractionDigits: 2 })} as a
+          security deposit prior to lease commencement.
+        </Text>
+
+        <Text style={styles.sectionTitle}>5. PERMITTED USE</Text>
+        <Text style={styles.para}>{model.permittedUse}</Text>
+
+        <Text style={styles.sectionTitle}>6. TENANT IMPROVEMENTS / BUILD-OUT ALLOWANCE</Text>
+        <Text style={styles.para}>
+          Landlord shall provide a tenant improvement allowance of $
+          {model.tiAllowance.toLocaleString("en-US", { minimumFractionDigits: 2 })}.
+        </Text>
+        <Text style={styles.para}>{model.tiScopeText}</Text>
+
+        <Text style={styles.sectionTitle}>7. RENEWAL OPTION(S)</Text>
+        <Text style={styles.para}>{model.renewalText}</Text>
+
+        <Text style={styles.sectionTitle}>8. BROKERAGE COMMISSION</Text>
+        <Text style={styles.para}>
+          <Text style={styles.bold}>Commission Notice: </Text>
+          It is hereby mutually acknowledged and agreed that the {model.commissionPayerLabel} shall hold exclusive
+          responsibility for satisfying the agent commission fee of {model.commissionSizeLabel} directly to the
+          designated Brokerage Representative.
+        </Text>
+
+        <Text style={styles.sectionTitle}>9. CONDITIONS PRECEDENT</Text>
+        {model.conditions.map((c, i) => (
+          <View style={styles.bullet} key={i}>
+            <Text style={styles.bulletDot}>•</Text>
+            <RichText html={c} style={styles.bulletText} />
+          </View>
+        ))}
+
+        <Text style={styles.sectionTitle}>10. NON-BINDING NATURE</Text>
+        <Text style={styles.para}>
+          This document outlines intent for framework architecture only and does not create enforceable leasing
+          mandates. Legal bindings manifest exclusively inside a finalized, formal Lease Agreement executed later
+          by explicit signatures.
+        </Text>
+
+        {model.agencyDisclosures.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>11. AGENCY DISCLOSURE</Text>
+            {model.agencyDisclosures.map((d, i) => (
+              <Text key={i} style={styles.para}>
+                <Text style={styles.bold}>{d.label}: </Text>
+                {d.text}
+              </Text>
+            ))}
+          </>
+        )}
+
+        <View style={styles.sigBlock}>
+          <Text>Accepted and Agreed:</Text>
+          {model.signatureBlocks.map((s, i) => (
+            <View key={i} style={{ marginTop: 20 }}>
+              <Text>___________________________</Text>
+              <Text style={styles.bold}>{s.name}</Text>
+              <Text>{s.title}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.sigBlock}>
+          <Text>Sincerely,</Text>
+          <Text style={{ marginTop: 24 }}>___________________________</Text>
+          <Text style={styles.bold}>{model.tenantName}</Text>
+          <Text>Tenant Authorized Representative</Text>
+        </View>
+      </Page>
+    </Document>
+  );
+}
+
+export async function buildLeasePdf(model) {
+  return renderToBuffer(<LeasePdfDocument model={model} />);
+}
