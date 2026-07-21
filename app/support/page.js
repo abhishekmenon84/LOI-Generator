@@ -1,3 +1,4 @@
+import { auth } from "../../lib/auth";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
@@ -29,10 +30,13 @@ const FAQS = [
   },
 ];
 
-export default function SupportPage() {
+export default async function SupportPage() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader isLoggedIn={isLoggedIn} />
       <main className="marketing-page">
         <h1>Support</h1>
         {FAQS.map((item, i) => (

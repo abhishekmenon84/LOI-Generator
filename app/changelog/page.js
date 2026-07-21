@@ -1,3 +1,4 @@
+import { auth } from "../../lib/auth";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
@@ -19,10 +20,13 @@ const ENTRIES = [
   },
 ];
 
-export default function ChangelogPage() {
+export default async function ChangelogPage() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader isLoggedIn={isLoggedIn} />
       <main className="marketing-page">
         <h1>Changelog</h1>
         {ENTRIES.map((entry) => (

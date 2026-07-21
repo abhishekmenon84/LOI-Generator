@@ -1,3 +1,4 @@
+import { auth } from "../../lib/auth";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
@@ -25,10 +26,13 @@ const UPCOMING = [
   },
 ];
 
-export default function V2Page() {
+export default async function V2Page() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader isLoggedIn={isLoggedIn} />
       <main className="marketing-page">
         <h1>What&apos;s coming in v2</h1>
         <p>

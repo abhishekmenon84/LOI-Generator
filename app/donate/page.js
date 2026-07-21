@@ -1,3 +1,4 @@
+import { auth } from "../../lib/auth";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
@@ -6,10 +7,13 @@ export const metadata = {
   description: "Support LOI Builder and help keep it free.",
 };
 
-export default function DonatePage() {
+export default async function DonatePage() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader isLoggedIn={isLoggedIn} />
       <main className="marketing-page">
         <h1>Support LOI Builder</h1>
         <p>

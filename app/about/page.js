@@ -1,3 +1,4 @@
+import { auth } from "../../lib/auth";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
@@ -6,10 +7,13 @@ export const metadata = {
   description: "What LOI Builder is and who built it.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader isLoggedIn={isLoggedIn} />
       <main className="marketing-page">
         <h1>About LOI Builder</h1>
         <p>
@@ -20,8 +24,9 @@ export default function AboutPage() {
           document in minutes instead of starting from a blank page.
         </p>
         <p>
-          There&apos;s no account, no subscription, and no signup wall. Fill out the form, preview
-          the document live, and export straight to Word, PDF, or Google Doc.
+          Sign in with just your email — no password required — and your deals are saved
+          automatically so you can pick up where you left off, from any device, then export
+          straight to Word, PDF, or Google Doc.
         </p>
         <p>
           <strong>Created by Abhishek Menon.</strong>

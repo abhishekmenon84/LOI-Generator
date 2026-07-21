@@ -1,3 +1,4 @@
+import { auth } from "../../lib/auth";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
@@ -6,10 +7,13 @@ export const metadata = {
   description: "Terms and legal disclaimer for LOI Builder.",
 };
 
-export default function LegalPage() {
+export default async function LegalPage() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader isLoggedIn={isLoggedIn} />
       <main className="marketing-page">
         <h1>Legal &amp; Disclaimer</h1>
         <h2>Non-binding document</h2>

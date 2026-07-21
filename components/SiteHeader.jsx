@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-export default function SiteHeader() {
+export default function SiteHeader({ isLoggedIn = false }) {
   const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
@@ -51,7 +51,9 @@ export default function SiteHeader() {
           <option value="dark">Dark Mode</option>
           <option value="dusk">Dusk Mode</option>
         </select>
-        <Link className="site-header-cta" href="/app">Launch Builder</Link>
+        <Link className="site-header-cta" href={isLoggedIn ? "/dashboard" : "/login"}>
+          {isLoggedIn ? "Dashboard" : "Sign In"}
+        </Link>
       </div>
     </nav>
   );
