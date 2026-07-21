@@ -1024,3 +1024,53 @@ select option {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+/* ── Dashboard deal list ────────────────────────────────────── */
+.deal-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deal-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.deal-list-item-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.deal-list-item-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.deal-list-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deal-list-item-delete {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.deal-list-item-delete:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
