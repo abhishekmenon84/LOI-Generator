@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 const DOCUMENT_TYPES = [
   { value: "purchase_loi", label: "Business + Real Estate Purchase LOI", badge: "Purchase LOI", buildPath: "/app" },
   { value: "commercial_lease_loi", label: "Commercial Lease LOI", badge: "Lease LOI", buildPath: "/app/lease" },
+  { value: "residential_lease", label: "Residential Lease (New Brunswick)", badge: "Residential Lease", buildPath: "/app/residential-lease" },
 ];
 
 function typeMeta(documentType) {
