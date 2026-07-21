@@ -110,18 +110,18 @@ export default function LOIForm({ data, onChange, onExport, onClearDraft, export
         <div>
           <h1 className="form-panel-title">LOI Workspace Engine</h1>
           <p className="form-panel-subtitle">
-            Fill in the fields below — the document preview updates live. Your progress is
-            saved automatically and restored if you refresh.{" "}
+            Fill in the fields below — the document preview updates live and saves
+            automatically to your account.{" "}
             <button
               type="button"
               onClick={() => {
-                if (window.confirm("Clear your saved draft and start over? This can't be undone.")) {
+                if (window.confirm("Reset this deal to a blank form? This can't be undone.")) {
                   onClearDraft();
                 }
               }}
               style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-light)', fontSize: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
             >
-              Clear draft
+              Reset this deal
             </button>
           </p>
         </div>

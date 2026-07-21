@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import LOIForm from "../../components/LOIForm";
 import LOIPreview from "../../components/LOIPreview";
 import { DEFAULT_FORM_DATA, buildLOIModel } from "../../lib/loiEngine";
 
-const STORAGE_KEY = "loi_form_data_v1";
-
 function todayLabel() {
   return new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-}
-
-function loadDraft() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
 }
 
 function downloadBlob(blob, filename) {
@@ -33,30 +22,67 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function Page() {
-  const [data, setData] = useState(() => {
-    const draft = loadDraft();
-    if (draft) return draft;
-    return {
-      ...DEFAULT_FORM_DATA,
-      currentDate: todayLabel(),
-    };
-  });
+function AppPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const dealId = searchParams.get("deal");
+
+  const [data, setData] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
     error: null,
     success: null,
   });
-
-  const model = useMemo(() => buildLOIModel(data), [data]);
+  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+    if (!dealId) {
+      router.replace("/dashboard");
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/deals/${dealId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Deal not found.");
+        return res.json();
+      })
+      .then((deal) => {
+        if (cancelled) return;
+        setData({
+          ...DEFAULT_FORM_DATA,
+          currentDate: todayLabel(),
+          ...deal.formData,
+        });
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dealId, router]);
 
-  function handleClearDraft() {
-    sessionStorage.removeItem(STORAGE_KEY);
+  const model = useMemo(() => (data ? buildLOIModel(data) : null), [data]);
+
+  useEffect(() => {
+    if (!data || !dealId) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      fetch(`/api/deals/${dealId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formData: data }),
+      }).catch(() => {
+        // Best-effort autosave; export still saves synchronously before download.
+      });
+    }, 1000);
+    return () => clearTimeout(saveTimeoutRef.current);
+  }, [data, dealId]);
+
+  function handleResetDeal() {
+    if (!window.confirm("Reset this deal to a blank form? This can't be undone.")) return;
     setData({
       ...DEFAULT_FORM_DATA,
       currentDate: todayLabel(),
@@ -66,7 +92,11 @@ export default function Page() {
   async function handleExport(format) {
     setExportState({ loading: true, format, error: null, success: null });
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      await fetch(`/api/deals/${dealId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formData: data }),
+      });
       const res = await fetch(`/api/export/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,6 +120,31 @@ export default function Page() {
     }
   }
 
+  if (loadError) {
+    return (
+      <>
+        <Navbar />
+        <div className="dashboard-layout">
+          <div className="form-panel">
+            <div className="status-banner status-error" role="alert">⚠️ {loadError}</div>
+            <a className="marketing-cta-button" href="/dashboard">Back to Dashboard</a>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (!data || !model) {
+    return (
+      <>
+        <Navbar />
+        <div className="dashboard-layout">
+          <div className="form-panel">Loading…</div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -98,11 +153,28 @@ export default function Page() {
           data={data}
           onChange={setData}
           onExport={handleExport}
-          onClearDraft={handleClearDraft}
+          onClearDraft={handleResetDeal}
           exportState={exportState}
         />
         <LOIPreview model={model} />
       </div>
     </>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <Navbar />
+          <div className="dashboard-layout">
+            <div className="form-panel">Loading…</div>
+          </div>
+        </>
+      }
+    >
+      <AppPageInner />
+    </Suspense>
   );
 }
