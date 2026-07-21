@@ -1074,3 +1074,15 @@ select option {
   color: #f87171;
   border-color: #f87171;
 }
+
+.deal-list-item-type-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-light);
+  background: var(--accent-subtle);
+  border-radius: 999px;
+  vertical-align: middle;
+}

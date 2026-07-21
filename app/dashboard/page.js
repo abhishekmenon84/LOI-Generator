@@ -17,11 +17,12 @@ export default async function DashboardPage() {
   const deals = await prisma.deal.findMany({
     where: { userId: session.user.id },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, name: true, updatedAt: true },
+    select: { id: true, name: true, documentType: true, updatedAt: true },
   });
   const serializedDeals = deals.map((d) => ({
     id: d.id,
     name: d.name,
+    documentType: d.documentType,
     updatedAt: d.updatedAt.toISOString(),
   }));
 
