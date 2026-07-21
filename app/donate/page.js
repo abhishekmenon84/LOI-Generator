@@ -17,9 +17,10 @@ export default async function DonatePage() {
       <main className="marketing-page">
         <h1>Support LOI Builder</h1>
         <p>
-          LOI Builder is free to use, with no account and no subscription required. If it saved
-          you time on a deal, consider chipping in to help cover hosting costs and fund new
-          features like e-signature and additional document templates.
+          LOI Builder is free to use, with no subscription required — just sign in with a free
+          account to save your deals. If it saved you time on a deal, consider chipping in to
+          help cover hosting costs and fund new features like e-signature and additional
+          document templates.
         </p>
         {/* Placeholder link — replace with a real payment provider URL (e.g. Buy Me a Coffee, Stripe) */}
         <a className="marketing-cta-button" href="#" rel="noopener noreferrer">

@@ -5,12 +5,14 @@
   "description": "Free Letter of Intent generator for business + real estate acquisitions.",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
+    "@prisma/client": "^5.22.0",
     "@react-email/render": "^2.1.0",
     "@react-pdf/renderer": "3.4.4",
     "docx": "8.5.0",
@@ -24,7 +26,6 @@
     "node": ">=18.17.0"
   },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
     "prisma": "^5.22.0"
   }
 }

@@ -4,7 +4,7 @@ A web application designed for generating a comprehensive, non-binding Letter of
 
 Once the form is complete, you can export the document for free in **Word (.docx)**, **PDF**, or **Google Doc** formats.
 
-Built with **Next.js 14 (App Router)**, the application uses `@react-pdf/renderer` for PDF generation, `docx` for Word documents, and a custom HTML builder for Google Doc compatibility. The application is completely stateless, requiring no user accounts or databases.
+Built with **Next.js 14 (App Router)**, the application uses `@react-pdf/renderer` for PDF generation, `docx` for Word documents, and a custom HTML builder for Google Doc compatibility. The application uses a Postgres database (via Prisma) and an email-sending account for user accounts and deal persistence, letting you save deals and resume them from a dashboard.
 
 ## Features
 
@@ -22,6 +22,16 @@ Built with **Next.js 14 (App Router)**, the application uses `@react-pdf/rendere
 
 Ensure you have [Node.js](https://nodejs.org/) (version 18 or higher recommended) and `npm` installed.
 
+### Environment Variables
+
+Create a `.env.local` file at the project root (gitignored, never committed) with the following:
+
+- `DATABASE_URL` — Postgres connection string (e.g. from a free [Neon](https://neon.tech) project).
+- `RESEND_API_KEY` — API key from a free [Resend](https://resend.com) account, used to send magic-link sign-in emails.
+- `AUTH_SECRET` — a random secret for Auth.js session signing; generate one with `openssl rand -base64 32`.
+
+See `.env.example` for a template.
+
 ### Installation
 
 1. **Clone the repository** (if you haven't already):
@@ -35,23 +45,32 @@ Ensure you have [Node.js](https://nodejs.org/) (version 18 or higher recommended
    npm install
    ```
 
-3. **Start the development server**:
+3. **Run database migrations**:
+   ```bash
+   npx prisma migrate deploy
+   ```
+
+4. **Start the development server**:
    ```bash
    npm run dev
    ```
 
-4. **Open the application**:
+5. **Open the application**:
    Open [http://localhost:3000](http://localhost:3000) in your browser to view and interact with the application.
 
 ## Project Structure
 
-- `app/` — Next.js 14 App Router configuration and API routes (`/api/export`).
+- `app/` — Next.js 14 App Router configuration and API routes (`/api/export`, `/api/deals/`), plus the `dashboard/` page for viewing and resuming saved deals.
 - `components/` — React components comprising the UI (`LOIForm`, `LOIPreview`, `Navbar`, `SectionCard`).
 - `lib/` — Core business logic:
   - `loiEngine.js`: Parses raw form data into a structured content model used by all exporters.
   - `docxBuilder.js`: Generates the `.docx` file using the `docx` library.
   - `pdfBuilder.jsx`: Generates the `.pdf` file using `@react-pdf/renderer`.
   - `htmlBuilder.js`: Generates the Google Docs compatible HTML output.
+  - `auth.js`: Auth.js configuration (magic-link email sign-in via Resend, Prisma adapter).
+  - `prisma.js`: Shared Prisma Client instance.
+- `prisma/schema.prisma` — Database schema (users, accounts, sessions, deals).
+- `middleware.js` — Edge middleware that protects the dashboard and deal routes, redirecting unauthenticated users to sign in.
 
 ## Legal Disclaimer
 

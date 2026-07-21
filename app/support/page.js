@@ -22,7 +22,7 @@ const FAQS = [
   },
   {
     q: "Does LOI Builder save my draft?",
-    a: "Not yet — save/resume a draft via a shareable link is planned. See What's in v1 for the current feature set.",
+    a: "Yes — sign in with a free account and your deal saves automatically. You can pick up where you left off from your dashboard on any device.",
   },
   {
     q: "I found a bug or have a question — how do I reach you?",
