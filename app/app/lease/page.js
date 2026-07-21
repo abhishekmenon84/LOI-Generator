@@ -50,6 +50,10 @@ function LeasePageInner() {
       })
       .then((deal) => {
         if (cancelled) return;
+        if (deal.documentType && deal.documentType !== "commercial_lease_loi") {
+          router.replace(`/app?deal=${dealId}`);
+          return;
+        }
         setData({
           ...DEFAULT_LEASE_DATA,
           currentDate: todayLabel(),

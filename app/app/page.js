@@ -50,6 +50,10 @@ function AppPageInner() {
       })
       .then((deal) => {
         if (cancelled) return;
+        if (deal.documentType && deal.documentType !== "purchase_loi") {
+          router.replace(`/app/lease?deal=${dealId}`);
+          return;
+        }
         setData({
           ...DEFAULT_FORM_DATA,
           currentDate: todayLabel(),

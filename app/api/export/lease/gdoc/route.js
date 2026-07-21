@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { buildLeaseModel } from "../../../../../lib/leaseEngine";
 import { buildLeaseDocx } from "../../../../../lib/docxBuilder";
 
+// Google Docs, Word, and Pages all import real .docx files reliably, so the
+// "GDoc" export reuses the same docx builder as the Word export rather than
+// a hand-rolled HTML document (which legacy HTML-to-.doc importers, notably
+// macOS Pages, rendered with broken table layout).
 export async function POST(request) {
   try {
     const body = await request.json();

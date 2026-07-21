@@ -17,7 +17,7 @@ export async function GET(request, { params }) {
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
-  return NextResponse.json({ id: deal.id, name: deal.name, formData: deal.formData });
+  return NextResponse.json({ id: deal.id, name: deal.name, documentType: deal.documentType, formData: deal.formData });
 }
 
 export async function PATCH(request, { params }) {
