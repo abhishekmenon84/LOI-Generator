@@ -3,10 +3,12 @@ import { auth } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import { DEFAULT_FORM_DATA } from "../../../lib/loiEngine";
 import { DEFAULT_LEASE_DATA } from "../../../lib/leaseEngine";
+import { DEFAULT_RESIDENTIAL_LEASE_DATA } from "../../../lib/residentialLeaseEngine";
 
 const DOCUMENT_TYPE_DEFAULTS = {
   purchase_loi: DEFAULT_FORM_DATA,
   commercial_lease_loi: DEFAULT_LEASE_DATA,
+  residential_lease: DEFAULT_RESIDENTIAL_LEASE_DATA,
 };
 
 export async function GET() {
