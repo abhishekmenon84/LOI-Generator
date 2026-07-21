@@ -27,7 +27,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader isLoggedIn={true} />
       <main className="marketing-page">
         <h1>Your Deals</h1>
         <p>Signed in as {session.user.email}.</p>
