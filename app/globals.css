@@ -841,7 +841,7 @@ select option {
   gap: 20px;
   padding: 0 28px;
   height: 60px;
-  background: rgba(7,8,15,0.85);
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
