@@ -31,6 +31,8 @@ export default function DealList({ initialDeals }) {
   const [newDealName, setNewDealName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   function startCreate(documentType) {
     setSelectedType(documentType);
@@ -64,10 +66,17 @@ export default function DealList({ initialDeals }) {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("Delete this deal? This can't be undone.")) return;
-    const res = await fetch(`/api/deals/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setDeals((prev) => prev.filter((d) => d.id !== id));
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/deals/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setDeals((prev) => prev.filter((d) => d.id !== id));
+      } else {
+        setError("Could not delete deal.");
+      }
+    } finally {
+      setDeleting(false);
+      setConfirmingDeleteId(null);
     }
   }
 
@@ -150,10 +159,34 @@ export default function DealList({ initialDeals }) {
                   <div className="deal-list-item-meta">Edited {relativeTime(deal.updatedAt)}</div>
                 </div>
                 <div className="deal-list-item-actions">
-                  <a className="marketing-cta-button" href={`${meta.buildPath}?deal=${deal.id}`}>Resume</a>
-                  <button type="button" onClick={() => handleDelete(deal.id)} className="deal-list-item-delete">
-                    Delete
-                  </button>
+                  {confirmingDeleteId === deal.id ? (
+                    <>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Delete this deal?</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(deal.id)}
+                        disabled={deleting}
+                        className="deal-list-item-delete"
+                      >
+                        {deleting ? "Deleting…" : "Confirm"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDeleteId(null)}
+                        disabled={deleting}
+                        style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "8px 14px", borderRadius: 8, cursor: "pointer" }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <a className="marketing-cta-button" href={`${meta.buildPath}?deal=${deal.id}`}>Resume</a>
+                      <button type="button" onClick={() => setConfirmingDeleteId(deal.id)} className="deal-list-item-delete">
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </li>
             );

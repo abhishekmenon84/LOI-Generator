@@ -117,7 +117,7 @@ body {
   justify-content: space-between;
   padding: 0 28px;
   height: 60px;
-  background: rgba(7,8,15,0.85);
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -530,7 +530,7 @@ select option {
   bottom: 0;
   margin: 0 -28px;
   padding: 16px 28px;
-  background: rgba(7,8,15,0.95);
+  background: var(--bg-surface);
   border-top: 1px solid var(--border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

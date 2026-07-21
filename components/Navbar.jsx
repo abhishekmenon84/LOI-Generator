@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Navbar() {
-  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
@@ -19,8 +19,7 @@ export default function Navbar() {
   };
 
   return (
-    <>
-      <nav className="navbar">
+    <nav className="navbar">
         {/* Logo and Version */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <a className="navbar-logo" href="/" aria-label="LOI Builder home">
@@ -40,14 +39,14 @@ export default function Navbar() {
 
         {/* Badge & Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <button 
-            onClick={() => setIsAboutOpen(true)}
-            style={{ background: "transparent", border: "none", color: "var(--text-secondary)", fontSize: "0.8rem", cursor: "pointer", fontWeight: "500" }}
+          <Link
+            href="/dashboard"
+            style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontWeight: "500", textDecoration: "none" }}
           >
-            About
-          </button>
-          
-          <select 
+            Dashboard
+          </Link>
+
+          <select
             value={theme}
             onChange={(e) => handleThemeChange(e.target.value)}
             style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "4px", background: "var(--bg-panel)", color: "var(--text-primary)", border: "1px solid var(--border)", cursor: "pointer", outline: "none" }}
@@ -63,32 +62,5 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
-
-      {/* About Modal */}
-      {isAboutOpen && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
-          background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000
-        }}>
-          <div style={{
-            background: "var(--bg-surface)", padding: "30px", borderRadius: "12px", 
-            maxWidth: "400px", border: "1px solid var(--border)", boxShadow: "var(--shadow-xl)"
-          }}>
-            <h2 style={{ fontSize: "1.2rem", marginBottom: "12px", color: "var(--text-primary)" }}>About LOI Builder</h2>
-            <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: "1.6", marginBottom: "20px" }}>
-              The LOI Builder is a free, modern tool for generating non-binding Letters of Intent for business and real estate acquisitions.<br /><br />
-              <strong>Created by Abhishek Menon</strong>
-            </p>
-            <button 
-              onClick={() => setIsAboutOpen(false)}
-              style={{ padding: "8px 16px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "600", width: "100%" }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </>
   );
 }
