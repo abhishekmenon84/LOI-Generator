@@ -34,6 +34,7 @@ export default function DealList({ initialDeals }) {
   const [error, setError] = useState(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [nameShake, setNameShake] = useState(false);
 
   function startCreate(documentType) {
     setSelectedType(documentType);
@@ -48,7 +49,11 @@ export default function DealList({ initialDeals }) {
   async function handleCreate(e) {
     e.preventDefault();
     const name = newDealName.trim();
-    if (!name || !selectedType) return;
+    if (!name) {
+      setNameShake(true);
+      return;
+    }
+    if (!selectedType) return;
     setCreating(true);
     setError(null);
     try {
@@ -126,7 +131,13 @@ export default function DealList({ initialDeals }) {
             autoFocus
             placeholder={`New ${typeMeta(selectedType).badge} name, e.g. 123 Main St Acquisition`}
             value={newDealName}
-            onChange={(e) => setNewDealName(e.target.value)}
+            onChange={(e) => {
+              setNewDealName(e.target.value);
+              if (nameShake) setNameShake(false);
+            }}
+            onAnimationEnd={() => setNameShake(false)}
+            className={nameShake ? "input-shake" : ""}
+            aria-invalid={nameShake}
             style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
           />
           <button type="submit" className="marketing-cta-button" disabled={creating}>
