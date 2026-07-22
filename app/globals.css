@@ -1038,6 +1038,85 @@ select option {
   color: var(--text-muted);
 }
 
+/* ── Home: why LOI over CREA forms ─────────────────────────── */
+.home-why-loi {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 28px 96px;
+}
+
+.home-why-loi h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-align: center;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.home-why-loi-intro {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 36px;
+}
+
+.home-why-loi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.home-why-loi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+}
+
+.home-why-loi-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  margin-bottom: 14px;
+}
+
+.home-why-loi-card-alt h3 {
+  color: var(--text-muted);
+}
+
+.home-why-loi-card ul {
+  padding-left: 18px;
+  margin: 0;
+}
+
+.home-why-loi-card li {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.home-why-loi-card li:last-child {
+  margin-bottom: 0;
+}
+
+.home-why-loi-footnote {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 28px auto 0;
+  max-width: 640px;
+}
+
+@media (max-width: 640px) {
+  .home-why-loi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Dashboard deal list ────────────────────────────────────── */
 .deal-list {
   list-style: none;

@@ -37,8 +37,6 @@ export default function SiteHeader({ isLoggedIn = false }) {
         {isLoggedIn && <Link href="/dashboard">Dashboard</Link>}
         <Link href="/about">About</Link>
         <Link href="/v1">What&apos;s in v1</Link>
-        <Link href="/v2">What&apos;s coming in v2</Link>
-        <Link href="/donate">Donate</Link>
         <Link href="/support">Support</Link>
       </div>
 

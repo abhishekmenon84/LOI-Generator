@@ -17,8 +17,12 @@ const FAQS = [
     a: "No. It's a non-binding Letter of Intent intended to outline preliminary terms. See our Legal & Disclaimer page for details.",
   },
   {
+    q: "What kinds of documents can I build?",
+    a: "A combined Business + Real Estate Purchase LOI, a Commercial Lease LOI, and a New Brunswick Residential Lease (standard form). Pick the type when you create a new deal.",
+  },
+  {
     q: "What export formats are supported?",
-    a: "Word (.docx), PDF, and Google Doc.",
+    a: "Word (.docx) and PDF.",
   },
   {
     q: "Does LOI Builder save my draft?",
@@ -46,7 +50,7 @@ export default async function SupportPage() {
           </div>
         ))}
         <p>
-          <a href="mailto:support@loibuilder.app">Contact us at support@loibuilder.app</a>
+          <a href="mailto:abhi@menonrealty.ca">Contact us at abhi@menonrealty.ca</a>
         </p>
       </main>
       <SiteFooter />
