@@ -126,20 +126,35 @@ export default function DealList({ initialDeals }) {
 
       {selectedType && (
         <form onSubmit={handleCreate} style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-          <input
-            type="text"
-            autoFocus
-            placeholder={`New ${typeMeta(selectedType).badge} name, e.g. 123 Main St Acquisition`}
-            value={newDealName}
-            onChange={(e) => {
-              setNewDealName(e.target.value);
-              if (nameShake) setNameShake(false);
-            }}
-            onAnimationEnd={() => setNameShake(false)}
-            className={nameShake ? "input-shake" : ""}
-            aria-invalid={nameShake}
-            style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
-          />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+            <input
+              key={nameShake ? "shaking" : "still"}
+              type="text"
+              autoFocus
+              placeholder={`New ${typeMeta(selectedType).badge} name, e.g. 123 Main St Acquisition`}
+              value={newDealName}
+              onChange={(e) => {
+                setNewDealName(e.target.value);
+                if (nameShake) setNameShake(false);
+              }}
+              onAnimationEnd={() => setNameShake(false)}
+              className={nameShake ? "input-shake" : ""}
+              aria-invalid={nameShake}
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                borderRadius: 8,
+                border: nameShake ? "2px solid #ef4444" : "1px solid var(--border)",
+                background: "var(--bg-panel)",
+                color: "var(--text-primary)",
+              }}
+            />
+            {nameShake && (
+              <span style={{ fontSize: "0.78rem", color: "#ef4444" }} role="alert">
+                Please enter a name before creating.
+              </span>
+            )}
+          </div>
           <button type="submit" className="marketing-cta-button" disabled={creating}>
             {creating ? "Creating…" : "Create"}
           </button>
