@@ -29,6 +29,7 @@ function ResidentialLeasePageInner() {
 
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [readOnly, setReadOnly] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -55,6 +56,7 @@ function ResidentialLeasePageInner() {
           router.replace(`${fallback}?deal=${dealId}`);
           return;
         }
+        setReadOnly(!!deal.readOnly);
         setData({
           ...DEFAULT_RESIDENTIAL_LEASE_DATA,
           currentDate: todayLabel(),
@@ -72,7 +74,7 @@ function ResidentialLeasePageInner() {
   const model = useMemo(() => (data ? buildResidentialLeaseModel(data) : null), [data]);
 
   useEffect(() => {
-    if (!data || !dealId) return;
+    if (!data || !dealId || readOnly) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       fetch(`/api/deals/${dealId}`, {
@@ -84,7 +86,7 @@ function ResidentialLeasePageInner() {
       });
     }, 1000);
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [data, dealId]);
+  }, [data, dealId, readOnly]);
 
   function handleResetDeal() {
     if (!window.confirm("Reset this deal to a blank form? This can't be undone.")) return;
@@ -160,6 +162,7 @@ function ResidentialLeasePageInner() {
           onExport={handleExport}
           onClearDraft={handleResetDeal}
           exportState={exportState}
+          readOnly={readOnly}
         />
         <ResidentialLeasePreview model={model} />
       </div>

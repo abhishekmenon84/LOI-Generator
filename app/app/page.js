@@ -29,6 +29,7 @@ function AppPageInner() {
 
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [readOnly, setReadOnly] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -54,6 +55,7 @@ function AppPageInner() {
           router.replace(`/app/lease?deal=${dealId}`);
           return;
         }
+        setReadOnly(!!deal.readOnly);
         setData({
           ...DEFAULT_FORM_DATA,
           currentDate: todayLabel(),
@@ -71,7 +73,7 @@ function AppPageInner() {
   const model = useMemo(() => (data ? buildLOIModel(data) : null), [data]);
 
   useEffect(() => {
-    if (!data || !dealId) return;
+    if (!data || !dealId || readOnly) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       fetch(`/api/deals/${dealId}`, {
@@ -83,7 +85,7 @@ function AppPageInner() {
       });
     }, 1000);
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [data, dealId]);
+  }, [data, dealId, readOnly]);
 
   function handleResetDeal() {
     if (!window.confirm("Reset this deal to a blank form? This can't be undone.")) return;
@@ -159,6 +161,7 @@ function AppPageInner() {
           onExport={handleExport}
           onClearDraft={handleResetDeal}
           exportState={exportState}
+          readOnly={readOnly}
         />
         <LOIPreview model={model} />
       </div>

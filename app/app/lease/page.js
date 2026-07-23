@@ -29,6 +29,7 @@ function LeasePageInner() {
 
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [readOnly, setReadOnly] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -54,6 +55,7 @@ function LeasePageInner() {
           router.replace(`/app?deal=${dealId}`);
           return;
         }
+        setReadOnly(!!deal.readOnly);
         setData({
           ...DEFAULT_LEASE_DATA,
           currentDate: todayLabel(),
@@ -71,7 +73,7 @@ function LeasePageInner() {
   const model = useMemo(() => (data ? buildLeaseModel(data) : null), [data]);
 
   useEffect(() => {
-    if (!data || !dealId) return;
+    if (!data || !dealId || readOnly) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       fetch(`/api/deals/${dealId}`, {
@@ -83,7 +85,7 @@ function LeasePageInner() {
       });
     }, 1000);
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [data, dealId]);
+  }, [data, dealId, readOnly]);
 
   function handleResetDeal() {
     if (!window.confirm("Reset this deal to a blank form? This can't be undone.")) return;
@@ -159,6 +161,7 @@ function LeasePageInner() {
           onExport={handleExport}
           onClearDraft={handleResetDeal}
           exportState={exportState}
+          readOnly={readOnly}
         />
         <LeasePreview model={model} />
       </div>

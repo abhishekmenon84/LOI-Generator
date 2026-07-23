@@ -52,7 +52,7 @@ function GDocIcon() {
   );
 }
 
-export default function LeaseForm({ data, onChange, onExport, onClearDraft, exportState }) {
+export default function LeaseForm({ data, onChange, onExport, onClearDraft, exportState, readOnly }) {
   function set(patch) {
     onChange({ ...data, ...patch });
   }
@@ -138,6 +138,14 @@ export default function LeaseForm({ data, onChange, onExport, onClearDraft, expo
           ✅ {exportState.success}
         </div>
       )}
+
+      {readOnly && (
+        <div className="status-banner" style={{ marginBottom: 15, background: "var(--accent-subtle)", border: "1px solid var(--accent)" }} role="status">
+          👁️ You have view-only access to this document.
+        </div>
+      )}
+
+      <fieldset disabled={readOnly} style={{ border: "none", padding: 0, margin: 0 }}>
 
       <div className="progress-wrap" role="status" aria-label={`Form completion: ${progress}%`}>
         <div className="progress-label">
@@ -502,6 +510,8 @@ export default function LeaseForm({ data, onChange, onExport, onClearDraft, expo
           + Add Custom Condition Clause
         </button>
       </SectionCard>
+
+      </fieldset>
 
       <div className="legal-disclaimer" role="note" style={{ marginTop: 20 }}>
         <strong>⚠️ Legal Notice:</strong> This tool generates non-binding letters of intent, not final legal contracts.
