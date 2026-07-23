@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import LeaseForm from "../../../components/LeaseForm";
 import LeasePreview from "../../../components/LeasePreview";
+import DealShareModal from "../../../components/DealShareModal";
 import { DEFAULT_LEASE_DATA, buildLeaseModel } from "../../../lib/leaseEngine";
 
 function todayLabel() {
@@ -30,6 +31,7 @@ function LeasePageInner() {
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [readOnly, setReadOnly] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -165,6 +167,17 @@ function LeasePageInner() {
         />
         <LeasePreview model={model} />
       </div>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setShareModalOpen(true)}
+          style={{ position: "fixed", bottom: 24, right: 24, zIndex: 100 }}
+          className="marketing-cta-button"
+        >
+          Share
+        </button>
+      )}
+      <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
     </>
   );
 }

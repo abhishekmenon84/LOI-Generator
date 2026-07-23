@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import ResidentialLeaseForm from "../../../components/ResidentialLeaseForm";
 import ResidentialLeasePreview from "../../../components/ResidentialLeasePreview";
+import DealShareModal from "../../../components/DealShareModal";
 import { DEFAULT_RESIDENTIAL_LEASE_DATA, buildResidentialLeaseModel } from "../../../lib/residentialLeaseEngine";
 
 function todayLabel() {
@@ -30,6 +31,7 @@ function ResidentialLeasePageInner() {
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [readOnly, setReadOnly] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -166,6 +168,17 @@ function ResidentialLeasePageInner() {
         />
         <ResidentialLeasePreview model={model} />
       </div>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setShareModalOpen(true)}
+          style={{ position: "fixed", bottom: 24, right: 24, zIndex: 100 }}
+          className="marketing-cta-button"
+        >
+          Share
+        </button>
+      )}
+      <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
     </>
   );
 }

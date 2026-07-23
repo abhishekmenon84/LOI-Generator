@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import LOIForm from "../../components/LOIForm";
 import LOIPreview from "../../components/LOIPreview";
+import DealShareModal from "../../components/DealShareModal";
 import { DEFAULT_FORM_DATA, buildLOIModel } from "../../lib/loiEngine";
 
 function todayLabel() {
@@ -30,6 +31,7 @@ function AppPageInner() {
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [readOnly, setReadOnly] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -165,6 +167,17 @@ function AppPageInner() {
         />
         <LOIPreview model={model} />
       </div>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setShareModalOpen(true)}
+          style={{ position: "fixed", bottom: 24, right: 24, zIndex: 100 }}
+          className="marketing-cta-button"
+        >
+          Share
+        </button>
+      )}
+      <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
     </>
   );
 }
