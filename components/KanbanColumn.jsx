@@ -1,5 +1,7 @@
 "use client";
 
+import KanbanCard from "./KanbanCard";
+
 const STAGE_ACCENTS = {
   draft: "var(--text-muted)",
   active: "var(--accent)",
@@ -42,8 +44,6 @@ export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop,
     </div>
   );
 }
-
-import KanbanCard from "./KanbanCard";
 
 function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown }) {
   return (
