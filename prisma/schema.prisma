@@ -14,10 +14,12 @@ model User {
   emailVerified DateTime?
   name          String?
   image         String?
-  accounts      Account[]
-  sessions      Session[]
-  memberships   Membership[]
-  dealsCreated  Deal[]    @relation("DealCreator")
+  accounts            Account[]
+  sessions            Session[]
+  memberships         Membership[]
+  dealsCreated        Deal[]      @relation("DealCreator")
+  dealSharesReceived  DealShare[] @relation("DealShareRecipient")
+  dealSharesGranted   DealShare[] @relation("DealShareGrantor")
 }
 
 model Organization {
@@ -99,9 +101,28 @@ model Deal {
   name            String
   documentType    String   @default("purchase_loi")
   formData        Json
+  stage           String   @default("draft") // "draft" | "active" | "pending" | "closed"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  shares DealShare[]
+
   @@index([orgId])
   @@index([createdByUserId])
+}
+
+model DealShare {
+  id              String   @id @default(cuid())
+  dealId          String
+  deal            Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  grantedToUserId String
+  grantedTo       User     @relation("DealShareRecipient", fields: [grantedToUserId], references: [id], onDelete: Cascade)
+  grantedByUserId String
+  grantedBy       User     @relation("DealShareGrantor", fields: [grantedByUserId], references: [id], onDelete: Cascade)
+  permission      String   @default("read") // "read" | "write"
+  createdAt       DateTime @default(now())
+
+  @@unique([dealId, grantedToUserId])
+  @@index([dealId])
+  @@index([grantedToUserId])
 }
