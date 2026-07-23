@@ -1178,3 +1178,9 @@ select option {
   border-radius: 999px;
   vertical-align: middle;
 }
+
+/* ── Kanban dashboard ───────────────────────────────────────── */
+.kanban-card:hover {
+  background: var(--bg-card-hover) !important;
+  border-color: var(--accent) !important;
+}
