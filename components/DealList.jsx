@@ -182,6 +182,14 @@ export default function DealList({ initialDeals }) {
                   <div className="deal-list-item-name">
                     {deal.name}
                     <span className="deal-list-item-type-badge">{meta.badge}</span>
+                    {deal.isShared && (
+                      <span
+                        className="deal-list-item-type-badge"
+                        style={{ background: "var(--accent-subtle)", color: "var(--accent-light)", marginLeft: 6 }}
+                      >
+                        {deal.writeAccess ? "Shared (can edit)" : "Shared (view only)"}
+                      </span>
+                    )}
                   </div>
                   <div className="deal-list-item-meta">Edited {relativeTime(deal.updatedAt)}</div>
                 </div>
@@ -209,9 +217,11 @@ export default function DealList({ initialDeals }) {
                   ) : (
                     <>
                       <a className="marketing-cta-button" href={`${meta.buildPath}?deal=${deal.id}`}>Resume</a>
-                      <button type="button" onClick={() => setConfirmingDeleteId(deal.id)} className="deal-list-item-delete">
-                        Delete
-                      </button>
+                      {deal.writeAccess && (
+                        <button type="button" onClick={() => setConfirmingDeleteId(deal.id)} className="deal-list-item-delete">
+                          Delete
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
