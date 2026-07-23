@@ -3,8 +3,10 @@
 import { useState } from "react";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
+import LoginChooser from "../../components/LoginChooser";
 
 export default function LoginPage() {
+  const [audience, setAudience] = useState(null); // null | "personal" | "business"
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState({ loading: false, error: null });
 
@@ -39,23 +41,38 @@ export default function LoginPage() {
       <SiteHeader />
       <main className="marketing-page">
         <h1>Sign in</h1>
-        <p>Enter your email and we&apos;ll send you a sign-in link — no password needed.</p>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 360 }}>
-          <input
-            type="email"
-            required
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
-          />
-          {status.error && (
-            <div className="status-banner status-error" role="alert">⚠️ {status.error}</div>
-          )}
-          <button type="submit" className="marketing-cta-button" disabled={status.loading}>
-            {status.loading ? "Sending…" : "Send me a sign-in link"}
-          </button>
-        </form>
+        {!audience ? (
+          <LoginChooser onChoose={setAudience} />
+        ) : (
+          <>
+            <p>
+              Enter your email and we&apos;ll send you a sign-in link — no password needed.{" "}
+              <button
+                type="button"
+                onClick={() => setAudience(null)}
+                style={{ background: "none", border: "none", padding: 0, color: "var(--accent-light)", cursor: "pointer", textDecoration: "underline" }}
+              >
+                Back
+              </button>
+            </p>
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 360 }}>
+              <input
+                type="email"
+                required
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+              />
+              {status.error && (
+                <div className="status-banner status-error" role="alert">⚠️ {status.error}</div>
+              )}
+              <button type="submit" className="marketing-cta-button" disabled={status.loading}>
+                {status.loading ? "Sending…" : "Send me a sign-in link"}
+              </button>
+            </form>
+          </>
+        )}
       </main>
       <SiteFooter />
     </>
