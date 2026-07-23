@@ -5,7 +5,7 @@
   "description": "Free Letter of Intent generator for business + real estate acquisitions.",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate"
