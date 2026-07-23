@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { loadAccessibleDeal } from "../../../../lib/orgAccess";
+import { isOrgActive } from "../../../../lib/orgBilling";
 
 const VALID_STAGES = ["draft", "active", "pending", "closed"];
 
@@ -35,6 +36,11 @@ export async function PATCH(request, { params }) {
   }
   if (!deal._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this deal." }, { status: 403 });
+  }
+
+  const org = await prisma.organization.findUnique({ where: { id: deal.orgId } });
+  if (!isOrgActive(org)) {
+    return NextResponse.json({ error: "Your organization's trial has ended. Subscribe to continue.", code: "TRIAL_EXPIRED" }, { status: 402 });
   }
 
   const body = await request.json().catch(() => ({}));
