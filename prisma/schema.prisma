@@ -16,7 +16,43 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  deals         Deal[]
+  memberships   Membership[]
+  dealsCreated  Deal[]    @relation("DealCreator")
+}
+
+model Organization {
+  id                   String   @id @default(cuid())
+  name                 String
+  accountType          String   @default("individual") // "individual" | "real_estate_agency" | "company" | "corporation"
+  isPersonal           Boolean  @default(true)
+  planTier             String   @default("trial") // "trial" | "tier_1_10" | "tier_11_30" | "tier_31_50" | "enterprise" | "expired"
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  memberships Membership[]
+  deals       Deal[]
+}
+
+model Membership {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  role   String @default("member") // "admin" | "member"
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
+model ProcessedWebhookEvent {
+  id          String   @id // Stripe event.id — dedup key
+  processedAt DateTime @default(now())
 }
 
 model Account {
@@ -55,14 +91,17 @@ model VerificationToken {
 }
 
 model Deal {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String
-  documentType String   @default("purchase_loi")
-  formData     Json
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  orgId           String
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdBy       User     @relation("DealCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  name            String
+  documentType    String   @default("purchase_loi")
+  formData        Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  @@index([userId])
+  @@index([orgId])
+  @@index([createdByUserId])
 }

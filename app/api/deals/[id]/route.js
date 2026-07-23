@@ -1,19 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
-
-async function loadOwnedDeal(dealId, userId) {
-  const deal = await prisma.deal.findUnique({ where: { id: dealId } });
-  if (!deal || deal.userId !== userId) return null;
-  return deal;
-}
+import { loadAccessibleDeal } from "../../../../lib/orgAccess";
+import { isOrgActive } from "../../../../lib/orgBilling";
 
 export async function GET(request, { params }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const deal = await loadOwnedDeal(params.id, session.user.id);
+  const deal = await loadAccessibleDeal(params.id, session.user.id);
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
@@ -25,10 +21,16 @@ export async function PATCH(request, { params }) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const deal = await loadOwnedDeal(params.id, session.user.id);
+  const deal = await loadAccessibleDeal(params.id, session.user.id);
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
+
+  const org = await prisma.organization.findUnique({ where: { id: deal.orgId } });
+  if (!isOrgActive(org)) {
+    return NextResponse.json({ error: "Your organization's trial has ended. Subscribe to continue.", code: "TRIAL_EXPIRED" }, { status: 402 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const data = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
@@ -42,7 +44,7 @@ export async function DELETE(request, { params }) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const deal = await loadOwnedDeal(params.id, session.user.id);
+  const deal = await loadAccessibleDeal(params.id, session.user.id);
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
