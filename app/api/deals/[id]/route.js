@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
-
-async function loadOwnedDeal(dealId, userId) {
-  const deal = await prisma.deal.findUnique({ where: { id: dealId } });
-  if (!deal || deal.userId !== userId) return null;
-  return deal;
-}
+import { loadAccessibleDeal } from "../../../../lib/orgAccess";
 
 export async function GET(request, { params }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const deal = await loadOwnedDeal(params.id, session.user.id);
+  const deal = await loadAccessibleDeal(params.id, session.user.id);
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
@@ -25,7 +20,7 @@ export async function PATCH(request, { params }) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const deal = await loadOwnedDeal(params.id, session.user.id);
+  const deal = await loadAccessibleDeal(params.id, session.user.id);
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
@@ -42,7 +37,7 @@ export async function DELETE(request, { params }) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const deal = await loadOwnedDeal(params.id, session.user.id);
+  const deal = await loadAccessibleDeal(params.id, session.user.id);
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }

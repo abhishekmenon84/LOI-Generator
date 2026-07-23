@@ -4,6 +4,7 @@ import { prisma } from "../../../lib/prisma";
 import { DEFAULT_FORM_DATA } from "../../../lib/loiEngine";
 import { DEFAULT_LEASE_DATA } from "../../../lib/leaseEngine";
 import { DEFAULT_RESIDENTIAL_LEASE_DATA } from "../../../lib/residentialLeaseEngine";
+import { listAccessibleDeals, getPersonalOrgId } from "../../../lib/orgAccess";
 
 const DOCUMENT_TYPE_DEFAULTS = {
   purchase_loi: DEFAULT_FORM_DATA,
@@ -16,12 +17,15 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
-  const deals = await prisma.deal.findMany({
-    where: { userId: session.user.id },
-    orderBy: { updatedAt: "desc" },
-    select: { id: true, name: true, documentType: true, updatedAt: true, createdAt: true },
-  });
-  return NextResponse.json({ deals });
+  const deals = await listAccessibleDeals(session.user.id);
+  const shaped = deals.map((d) => ({
+    id: d.id,
+    name: d.name,
+    documentType: d.documentType,
+    updatedAt: d.updatedAt,
+    createdAt: d.createdAt,
+  }));
+  return NextResponse.json({ deals: shaped });
 }
 
 export async function POST(request) {
@@ -38,9 +42,16 @@ export async function POST(request) {
   if (!Object.prototype.hasOwnProperty.call(DOCUMENT_TYPE_DEFAULTS, documentType)) {
     return NextResponse.json({ error: "Invalid document type." }, { status: 400 });
   }
+
+  const orgId = await getPersonalOrgId(session.user.id);
+  if (!orgId) {
+    return NextResponse.json({ error: "No organization found for this account." }, { status: 500 });
+  }
+
   const deal = await prisma.deal.create({
     data: {
-      userId: session.user.id,
+      orgId,
+      createdByUserId: session.user.id,
       name,
       documentType,
       formData: DOCUMENT_TYPE_DEFAULTS[documentType],
