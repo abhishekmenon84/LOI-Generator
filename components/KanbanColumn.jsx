@@ -46,34 +46,29 @@ export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop,
 }
 
 function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown }) {
-  return (
-    <div style={{ position: "relative" }}>
-      <KanbanCard deal={deal} onDragStart={onDragStart} />
-      {deal.writeAccess && (
-        <select
-          value={deal.stage}
-          onChange={(e) => onStageChangeDropdown(deal.id, e.target.value)}
-          onClick={(e) => e.preventDefault()}
-          aria-label={`Change stage for ${deal.name}`}
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            fontSize: "0.7rem",
-            padding: "2px 4px",
-            borderRadius: 6,
-            border: "1px solid var(--border)",
-            background: "var(--bg-base)",
-            color: "var(--text-secondary)",
-            cursor: "pointer",
-          }}
-        >
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
-          <option value="closed">Closed</option>
-        </select>
-      )}
-    </div>
-  );
+  const stageControl = deal.writeAccess ? (
+    <select
+      value={deal.stage}
+      onChange={(e) => onStageChangeDropdown(deal.id, e.target.value)}
+      onClick={(e) => e.preventDefault()}
+      aria-label={`Change stage for ${deal.name}`}
+      style={{
+        fontSize: "0.68rem",
+        padding: "3px 6px",
+        borderRadius: 6,
+        border: "1px solid var(--border)",
+        background: "var(--bg-base)",
+        color: "var(--text-secondary)",
+        cursor: "pointer",
+        flexShrink: 0,
+      }}
+    >
+      <option value="draft">Draft</option>
+      <option value="active">Active</option>
+      <option value="pending">Pending</option>
+      <option value="closed">Closed</option>
+    </select>
+  ) : null;
+
+  return <KanbanCard deal={deal} onDragStart={onDragStart} stageControl={stageControl} />;
 }
