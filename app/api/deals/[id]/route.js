@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { loadAccessibleDeal } from "../../../../lib/orgAccess";
+import { isOrgActive } from "../../../../lib/orgBilling";
 
 export async function GET(request, { params }) {
   const session = await auth();
@@ -24,6 +25,12 @@ export async function PATCH(request, { params }) {
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
+
+  const org = await prisma.organization.findUnique({ where: { id: deal.orgId } });
+  if (!isOrgActive(org)) {
+    return NextResponse.json({ error: "Your organization's trial has ended. Subscribe to continue.", code: "TRIAL_EXPIRED" }, { status: 402 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const data = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();

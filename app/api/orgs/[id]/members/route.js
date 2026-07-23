@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { getUserMembership } from "../../../../../lib/orgAccess";
-import { maybeAutoUpgradeTier } from "../../../../../lib/orgBilling";
+import { isOrgActive, maybeAutoUpgradeTier } from "../../../../../lib/orgBilling";
 import { Resend } from "resend";
 
 export async function POST(request, { params }) {
@@ -18,6 +18,10 @@ export async function POST(request, { params }) {
   const org = await prisma.organization.findUnique({ where: { id: params.id } });
   if (!org || org.isPersonal) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
+  if (!isOrgActive(org)) {
+    return NextResponse.json({ error: "Your organization's trial has ended. Subscribe to continue.", code: "TRIAL_EXPIRED" }, { status: 402 });
   }
 
   const body = await request.json().catch(() => ({}));
