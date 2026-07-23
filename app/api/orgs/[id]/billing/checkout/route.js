@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { getUserMembership } from "../../../../../../lib/orgAccess";
-import { createOrgSubscriptionCheckout, getTierForSeatCount, SEAT_TIERS } from "../../../../../../lib/orgBilling";
+import { createOrgSubscriptionCheckout, SEAT_TIERS } from "../../../../../../lib/orgBilling";
 
 export async function POST(request, { params }) {
   const session = await auth();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../../lib/prisma";
-import { getStripeClient, getTierForSeatCount } from "../../../../../../lib/orgBilling";
+import { getStripeClient } from "../../../../../../lib/orgBilling";
 
 export async function POST(request) {
   const signature = request.headers.get("stripe-signature");
@@ -13,6 +13,21 @@ export async function POST(request) {
   } catch (err) {
     console.error("orgs/billing/webhook signature verification failed:", err.message);
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+  }
+
+  // Stripe delivers events at-least-once, so the same event.id can arrive
+  // more than once (retries, redeliveries). Record it before processing and
+  // bail out on a duplicate — otherwise a stale redelivery of an OLD
+  // checkout.session.completed could overwrite a planTier that has since
+  // been auto-upgraded, silently desyncing the DB from the real Stripe
+  // subscription.
+  try {
+    await prisma.processedWebhookEvent.create({ data: { id: event.id } });
+  } catch (err) {
+    if (err.code === "P2002") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    throw err;
   }
 
   if (event.type === "checkout.session.completed") {

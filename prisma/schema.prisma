@@ -49,6 +49,11 @@ model Membership {
   @@index([orgId])
 }
 
+model ProcessedWebhookEvent {
+  id          String   @id // Stripe event.id — dedup key
+  processedAt DateTime @default(now())
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String

@@ -5,6 +5,15 @@ import { getUserMembership } from "../../../../../lib/orgAccess";
 import { isOrgActive, maybeAutoUpgradeTier } from "../../../../../lib/orgBilling";
 import { Resend } from "resend";
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export async function POST(request, { params }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -49,7 +58,7 @@ export async function POST(request, { params }) {
     from: "LOI Builder <onboarding@resend.dev>",
     to: email,
     subject: `You've been added to ${org.name} on LOI Builder`,
-    html: `<p>You've been added as a member of <strong>${org.name}</strong> on LOI Builder.</p><p><a href="${appUrl}/login">Sign in</a> with this email address (${email}) to get started.</p>`,
+    html: `<p>You've been added as a member of <strong>${escapeHtml(org.name)}</strong> on LOI Builder.</p><p><a href="${appUrl}/login">Sign in</a> with this email address (${escapeHtml(email)}) to get started.</p>`,
   });
 
   return NextResponse.json({ ok: true }, { status: 201 });
