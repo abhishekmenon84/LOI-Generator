@@ -1,5 +1,6 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { SampleWatermark } from "./watermark";
 
 // Pure JS PDF rendering (no headless browser / Chromium binary needed),
 // which makes this safe to run in Vercel's serverless functions.
@@ -41,10 +42,11 @@ function RichText({ html, style }) {
   return <Text style={style}>{parts}</Text>;
 }
 
-function LOIPdfDocument({ model }) {
+function LOIPdfDocument({ model, watermark }) {
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
+        {watermark && <SampleWatermark />}
         <Text style={styles.header}>LETTER OF INTENT TO PURCHASE</Text>
 
         <Text style={styles.para}>
@@ -163,14 +165,15 @@ function LOIPdfDocument({ model }) {
   );
 }
 
-export async function buildLOIPdf(model) {
-  return renderToBuffer(<LOIPdfDocument model={model} />);
+export async function buildLOIPdf(model, options = {}) {
+  return renderToBuffer(<LOIPdfDocument model={model} watermark={!!options.watermark} />);
 }
 
-function LeasePdfDocument({ model }) {
+function LeasePdfDocument({ model, watermark }) {
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
+        {watermark && <SampleWatermark />}
         <Text style={styles.header}>LETTER OF INTENT TO LEASE</Text>
 
         <Text style={styles.para}>
@@ -277,14 +280,15 @@ function LeasePdfDocument({ model }) {
   );
 }
 
-export async function buildLeasePdf(model) {
-  return renderToBuffer(<LeasePdfDocument model={model} />);
+export async function buildLeasePdf(model, options = {}) {
+  return renderToBuffer(<LeasePdfDocument model={model} watermark={!!options.watermark} />);
 }
 
-function ResidentialLeasePdfDocument({ model }) {
+function ResidentialLeasePdfDocument({ model, watermark }) {
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
+        {watermark && <SampleWatermark />}
         <Text style={styles.header}>RESIDENTIAL LEASE</Text>
         <Text style={{ textAlign: "center", marginBottom: 16, fontStyle: "italic" }}>
           (Standard Form of Lease — New Brunswick, Form 6)
@@ -371,6 +375,6 @@ function ResidentialLeasePdfDocument({ model }) {
   );
 }
 
-export async function buildResidentialLeasePdf(model) {
-  return renderToBuffer(<ResidentialLeasePdfDocument model={model} />);
+export async function buildResidentialLeasePdf(model, options = {}) {
+  return renderToBuffer(<ResidentialLeasePdfDocument model={model} watermark={!!options.watermark} />);
 }

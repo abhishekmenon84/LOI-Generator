@@ -104,7 +104,7 @@ function LeasePageInner() {
       const res = await fetch(`/api/export/lease/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formData: data }),
+        body: JSON.stringify(format === "pdf" ? { dealId } : { formData: data }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
