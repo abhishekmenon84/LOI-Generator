@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/prisma";
 import { DEFAULT_FORM_DATA } from "../../../lib/loiEngine";
 import { DEFAULT_LEASE_DATA } from "../../../lib/leaseEngine";
 import { DEFAULT_RESIDENTIAL_LEASE_DATA } from "../../../lib/residentialLeaseEngine";
-import { listAccessibleDeals, getPersonalOrgId, listUserOrgs } from "../../../lib/orgAccess";
+import { listAccessibleDeals, getPersonalOrgId, listUserOrgs, loadAccessibleDeal } from "../../../lib/orgAccess";
 
 const DOCUMENT_TYPE_DEFAULTS = {
   purchase_loi: DEFAULT_FORM_DATA,
@@ -57,13 +57,34 @@ export async function POST(request) {
     }
   }
 
+  let parentFormData = null;
+  let parentDocumentType = null;
+  if (body.parentDealId) {
+    const parent = await loadAccessibleDeal(body.parentDealId, session.user.id);
+    if (!parent) {
+      return NextResponse.json({ error: "Parent deal not found." }, { status: 404 });
+    }
+    if (!parent._writeAccess) {
+      return NextResponse.json({ error: "You only have read access to the parent deal." }, { status: 403 });
+    }
+    if (parent.orgId !== orgId) {
+      return NextResponse.json({ error: "Child deal must be created in the same organization as its parent." }, { status: 403 });
+    }
+    if (parent.parentDealId) {
+      return NextResponse.json({ error: "A child deal cannot itself become a parent." }, { status: 409 });
+    }
+    parentFormData = parent.formData;
+    parentDocumentType = parent.documentType;
+  }
+
   const deal = await prisma.deal.create({
     data: {
       orgId,
       createdByUserId: session.user.id,
       name,
-      documentType,
-      formData: DOCUMENT_TYPE_DEFAULTS[documentType],
+      documentType: parentDocumentType || documentType,
+      formData: parentFormData || DOCUMENT_TYPE_DEFAULTS[documentType],
+      parentDealId: body.parentDealId || null,
     },
   });
   return NextResponse.json({ id: deal.id, documentType: deal.documentType }, { status: 201 });
