@@ -7,6 +7,7 @@ import LeaseForm from "../../../components/LeaseForm";
 import LeasePreview from "../../../components/LeasePreview";
 import DealShareModal from "../../../components/DealShareModal";
 import SendForSignatureModal from "../../../components/SendForSignatureModal";
+import DocumentAuditPanel from "../../../components/DocumentAuditPanel";
 import { DEFAULT_LEASE_DATA, buildLeaseModel } from "../../../lib/leaseEngine";
 
 function todayLabel() {
@@ -34,6 +35,7 @@ function LeasePageInner() {
   const [readOnly, setReadOnly] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [sendForSignatureOpen, setSendForSignatureOpen] = useState(false);
+  const [auditPanelOpen, setAuditPanelOpen] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -197,6 +199,17 @@ function LeasePageInner() {
         onClose={() => setSendForSignatureOpen(false)}
         onSent={() => setExportState((s) => ({ ...s, success: "Sent for signature." }))}
       />
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setAuditPanelOpen(true)}
+          style={{ position: "fixed", bottom: 24, right: 220, zIndex: 100 }}
+          className="marketing-cta-button"
+        >
+          Audit Trail
+        </button>
+      )}
+      <DocumentAuditPanel dealId={dealId} isOpen={auditPanelOpen} onClose={() => setAuditPanelOpen(false)} />
     </>
   );
 }

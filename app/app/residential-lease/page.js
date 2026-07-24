@@ -7,6 +7,7 @@ import ResidentialLeaseForm from "../../../components/ResidentialLeaseForm";
 import ResidentialLeasePreview from "../../../components/ResidentialLeasePreview";
 import DealShareModal from "../../../components/DealShareModal";
 import SendForSignatureModal from "../../../components/SendForSignatureModal";
+import DocumentAuditPanel from "../../../components/DocumentAuditPanel";
 import { DEFAULT_RESIDENTIAL_LEASE_DATA, buildResidentialLeaseModel } from "../../../lib/residentialLeaseEngine";
 
 function todayLabel() {
@@ -34,6 +35,7 @@ function ResidentialLeasePageInner() {
   const [readOnly, setReadOnly] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [sendForSignatureOpen, setSendForSignatureOpen] = useState(false);
+  const [auditPanelOpen, setAuditPanelOpen] = useState(false);
   const [exportState, setExportState] = useState({
     loading: false,
     format: null,
@@ -198,6 +200,17 @@ function ResidentialLeasePageInner() {
         onClose={() => setSendForSignatureOpen(false)}
         onSent={() => setExportState((s) => ({ ...s, success: "Sent for signature." }))}
       />
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setAuditPanelOpen(true)}
+          style={{ position: "fixed", bottom: 24, right: 220, zIndex: 100 }}
+          className="marketing-cta-button"
+        >
+          Audit Trail
+        </button>
+      )}
+      <DocumentAuditPanel dealId={dealId} isOpen={auditPanelOpen} onClose={() => setAuditPanelOpen(false)} />
     </>
   );
 }
