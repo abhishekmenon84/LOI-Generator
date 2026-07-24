@@ -69,6 +69,9 @@ export async function DELETE(request, { params }) {
   if (!deal._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this deal." }, { status: 403 });
   }
+  if (deal.locked) {
+    return NextResponse.json({ error: "This document has been fully signed and can no longer be deleted.", code: "DEAL_LOCKED" }, { status: 409 });
+  }
   await prisma.deal.delete({ where: { id: deal.id } });
   return NextResponse.json({ ok: true });
 }
