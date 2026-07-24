@@ -56,7 +56,7 @@ export default async function OrgSettingsPage() {
             <OrgMembersPanel
               org={{
                 id: org.id,
-                members: org.memberships.map((m) => ({ userId: m.userId, email: m.user.email, name: m.user.name, role: m.role })),
+                members: org.memberships.map((m) => ({ userId: m.userId, email: m.user.email, name: m.user.name, role: m.role, active: m.active })),
               }}
               currentUserId={session.user.id}
             />

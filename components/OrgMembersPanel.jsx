@@ -39,6 +39,20 @@ export default function OrgMembersPanel({ org, currentUserId }) {
     }
   }
 
+  async function handleToggleActive(userId, currentlyActive) {
+    const res = await fetch(`/api/orgs/${org.id}/members/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !currentlyActive }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, active: !currentlyActive } : m)));
+    } else {
+      setError(body.error || "Could not update member.");
+    }
+  }
+
   return (
     <div>
       <h2>Members ({members.length})</h2>
@@ -46,12 +60,21 @@ export default function OrgMembersPanel({ org, currentUserId }) {
         {members.map((m) => (
           <li key={m.userId || m.email} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
             <span>
-              {m.name || m.email} <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>({m.role})</span>
+              {m.name || m.email} <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>({m.role}{m.active === false ? ", deactivated" : ""})</span>
             </span>
             {m.userId && m.userId !== currentUserId && (
-              <button type="button" onClick={() => handleRemove(m.userId)} className="deal-list-item-delete">
-                Remove
-              </button>
+              <span style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => handleToggleActive(m.userId, m.active)}
+                  style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontSize: "0.8rem" }}
+                >
+                  {m.active === false ? "Reactivate" : "Deactivate"}
+                </button>
+                <button type="button" onClick={() => handleRemove(m.userId)} className="deal-list-item-delete">
+                  Remove
+                </button>
+              </span>
             )}
           </li>
         ))}
