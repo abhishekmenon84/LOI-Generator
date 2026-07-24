@@ -135,6 +135,7 @@ model SignatureRequest {
   status      String   @default("pending") // "pending" | "fully_executed" | "voided"
   verifyCode  String   @unique
   createdByUserId String
+  finalDocumentHash String?
   createdAt   DateTime @default(now())
   voidedAt    DateTime?
 
