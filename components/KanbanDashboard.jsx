@@ -139,6 +139,13 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
   async function handleArchive(dealId) {
     const deal = deals.find((d) => d.id === dealId);
     if (!deal) return;
+    const children = deals.filter((d) => d.parentDealId === dealId);
+    let alsoArchiveChildren = false;
+    if (children.length > 0) {
+      alsoArchiveChildren = window.confirm(
+        `"${deal.name}" has ${children.length} linked offer${children.length === 1 ? "" : "s"}. Also archive ${children.length === 1 ? "it" : "them"}? (Cancel archives only the parent.)`
+      );
+    }
     setDeals((cur) => cur.filter((d) => d.id !== dealId));
     setArchivedDeals((cur) => [...cur, { ...deal }]);
     try {
@@ -148,6 +155,20 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
       setDeals((cur) => [...cur, deal]);
       setArchivedDeals((cur) => cur.filter((d) => d.id !== dealId));
       setError(err.message);
+    }
+    if (alsoArchiveChildren) {
+      for (const child of children) {
+        setDeals((cur) => cur.filter((d) => d.id !== child.id));
+        setArchivedDeals((cur) => [...cur, { ...child }]);
+        try {
+          const res = await fetch(`/api/deals/${child.id}/archive`, { method: "POST" });
+          if (!res.ok) throw new Error("Could not archive deal.");
+        } catch (err) {
+          setDeals((cur) => [...cur, child]);
+          setArchivedDeals((cur) => cur.filter((d) => d.id !== child.id));
+          setError(err.message);
+        }
+      }
     }
   }
 
@@ -173,6 +194,13 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
   async function handleTrash(dealId) {
     const deal = deals.find((d) => d.id === dealId);
     if (!deal) return;
+    const children = deals.filter((d) => d.parentDealId === dealId);
+    let alsoTrashChildren = false;
+    if (children.length > 0) {
+      alsoTrashChildren = window.confirm(
+        `"${deal.name}" has ${children.length} linked offer${children.length === 1 ? "" : "s"}. Also move ${children.length === 1 ? "it" : "them"} to trash? (Cancel trashes only the parent.)`
+      );
+    }
     setDeals((cur) => cur.filter((d) => d.id !== dealId));
     setTrashedDeals((cur) => [...cur, { ...deal }]);
     try {
@@ -182,6 +210,20 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
       setDeals((cur) => [...cur, deal]);
       setTrashedDeals((cur) => cur.filter((d) => d.id !== dealId));
       setError(err.message);
+    }
+    if (alsoTrashChildren) {
+      for (const child of children) {
+        setDeals((cur) => cur.filter((d) => d.id !== child.id));
+        setTrashedDeals((cur) => [...cur, { ...child }]);
+        try {
+          const res = await fetch(`/api/deals/${child.id}`, { method: "DELETE" });
+          if (!res.ok) throw new Error("Could not move deal to trash.");
+        } catch (err) {
+          setDeals((cur) => [...cur, child]);
+          setTrashedDeals((cur) => cur.filter((d) => d.id !== child.id));
+          setError(err.message);
+        }
+      }
     }
   }
 
