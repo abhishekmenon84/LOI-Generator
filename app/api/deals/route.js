@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/prisma";
 import { DEFAULT_FORM_DATA } from "../../../lib/loiEngine";
 import { DEFAULT_LEASE_DATA } from "../../../lib/leaseEngine";
 import { DEFAULT_RESIDENTIAL_LEASE_DATA } from "../../../lib/residentialLeaseEngine";
-import { listAccessibleDeals, getPersonalOrgId } from "../../../lib/orgAccess";
+import { listAccessibleDeals, getPersonalOrgId, listUserOrgs } from "../../../lib/orgAccess";
 
 const DOCUMENT_TYPE_DEFAULTS = {
   purchase_loi: DEFAULT_FORM_DATA,
@@ -43,9 +43,18 @@ export async function POST(request) {
     return NextResponse.json({ error: "Invalid document type." }, { status: 400 });
   }
 
-  const orgId = await getPersonalOrgId(session.user.id);
-  if (!orgId) {
-    return NextResponse.json({ error: "No organization found for this account." }, { status: 500 });
+  let orgId = body.orgId;
+  if (orgId) {
+    const userOrgs = await listUserOrgs(session.user.id);
+    const match = userOrgs.find((o) => o.orgId === orgId);
+    if (!match) {
+      return NextResponse.json({ error: "You are not a member of that organization." }, { status: 403 });
+    }
+  } else {
+    orgId = await getPersonalOrgId(session.user.id);
+    if (!orgId) {
+      return NextResponse.json({ error: "No organization found for this account." }, { status: 500 });
+    }
   }
 
   const deal = await prisma.deal.create({
