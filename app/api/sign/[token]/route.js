@@ -49,6 +49,7 @@ export async function GET(request, { params }) {
   return NextResponse.json({
     dealName: slot.request.deal.name,
     documentType: slot.request.deal.documentType,
+    formData: slot.request.deal.formData,
     signerName: slot.name,
     signerRole: slot.roleOtherLabel || slot.role,
   });
