@@ -61,7 +61,7 @@ function GDocIcon() {
 }
 
 /* ── Main form component ─────────────────────────────────── */
-export default function LOIForm({ data, onChange, onExport, onClearDraft, exportState, readOnly }) {
+export default function LOIForm({ data, onChange, onExport, onClearDraft, exportState, readOnly, actionBar }) {
   function set(patch) {
     onChange({ ...data, ...patch });
   }
@@ -155,6 +155,8 @@ export default function LOIForm({ data, onChange, onExport, onClearDraft, export
           </button>
         </div>
       </div>
+
+      {actionBar}
 
       {exportState.error && (
         <div className="status-banner status-error" style={{ marginBottom: 15 }} role="alert">

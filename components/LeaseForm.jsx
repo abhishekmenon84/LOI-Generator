@@ -52,7 +52,7 @@ function GDocIcon() {
   );
 }
 
-export default function LeaseForm({ data, onChange, onExport, onClearDraft, exportState, readOnly }) {
+export default function LeaseForm({ data, onChange, onExport, onClearDraft, exportState, readOnly, actionBar }) {
   function set(patch) {
     onChange({ ...data, ...patch });
   }
@@ -127,6 +127,8 @@ export default function LeaseForm({ data, onChange, onExport, onClearDraft, expo
           </button>
         </div>
       </div>
+
+      {actionBar}
 
       {exportState.error && (
         <div className="status-banner status-error" style={{ marginBottom: 15 }} role="alert">

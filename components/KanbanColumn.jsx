@@ -1,44 +1,56 @@
 "use client";
 
+import { useState } from "react";
 import KanbanCard from "./KanbanCard";
 
-const STAGE_ACCENTS = {
+const STAGE_DOTS = {
   draft: "var(--text-muted)",
   active: "var(--accent)",
   pending: "#f59e0b",
   closed: "#10b981",
+  archive: "var(--text-muted)",
+  trash: "#ef4444",
 };
 
-export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop, onStageChangeDropdown }) {
+export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop, onStageChangeDropdown, side = false }) {
+  const [dragOver, setDragOver] = useState(false);
+
   return (
     <div
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => onDrop(e, stage)}
-      style={{
-        flex: 1,
-        minWidth: 260,
-        background: "var(--bg-panel)",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
       }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        setDragOver(false);
+        onDrop(e, stage);
+      }}
+      className={`kanban-column${side ? " kanban-column-side" : ""}${dragOver ? " kanban-column-dragover" : ""}`}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: STAGE_ACCENTS[stage] }} />
-        <h2 style={{ fontSize: "0.95rem", fontWeight: 700, margin: 0 }}>{label}</h2>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "auto" }}>{deals.length}</span>
+      <div className="kanban-column-header">
+        <div className="kanban-column-title">
+          <span className="kanban-column-dot" style={{ background: STAGE_DOTS[stage] }} />
+          <span className="kanban-column-label">{label}</span>
+        </div>
+        <span className="kanban-column-count">{deals.length}</span>
       </div>
-      <div style={{ flex: 1, minHeight: 40 }}>
+      <div className="kanban-column-body">
         {deals.length === 0 ? (
-          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>No deals here yet.</p>
+          <p className="kanban-column-empty">{side ? "Empty" : "No deals here yet."}</p>
         ) : (
-          deals.map((deal) => (
-            <div key={deal.id}>
-              <KanbanCardWithDropdown deal={deal} onDragStart={onDragStart} onStageChangeDropdown={onStageChangeDropdown} />
-            </div>
-          ))
+          deals.map((deal) =>
+            side ? (
+              <KanbanCard key={deal.id} deal={deal} onDragStart={onDragStart} compact />
+            ) : (
+              <KanbanCardWithDropdown
+                key={deal.id}
+                deal={deal}
+                onDragStart={onDragStart}
+                onStageChangeDropdown={onStageChangeDropdown}
+              />
+            )
+          )
         )}
       </div>
     </div>
@@ -52,16 +64,7 @@ function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown }) {
       onChange={(e) => onStageChangeDropdown(deal.id, e.target.value)}
       onClick={(e) => e.preventDefault()}
       aria-label={`Change stage for ${deal.name}`}
-      style={{
-        fontSize: "0.68rem",
-        padding: "3px 6px",
-        borderRadius: 6,
-        border: "1px solid var(--border)",
-        background: "var(--bg-base)",
-        color: "var(--text-secondary)",
-        cursor: "pointer",
-        flexShrink: 0,
-      }}
+      className="kanban-card-stage-select"
     >
       <option value="draft">Draft</option>
       <option value="active">Active</option>

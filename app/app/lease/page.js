@@ -8,6 +8,7 @@ import LeasePreview from "../../../components/LeasePreview";
 import DealShareModal from "../../../components/DealShareModal";
 import SendForSignatureModal from "../../../components/SendForSignatureModal";
 import DocumentAuditPanel from "../../../components/DocumentAuditPanel";
+import DocumentActionBar from "../../../components/DocumentActionBar";
 import { DEFAULT_LEASE_DATA, buildLeaseModel } from "../../../lib/leaseEngine";
 
 function todayLabel() {
@@ -168,30 +169,18 @@ function LeasePageInner() {
           onClearDraft={handleResetDeal}
           exportState={exportState}
           readOnly={readOnly}
+          actionBar={
+            <DocumentActionBar
+              readOnly={readOnly}
+              onShare={() => setShareModalOpen(true)}
+              onSendForSignature={() => setSendForSignatureOpen(true)}
+              onAudit={() => setAuditPanelOpen(true)}
+            />
+          }
         />
         <LeasePreview model={model} />
       </div>
-      {!readOnly && (
-        <button
-          type="button"
-          onClick={() => setShareModalOpen(true)}
-          style={{ position: "fixed", bottom: 24, right: 24, zIndex: 100 }}
-          className="marketing-cta-button"
-        >
-          Share
-        </button>
-      )}
       <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
-      {!readOnly && (
-        <button
-          type="button"
-          onClick={() => setSendForSignatureOpen(true)}
-          style={{ position: "fixed", bottom: 24, right: 100, zIndex: 100 }}
-          className="marketing-cta-button"
-        >
-          Send for Signature
-        </button>
-      )}
       <SendForSignatureModal
         dealId={dealId}
         documentType="commercial_lease_loi"
@@ -199,16 +188,6 @@ function LeasePageInner() {
         onClose={() => setSendForSignatureOpen(false)}
         onSent={() => setExportState((s) => ({ ...s, success: "Sent for signature." }))}
       />
-      {!readOnly && (
-        <button
-          type="button"
-          onClick={() => setAuditPanelOpen(true)}
-          style={{ position: "fixed", bottom: 24, right: 220, zIndex: 100 }}
-          className="marketing-cta-button"
-        >
-          Audit Trail
-        </button>
-      )}
       <DocumentAuditPanel dealId={dealId} isOpen={auditPanelOpen} onClose={() => setAuditPanelOpen(false)} />
     </>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import SignOutButton from "./SignOutButton";
 
 export default function SiteHeader({ isLoggedIn = false }) {
   const [theme, setTheme] = useState("dark");
@@ -51,9 +52,13 @@ export default function SiteHeader({ isLoggedIn = false }) {
           <option value="dark">Dark Mode</option>
           <option value="dusk">Dusk Mode</option>
         </select>
-        <Link className="site-header-cta" href={isLoggedIn ? "/dashboard" : "/login"}>
-          {isLoggedIn ? "Dashboard" : "Sign In"}
-        </Link>
+        {isLoggedIn ? (
+          <SignOutButton className="site-header-cta site-header-signout" />
+        ) : (
+          <Link className="site-header-cta" href="/login">
+            Sign In
+          </Link>
+        )}
       </div>
     </nav>
   );
