@@ -102,6 +102,7 @@ model Deal {
   documentType    String   @default("purchase_loi")
   formData        Json
   stage           String   @default("draft") // "draft" | "active" | "pending" | "closed"
+  locked          Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
