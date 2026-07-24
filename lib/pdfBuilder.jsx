@@ -5,6 +5,32 @@ import { SampleWatermark } from "./watermark";
 // Pure JS PDF rendering (no headless browser / Chromium binary needed),
 // which makes this safe to run in Vercel's serverless functions.
 
+// Fixed constant creation date so PDF output is byte-deterministic given the
+// same formData. Without this, @react-pdf/pdfkit stamps CreationDate with
+// `new Date()` on every render, which breaks the tamper-detection hash
+// comparison in lib/signatureFinalize.js / lib/signatureEngine.js (a
+// byte-identical re-render at a later time would otherwise hash differently).
+const PDF_CREATION_DATE = new Date(0);
+
+// The `creationDate` prop above fixes the /Info dictionary's CreationDate
+// entry (handled by @react-pdf/render's `addMetadata`), but @react-pdf/pdfkit
+// computes the PDF trailer's file identifier (`/ID`) inside the PDFDocument
+// *constructor*, before @react-pdf/render gets a chance to apply our fixed
+// creationDate prop. That file ID is an MD5 hash seeded by the real-time
+// `new Date()` pdfkit defaults to at construction time (see
+// PDFSecurity.generateFileID in @react-pdf/pdfkit), so it still varies from
+// render to render even though every other byte is now deterministic.
+// Normalize it here, at the render source, so the returned buffer is fully
+// byte-identical across renders of the same content.
+const PDF_ID_PATTERN = /\/ID\s*\[<[0-9a-fA-F]+>\s*<[0-9a-fA-F]+>\]/;
+const FIXED_PDF_ID = "00000000000000000000000000000000";
+
+function makeDeterministic(buffer) {
+  const text = buffer.toString("latin1");
+  const fixed = text.replace(PDF_ID_PATTERN, `/ID [<${FIXED_PDF_ID}> <${FIXED_PDF_ID}>]`);
+  return fixed === text ? buffer : Buffer.from(fixed, "latin1");
+}
+
 const styles = StyleSheet.create({
   page: { padding: 48, fontSize: 10.5, fontFamily: "Times-Roman", lineHeight: 1.5 },
   header: { textAlign: "center", fontFamily: "Times-Bold", fontSize: 14, marginBottom: 20 },
@@ -44,7 +70,7 @@ function RichText({ html, style }) {
 
 function LOIPdfDocument({ model, watermark }) {
   return (
-    <Document>
+    <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
         {watermark && <SampleWatermark />}
         <Text style={styles.header}>LETTER OF INTENT TO PURCHASE</Text>
@@ -166,12 +192,13 @@ function LOIPdfDocument({ model, watermark }) {
 }
 
 export async function buildLOIPdf(model, options = {}) {
-  return renderToBuffer(<LOIPdfDocument model={model} watermark={!!options.watermark} />);
+  const buffer = await renderToBuffer(<LOIPdfDocument model={model} watermark={!!options.watermark} />);
+  return makeDeterministic(buffer);
 }
 
 function LeasePdfDocument({ model, watermark }) {
   return (
-    <Document>
+    <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
         {watermark && <SampleWatermark />}
         <Text style={styles.header}>LETTER OF INTENT TO LEASE</Text>
@@ -281,12 +308,13 @@ function LeasePdfDocument({ model, watermark }) {
 }
 
 export async function buildLeasePdf(model, options = {}) {
-  return renderToBuffer(<LeasePdfDocument model={model} watermark={!!options.watermark} />);
+  const buffer = await renderToBuffer(<LeasePdfDocument model={model} watermark={!!options.watermark} />);
+  return makeDeterministic(buffer);
 }
 
 function ResidentialLeasePdfDocument({ model, watermark }) {
   return (
-    <Document>
+    <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
         {watermark && <SampleWatermark />}
         <Text style={styles.header}>RESIDENTIAL LEASE</Text>
@@ -376,5 +404,6 @@ function ResidentialLeasePdfDocument({ model, watermark }) {
 }
 
 export async function buildResidentialLeasePdf(model, options = {}) {
-  return renderToBuffer(<ResidentialLeasePdfDocument model={model} watermark={!!options.watermark} />);
+  const buffer = await renderToBuffer(<ResidentialLeasePdfDocument model={model} watermark={!!options.watermark} />);
+  return makeDeterministic(buffer);
 }
