@@ -72,6 +72,6 @@ export async function DELETE(request, { params }) {
   if (deal.locked) {
     return NextResponse.json({ error: "This document has been fully signed and can no longer be deleted.", code: "DEAL_LOCKED" }, { status: 409 });
   }
-  await prisma.deal.delete({ where: { id: deal.id } });
+  await prisma.deal.update({ where: { id: deal.id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ ok: true });
 }
