@@ -1560,3 +1560,146 @@ select option {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
+
+/* Threaded offers: nested child-deal rows inside a parent card */
+.kanban-thread-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.kanban-thread-toggle:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.kanban-thread-list {
+  margin-top: 10px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kanban-thread-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  position: relative;
+  transition: opacity 200ms var(--ease);
+}
+
+.kanban-thread-row-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kanban-thread-row-link:hover {
+  color: var(--text-primary);
+}
+
+.kanban-thread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kanban-thread-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.kanban-thread-menu-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.kanban-thread-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.kanban-thread-menu button {
+  text-align: left;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.kanban-thread-menu button:hover {
+  background: var(--bg-card-hover);
+}
+
+.kanban-thread-menu hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2px 0;
+}
+
+.kanban-thread-add {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.kanban-thread-add:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent-light);
+}

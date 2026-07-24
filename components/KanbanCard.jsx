@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 function ArchiveIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -40,18 +43,108 @@ function typeMeta(documentType) {
   return DOCUMENT_TYPES.find((t) => t.value === documentType) || DOCUMENT_TYPES[0];
 }
 
-export default function KanbanCard({ deal, onDragStart, compact = false, stageControl, onArchive, onTrash, onRestore, onPermanentDelete }) {
+const PRIORITY_COLORS = { green: "#10b981", yellow: "#f59e0b", grey: "#94a3b8" };
+
+function ThreadRow({ deal, allSiblingsHaveGreen, onUnlink, onSetPriority }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const meta = typeMeta(deal.documentType);
+  const faded = allSiblingsHaveGreen && deal.priority !== "green";
+  const fadeOpacity = deal.priority === "yellow" ? 0.75 : 0.5;
   return (
-    <a
-      href={`${meta.buildPath}?deal=${deal.id}`}
+    <div
+      className="kanban-thread-row"
+      style={{ opacity: faded ? fadeOpacity : 1 }}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen(true); }}
+    >
+      <a href={`${meta.buildPath}?deal=${deal.id}`} className="kanban-thread-row-link" onClick={(e) => e.stopPropagation()}>
+        <span className="kanban-thread-dot" style={{ background: deal.priority ? PRIORITY_COLORS[deal.priority] : "var(--border)" }} />
+        {deal.name}
+      </a>
+      <button type="button" className="kanban-thread-menu-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen((v) => !v); }} aria-label="Thread actions">
+        ⋮
+      </button>
+      {menuOpen && (
+        <div className="kanban-thread-menu" onClick={(e) => e.stopPropagation()}>
+          <button type="button" onClick={() => { onSetPriority(deal.id, "green"); setMenuOpen(false); }}>Green (highest)</button>
+          <button type="button" onClick={() => { onSetPriority(deal.id, "yellow"); setMenuOpen(false); }}>Yellow</button>
+          <button type="button" onClick={() => { onSetPriority(deal.id, "grey"); setMenuOpen(false); }}>Grey (lowest)</button>
+          <button type="button" onClick={() => { onSetPriority(deal.id, null); setMenuOpen(false); }}>Clear</button>
+          <hr />
+          <button type="button" onClick={() => { onUnlink(deal.id); setMenuOpen(false); }}>Remove from thread</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function KanbanCard({
+  deal,
+  onDragStart,
+  compact = false,
+  stageControl,
+  onArchive,
+  onTrash,
+  onRestore,
+  onPermanentDelete,
+  childThreads = [],
+  onUnlinkChild,
+  onSetChildPriority,
+  onAddOffer,
+  onLinkChild,
+}) {
+  const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const meta = typeMeta(deal.documentType);
+  const href = `${meta.buildPath}?deal=${deal.id}`;
+
+  function navigate(e) {
+    // Ignore clicks that originated on interactive children (buttons, the
+    // stage-change select, nested thread links/menus) — those already
+    // stopPropagation() or preventDefault() themselves as needed; this
+    // handler only fires for clicks on the card's own background.
+    if (e.defaultPrevented) return;
+    router.push(href);
+  }
+
+  return (
+    <div
       className={`kanban-card${compact ? " kanban-card-compact" : ""}`}
       draggable={deal.writeAccess}
       onDragStart={(e) => onDragStart(e, deal.id)}
-      style={{ borderLeftColor: meta.fg }}
+      onClick={navigate}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          router.push(href);
+        }
+      }}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const draggedId = e.dataTransfer.getData("text/plain");
+        if (!draggedId || draggedId === deal.id) return;
+        if (window.confirm(`Link as an offer under "${deal.name}"?`)) {
+          onLinkChild?.(draggedId, deal.id);
+        }
+      }}
+      style={{ borderLeftColor: meta.fg, cursor: "pointer" }}
       title={deal.name}
+      role="link"
+      tabIndex={0}
     >
-      <div className="kanban-card-name">{deal.name}</div>
+      <div className="kanban-card-name">
+        {deal.name}
+        {childThreads.length > 0 && (
+          <button
+            type="button"
+            className="kanban-thread-toggle"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded((v) => !v); }}
+          >
+            {expanded ? "▾" : "▸"} {childThreads.length} offer{childThreads.length === 1 ? "" : "s"}
+          </button>
+        )}
+      </div>
       {compact ? (
         <div className="kanban-card-footer">
           <span className="kanban-card-compact-type">{meta.badge}</span>
@@ -101,6 +194,26 @@ export default function KanbanCard({ deal, onDragStart, compact = false, stageCo
           </div>
         </div>
       )}
-    </a>
+      {expanded && childThreads.length > 0 && (
+        <div className="kanban-thread-list" onClick={(e) => e.preventDefault()}>
+          {childThreads.map((child) => (
+            <ThreadRow
+              key={child.id}
+              deal={child}
+              allSiblingsHaveGreen={childThreads.some((c) => c.priority === "green")}
+              onUnlink={onUnlinkChild}
+              onSetPriority={onSetChildPriority}
+            />
+          ))}
+          <button
+            type="button"
+            className="kanban-thread-add"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddOffer?.(deal); }}
+          >
+            + Add another offer
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

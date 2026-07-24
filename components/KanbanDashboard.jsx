@@ -30,6 +30,7 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
   const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [newDealName, setNewDealName] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
+  const [parentDealIdForCreate, setParentDealIdForCreate] = useState(null);
 
   async function updateStage(dealId, newStage) {
     const prev = deals;
@@ -70,7 +71,12 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
       const res = await fetch("/api/deals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, documentType: selectedType, ...(selectedOrgId ? { orgId: selectedOrgId } : {}) }),
+        body: JSON.stringify({
+          name,
+          documentType: selectedType,
+          ...(selectedOrgId ? { orgId: selectedOrgId } : {}),
+          ...(parentDealIdForCreate ? { parentDealId: parentDealIdForCreate } : {}),
+        }),
       });
       if (!res.ok) throw new Error("Could not create deal.");
       const { id } = await res.json();
@@ -79,6 +85,54 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
     } catch (err) {
       setError(err.message);
       setCreateBusy(false);
+    }
+  }
+
+  async function handleUnlinkChild(childId) {
+    const prevDeals = deals;
+    setDeals((cur) => cur.map((d) => (d.id === childId ? { ...d, parentDealId: null, priority: null } : d)));
+    try {
+      const res = await fetch(`/api/deals/${childId}/unlink`, { method: "POST" });
+      if (!res.ok) throw new Error("Could not unlink deal.");
+    } catch (err) {
+      setDeals(prevDeals);
+      setError(err.message);
+    }
+  }
+
+  async function handleSetChildPriority(childId, priority) {
+    const prevDeals = deals;
+    setDeals((cur) => cur.map((d) => (d.id === childId ? { ...d, priority } : d)));
+    try {
+      const res = await fetch(`/api/deals/${childId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority }),
+      });
+      if (!res.ok) throw new Error("Could not set priority.");
+    } catch (err) {
+      setDeals(prevDeals);
+      setError(err.message);
+    }
+  }
+
+  async function handleLinkChild(childId, parentId) {
+    if (childId === parentId) return;
+    const prevDeals = deals;
+    setDeals((cur) => cur.map((d) => (d.id === childId ? { ...d, parentDealId: parentId } : d)));
+    try {
+      const res = await fetch(`/api/deals/${parentId}/link-child`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ childDealId: childId }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Could not link deal.");
+      }
+    } catch (err) {
+      setDeals(prevDeals);
+      setError(err.message);
     }
   }
 
@@ -151,6 +205,17 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
     });
   }, [deals, search, typeFilter]);
 
+  const childrenByParent = useMemo(() => {
+    const map = new Map();
+    for (const d of filteredDeals) {
+      if (d.parentDealId) {
+        if (!map.has(d.parentDealId)) map.set(d.parentDealId, []);
+        map.get(d.parentDealId).push(d);
+      }
+    }
+    return map;
+  }, [filteredDeals]);
+
   return (
     <div>
       <div className="kanban-toolbar">
@@ -185,7 +250,7 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
 
       {creating && (
         <div style={{ marginBottom: 20, padding: 16, borderRadius: "var(--radius-md)", border: "1px solid var(--border)", background: "var(--bg-panel)" }}>
-          {!selectedType ? (
+          {!selectedType && !parentDealIdForCreate ? (
             <div>
               <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 10 }}>What kind of document?</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -201,7 +266,10 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
                 ))}
                 <button
                   type="button"
-                  onClick={() => setCreating(false)}
+                  onClick={() => {
+                    setCreating(false);
+                    setParentDealIdForCreate(null);
+                  }}
                   style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
                 >
                   Cancel
@@ -222,6 +290,7 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
                   onClick={() => {
                     setCreating(false);
                     setSelectedType(null);
+                    setParentDealIdForCreate(null);
                   }}
                   style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
                 >
@@ -250,6 +319,7 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
                   setSelectedType(null);
                   setSelectedOrgId(null);
                   setNewDealName("");
+                  setParentDealIdForCreate(null);
                 }}
                 style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "8px 14px", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
               >
@@ -272,12 +342,21 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
             key={s.key}
             stage={s.key}
             label={s.label}
-            deals={filteredDeals.filter((d) => d.stage === s.key)}
+            deals={filteredDeals.filter((d) => d.stage === s.key && !d.parentDealId)}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
             onStageChangeDropdown={updateStage}
             onArchive={handleArchive}
             onTrash={handleTrash}
+            childrenByParent={childrenByParent}
+            onUnlinkChild={handleUnlinkChild}
+            onSetChildPriority={handleSetChildPriority}
+            onAddOffer={(parent) => {
+              setSelectedType(parent.documentType);
+              setParentDealIdForCreate(parent.id);
+              setCreating(true);
+            }}
+            onLinkChild={handleLinkChild}
           />
         ))}
 

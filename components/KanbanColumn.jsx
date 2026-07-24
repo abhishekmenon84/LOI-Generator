@@ -12,7 +12,24 @@ const STAGE_DOTS = {
   trash: "#ef4444",
 };
 
-export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop, onStageChangeDropdown, onArchive, onTrash, onRestore, onPermanentDelete, side = false }) {
+export default function KanbanColumn({
+  stage,
+  label,
+  deals,
+  onDragStart,
+  onDrop,
+  onStageChangeDropdown,
+  onArchive,
+  onTrash,
+  onRestore,
+  onPermanentDelete,
+  side = false,
+  childrenByParent,
+  onUnlinkChild,
+  onSetChildPriority,
+  onAddOffer,
+  onLinkChild,
+}) {
   const [dragOver, setDragOver] = useState(false);
 
   return (
@@ -57,6 +74,11 @@ export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop,
                 onStageChangeDropdown={onStageChangeDropdown}
                 onArchive={onArchive}
                 onTrash={onTrash}
+                childThreads={childrenByParent?.get(deal.id) || []}
+                onUnlinkChild={onUnlinkChild}
+                onSetChildPriority={onSetChildPriority}
+                onAddOffer={onAddOffer}
+                onLinkChild={onLinkChild}
               />
             )
           )
@@ -66,7 +88,7 @@ export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop,
   );
 }
 
-function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown, onArchive, onTrash }) {
+function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown, onArchive, onTrash, childThreads, onUnlinkChild, onSetChildPriority, onAddOffer, onLinkChild }) {
   const stageControl = deal.writeAccess ? (
     <select
       value={deal.stage}
@@ -89,6 +111,11 @@ function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown, onAr
       stageControl={stageControl}
       onArchive={deal.writeAccess ? onArchive : undefined}
       onTrash={deal.writeAccess ? onTrash : undefined}
+      childThreads={childThreads}
+      onUnlinkChild={onUnlinkChild}
+      onSetChildPriority={onSetChildPriority}
+      onAddOffer={onAddOffer}
+      onLinkChild={onLinkChild}
     />
   );
 }
