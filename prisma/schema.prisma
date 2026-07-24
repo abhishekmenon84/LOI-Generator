@@ -102,10 +102,12 @@ model Deal {
   documentType    String   @default("purchase_loi")
   formData        Json
   stage           String   @default("draft") // "draft" | "active" | "pending" | "closed"
+  locked          Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  shares DealShare[]
+  shares            DealShare[]
+  signatureRequests SignatureRequest[]
 
   @@index([orgId])
   @@index([createdByUserId])
@@ -125,4 +127,54 @@ model DealShare {
   @@unique([dealId, grantedToUserId])
   @@index([dealId])
   @@index([grantedToUserId])
+}
+
+model SignatureRequest {
+  id          String   @id @default(cuid())
+  dealId      String
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  status      String   @default("pending") // "pending" | "fully_executed" | "voided"
+  verifyCode  String   @unique
+  createdByUserId String
+  finalDocumentHash String?
+  createdAt   DateTime @default(now())
+  voidedAt    DateTime?
+
+  signers SignerSlot[]
+
+  @@index([dealId])
+}
+
+model SignerSlot {
+  id             String   @id @default(cuid())
+  requestId      String
+  request        SignatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  kind           String   @default("signer") // "signer" | "notify_only"
+  role           String
+  roleOtherLabel String?
+  name           String
+  email          String
+  signingToken   String?  @unique
+  tokenUsedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  signatureEvent SignatureEvent?
+
+  @@index([requestId])
+}
+
+model SignatureEvent {
+  id                String   @id @default(cuid())
+  signerSlotId      String   @unique
+  signerSlot        SignerSlot @relation(fields: [signerSlotId], references: [id], onDelete: Cascade)
+  signatureImageUrl String
+  documentHash      String
+  userAgent         String
+  screenInfo        String
+  timezoneOffset    Int
+  ipAddress         String
+  geoCountry        String?
+  geoRegion         String?
+  geoCity           String?
+  signedAt          DateTime @default(now())
 }

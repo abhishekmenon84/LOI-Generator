@@ -21,6 +21,7 @@ export async function GET(request, { params }) {
     documentType: deal.documentType,
     formData: deal.formData,
     stage: deal.stage,
+    locked: deal.locked,
     readOnly: !deal._writeAccess,
   });
 }
@@ -41,6 +42,10 @@ export async function PATCH(request, { params }) {
   const org = await prisma.organization.findUnique({ where: { id: deal.orgId } });
   if (!isOrgActive(org)) {
     return NextResponse.json({ error: "Your organization's trial has ended. Subscribe to continue.", code: "TRIAL_EXPIRED" }, { status: 402 });
+  }
+
+  if (deal.locked) {
+    return NextResponse.json({ error: "This document has been fully signed and can no longer be edited.", code: "DEAL_LOCKED" }, { status: 409 });
   }
 
   const body = await request.json().catch(() => ({}));
