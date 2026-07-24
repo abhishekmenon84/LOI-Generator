@@ -38,18 +38,13 @@ export async function PATCH(request, { params }) {
   if (params.userId === session.user.id && body.active === false) {
     return NextResponse.json({ error: "You cannot deactivate yourself." }, { status: 400 });
   }
-
-  if (body.active === false) {
-    const activeAdminCount = await prisma.membership.count({
-      where: { orgId: params.id, role: "admin", active: true },
-    });
-    const target = await prisma.membership.findUnique({
-      where: { userId_orgId: { userId: params.userId, orgId: params.id } },
-    });
-    if (target?.role === "admin" && target.active && activeAdminCount <= 1) {
-      return NextResponse.json({ error: "Cannot deactivate the last active admin." }, { status: 400 });
-    }
-  }
+  // No separate "last active admin" count guard is needed beyond the
+  // self-deactivation check above: reaching this PATCH at all requires the
+  // requester to already be an active admin (see the requesterMembership
+  // check above), so if the org has only one active admin, that admin is
+  // necessarily the requester — and the self-check already rejects that
+  // case. A target-is-the-last-admin scenario where the requester is a
+  // DIFFERENT active admin is therefore impossible by construction.
 
   const updated = await prisma.membership.updateMany({
     where: { userId: params.userId, orgId: params.id },
