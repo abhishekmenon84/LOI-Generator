@@ -12,7 +12,7 @@ const STAGE_DOTS = {
   trash: "#ef4444",
 };
 
-export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop, onStageChangeDropdown, side = false }) {
+export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop, onStageChangeDropdown, onArchive, onTrash, onRestore, onPermanentDelete, side = false }) {
   const [dragOver, setDragOver] = useState(false);
 
   return (
@@ -41,13 +41,22 @@ export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop,
         ) : (
           deals.map((deal) =>
             side ? (
-              <KanbanCard key={deal.id} deal={deal} onDragStart={onDragStart} compact />
+              <KanbanCard
+                key={deal.id}
+                deal={deal}
+                onDragStart={onDragStart}
+                compact
+                onRestore={onRestore ? () => onRestore(deal.id, stage) : undefined}
+                onPermanentDelete={stage === "trash" && onPermanentDelete ? () => onPermanentDelete(deal.id) : undefined}
+              />
             ) : (
               <KanbanCardWithDropdown
                 key={deal.id}
                 deal={deal}
                 onDragStart={onDragStart}
                 onStageChangeDropdown={onStageChangeDropdown}
+                onArchive={onArchive}
+                onTrash={onTrash}
               />
             )
           )
@@ -57,7 +66,7 @@ export default function KanbanColumn({ stage, label, deals, onDragStart, onDrop,
   );
 }
 
-function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown }) {
+function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown, onArchive, onTrash }) {
   const stageControl = deal.writeAccess ? (
     <select
       value={deal.stage}
@@ -73,5 +82,13 @@ function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown }) {
     </select>
   ) : null;
 
-  return <KanbanCard deal={deal} onDragStart={onDragStart} stageControl={stageControl} />;
+  return (
+    <KanbanCard
+      deal={deal}
+      onDragStart={onDragStart}
+      stageControl={stageControl}
+      onArchive={deal.writeAccess ? onArchive : undefined}
+      onTrash={deal.writeAccess ? onTrash : undefined}
+    />
+  );
 }

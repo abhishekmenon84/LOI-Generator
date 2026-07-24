@@ -17,14 +17,17 @@ const DOCUMENT_TYPES = [
   { value: "residential_lease", label: "Residential Lease (New Brunswick)", buildPath: "/app/residential-lease" },
 ];
 
-export default function KanbanDashboard({ initialDeals }) {
+export default function KanbanDashboard({ initialDeals, initialArchived = [], initialTrashed = [], userOrgs = [] }) {
   const router = useRouter();
   const [deals, setDeals] = useState(initialDeals);
+  const [archivedDeals, setArchivedDeals] = useState(initialArchived);
+  const [trashedDeals, setTrashedDeals] = useState(initialTrashed);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [creating, setCreating] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
+  const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [newDealName, setNewDealName] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
 
@@ -67,7 +70,7 @@ export default function KanbanDashboard({ initialDeals }) {
       const res = await fetch("/api/deals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, documentType: selectedType }),
+        body: JSON.stringify({ name, documentType: selectedType, ...(selectedOrgId ? { orgId: selectedOrgId } : {}) }),
       });
       if (!res.ok) throw new Error("Could not create deal.");
       const { id } = await res.json();
@@ -76,6 +79,66 @@ export default function KanbanDashboard({ initialDeals }) {
     } catch (err) {
       setError(err.message);
       setCreateBusy(false);
+    }
+  }
+
+  async function handleArchive(dealId) {
+    const deal = deals.find((d) => d.id === dealId);
+    if (!deal) return;
+    setDeals((cur) => cur.filter((d) => d.id !== dealId));
+    setArchivedDeals((cur) => [...cur, { ...deal }]);
+    try {
+      const res = await fetch(`/api/deals/${dealId}/archive`, { method: "POST" });
+      if (!res.ok) throw new Error("Could not archive deal.");
+    } catch (err) {
+      setDeals((cur) => [...cur, deal]);
+      setArchivedDeals((cur) => cur.filter((d) => d.id !== dealId));
+      setError(err.message);
+    }
+  }
+
+  async function handleRestore(dealId, from) {
+    const source = from === "trash" ? trashedDeals : archivedDeals;
+    const deal = source.find((d) => d.id === dealId);
+    if (!deal) return;
+    if (from === "trash") setTrashedDeals((cur) => cur.filter((d) => d.id !== dealId));
+    else setArchivedDeals((cur) => cur.filter((d) => d.id !== dealId));
+    setDeals((cur) => [...cur, { ...deal, stage: deal.stage || "draft" }]);
+    try {
+      const res = await fetch(`/api/deals/${dealId}/restore`, { method: "POST" });
+      if (!res.ok) throw new Error("Could not restore deal.");
+    } catch (err) {
+      setError(err.message);
+      // Not reverting optimistic state on restore failure — a failed restore
+      // leaving the deal visually "restored" but still archived server-side
+      // is a smaller UX issue than a full state-thrash; the next page load
+      // will reconcile from the server's actual state either way.
+    }
+  }
+
+  async function handleTrash(dealId) {
+    const deal = deals.find((d) => d.id === dealId);
+    if (!deal) return;
+    setDeals((cur) => cur.filter((d) => d.id !== dealId));
+    setTrashedDeals((cur) => [...cur, { ...deal }]);
+    try {
+      const res = await fetch(`/api/deals/${dealId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Could not move deal to trash.");
+    } catch (err) {
+      setDeals((cur) => [...cur, deal]);
+      setTrashedDeals((cur) => cur.filter((d) => d.id !== dealId));
+      setError(err.message);
+    }
+  }
+
+  async function handlePermanentDelete(dealId) {
+    if (!window.confirm("Permanently delete this deal? This cannot be undone.")) return;
+    setTrashedDeals((cur) => cur.filter((d) => d.id !== dealId));
+    try {
+      const res = await fetch(`/api/deals/${dealId}/permanent`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Could not permanently delete deal.");
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -145,6 +208,27 @@ export default function KanbanDashboard({ initialDeals }) {
                 </button>
               </div>
             </div>
+          ) : userOrgs.length > 1 && !selectedOrgId ? (
+            <div>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 10 }}>Which organization?</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {userOrgs.map((o) => (
+                  <button key={o.orgId} type="button" className="marketing-cta-button" onClick={() => setSelectedOrgId(o.orgId)}>
+                    {o.isPersonal ? "Personal" : o.orgName}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreating(false);
+                    setSelectedType(null);
+                  }}
+                  style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           ) : (
             <form onSubmit={handleCreate} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <input
@@ -164,6 +248,7 @@ export default function KanbanDashboard({ initialDeals }) {
                 onClick={() => {
                   setCreating(false);
                   setSelectedType(null);
+                  setSelectedOrgId(null);
                   setNewDealName("");
                 }}
                 style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "8px 14px", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
@@ -191,13 +276,15 @@ export default function KanbanDashboard({ initialDeals }) {
             onDragStart={handleDragStart}
             onDrop={handleDrop}
             onStageChangeDropdown={updateStage}
+            onArchive={handleArchive}
+            onTrash={handleTrash}
           />
         ))}
 
         <div className="kanban-board-divider" aria-hidden="true" />
 
-        <KanbanColumn stage="archive" label="Archive" deals={[]} onDragStart={handleDragStart} onDrop={() => {}} side />
-        <KanbanColumn stage="trash" label="Trash" deals={[]} onDragStart={handleDragStart} onDrop={() => {}} side />
+        <KanbanColumn stage="archive" label="Archive" deals={archivedDeals} onDragStart={handleDragStart} onDrop={() => {}} side onRestore={handleRestore} />
+        <KanbanColumn stage="trash" label="Trash" deals={trashedDeals} onDragStart={handleDragStart} onDrop={() => {}} side onRestore={handleRestore} onPermanentDelete={handlePermanentDelete} />
       </div>
     </div>
   );

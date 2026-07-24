@@ -24,11 +24,12 @@ function relativeTime(isoString) {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-export default function DealList({ initialDeals }) {
+export default function DealList({ initialDeals, userOrgs = [] }) {
   const router = useRouter();
   const [deals, setDeals] = useState(initialDeals);
   const [pickingType, setPickingType] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
+  const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [newDealName, setNewDealName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
@@ -43,6 +44,7 @@ export default function DealList({ initialDeals }) {
 
   function cancelCreate() {
     setSelectedType(null);
+    setSelectedOrgId(null);
     setNewDealName("");
   }
 
@@ -60,7 +62,7 @@ export default function DealList({ initialDeals }) {
       const res = await fetch("/api/deals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, documentType: selectedType }),
+        body: JSON.stringify({ name, documentType: selectedType, ...(selectedOrgId ? { orgId: selectedOrgId } : {}) }),
       });
       if (!res.ok) throw new Error("Could not create deal.");
       const { id } = await res.json();
@@ -124,7 +126,27 @@ export default function DealList({ initialDeals }) {
         </div>
       )}
 
-      {selectedType && (
+      {selectedType && userOrgs.length > 1 && !selectedOrgId && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Which organization?</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {userOrgs.map((o) => (
+              <button key={o.orgId} type="button" className="marketing-cta-button" onClick={() => setSelectedOrgId(o.orgId)}>
+                {o.isPersonal ? "Personal" : o.orgName}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={cancelCreate}
+            style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem", alignSelf: "flex-start" }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {selectedType && (userOrgs.length <= 1 || selectedOrgId) && (
         <form onSubmit={handleCreate} style={{ display: "flex", gap: 8, marginBottom: 24 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <input
