@@ -61,7 +61,12 @@ export default async function DashboardPage() {
       <main className="marketing-page">
         <h1>Your Deals</h1>
         <p>Signed in as {session.user.email}.</p>
-        <DealList initialDeals={serializedDeals} userOrgs={userOrgs} />
+        <DealList
+          initialDeals={serializedDeals}
+          initialArchived={serializedArchived}
+          initialTrashed={serializedTrashed}
+          userOrgs={userOrgs}
+        />
       </main>
       <SiteFooter />
     </>

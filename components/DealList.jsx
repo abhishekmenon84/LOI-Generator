@@ -24,9 +24,12 @@ function relativeTime(isoString) {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-export default function DealList({ initialDeals, userOrgs = [] }) {
+export default function DealList({ initialDeals, initialArchived = [], initialTrashed = [], userOrgs = [] }) {
   const router = useRouter();
+  const [view, setView] = useState("active");
   const [deals, setDeals] = useState(initialDeals);
+  const [archivedDeals, setArchivedDeals] = useState(initialArchived);
+  const [trashedDeals, setTrashedDeals] = useState(initialTrashed);
   const [pickingType, setPickingType] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
   const [selectedOrgId, setSelectedOrgId] = useState(null);
@@ -36,6 +39,9 @@ export default function DealList({ initialDeals, userOrgs = [] }) {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [nameShake, setNameShake] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+
+  const visibleDeals = view === "active" ? deals : view === "archive" ? archivedDeals : trashedDeals;
 
   function startCreate(documentType) {
     setSelectedType(documentType);
@@ -78,13 +84,67 @@ export default function DealList({ initialDeals, userOrgs = [] }) {
     try {
       const res = await fetch(`/api/deals/${id}`, { method: "DELETE" });
       if (res.ok) {
+        const deal = deals.find((d) => d.id === id);
         setDeals((prev) => prev.filter((d) => d.id !== id));
+        if (deal) setTrashedDeals((cur) => [...cur, { ...deal }]);
       } else {
         setError("Could not delete deal.");
       }
     } finally {
       setDeleting(false);
       setConfirmingDeleteId(null);
+    }
+  }
+
+  async function handleArchive(id) {
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+    setBusyId(id);
+    setDeals((cur) => cur.filter((d) => d.id !== id));
+    setArchivedDeals((cur) => [...cur, { ...deal }]);
+    try {
+      const res = await fetch(`/api/deals/${id}/archive`, { method: "POST" });
+      if (!res.ok) throw new Error("Could not archive deal.");
+    } catch (err) {
+      setDeals((cur) => [...cur, deal]);
+      setArchivedDeals((cur) => cur.filter((d) => d.id !== id));
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleRestore(id) {
+    const source = view === "trash" ? trashedDeals : archivedDeals;
+    const deal = source.find((d) => d.id === id);
+    if (!deal) return;
+    setBusyId(id);
+    if (view === "trash") setTrashedDeals((cur) => cur.filter((d) => d.id !== id));
+    else setArchivedDeals((cur) => cur.filter((d) => d.id !== id));
+    setDeals((cur) => [...cur, { ...deal }]);
+    try {
+      const res = await fetch(`/api/deals/${id}/restore`, { method: "POST" });
+      if (!res.ok) throw new Error("Could not restore deal.");
+    } catch (err) {
+      setError(err.message);
+      // Not reverting optimistic state on restore failure — the next page
+      // load will reconcile from the server's actual state either way.
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handlePermanentDelete(id) {
+    if (!window.confirm("Permanently delete this deal? This cannot be undone.")) return;
+    setBusyId(id);
+    setTrashedDeals((cur) => cur.filter((d) => d.id !== id));
+    try {
+      const res = await fetch(`/api/deals/${id}/permanent`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Could not permanently delete deal.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -192,11 +252,40 @@ export default function DealList({ initialDeals, userOrgs = [] }) {
 
       {error && <div className="status-banner status-error" role="alert">⚠️ {error}</div>}
 
-      {deals.length === 0 ? (
-        <p>No deals yet — create one above to get started.</p>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {["active", "archive", "trash"].map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 999,
+              border: "1px solid var(--border)",
+              background: view === v ? "var(--accent-subtle)" : "transparent",
+              color: view === v ? "var(--accent-light)" : "var(--text-secondary)",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              textTransform: "capitalize",
+            }}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+
+      {visibleDeals.length === 0 ? (
+        <p>
+          {view === "active"
+            ? "No deals yet — create one above to get started."
+            : view === "archive"
+            ? "No archived deals."
+            : "Trash is empty."}
+        </p>
       ) : (
         <ul className="deal-list">
-          {deals.map((deal) => {
+          {visibleDeals.map((deal) => {
             const meta = typeMeta(deal.documentType);
             return (
               <li key={deal.id} className="deal-list-item">
@@ -216,16 +305,16 @@ export default function DealList({ initialDeals, userOrgs = [] }) {
                   <div className="deal-list-item-meta">Edited {relativeTime(deal.updatedAt)}</div>
                 </div>
                 <div className="deal-list-item-actions">
-                  {confirmingDeleteId === deal.id ? (
+                  {view === "active" && confirmingDeleteId === deal.id ? (
                     <>
-                      <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Delete this deal?</span>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Move to trash?</span>
                       <button
                         type="button"
                         onClick={() => handleDelete(deal.id)}
                         disabled={deleting}
                         className="deal-list-item-delete"
                       >
-                        {deleting ? "Deleting…" : "Confirm"}
+                        {deleting ? "Moving…" : "Confirm"}
                       </button>
                       <button
                         type="button"
@@ -236,13 +325,59 @@ export default function DealList({ initialDeals, userOrgs = [] }) {
                         Cancel
                       </button>
                     </>
-                  ) : (
+                  ) : view === "active" ? (
                     <>
                       <a className="marketing-cta-button" href={`${meta.buildPath}?deal=${deal.id}`}>Resume</a>
                       {deal.writeAccess && (
-                        <button type="button" onClick={() => setConfirmingDeleteId(deal.id)} className="deal-list-item-delete">
-                          Delete
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleArchive(deal.id)}
+                            disabled={busyId === deal.id}
+                            style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "8px 14px", borderRadius: 8, cursor: "pointer" }}
+                          >
+                            Archive
+                          </button>
+                          <button type="button" onClick={() => setConfirmingDeleteId(deal.id)} className="deal-list-item-delete">
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </>
+                  ) : view === "archive" ? (
+                    <>
+                      {deal.writeAccess && (
+                        <button
+                          type="button"
+                          onClick={() => handleRestore(deal.id)}
+                          disabled={busyId === deal.id}
+                          className="marketing-cta-button"
+                        >
+                          {busyId === deal.id ? "Restoring…" : "Restore"}
                         </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {deal.writeAccess && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleRestore(deal.id)}
+                            disabled={busyId === deal.id}
+                            className="marketing-cta-button"
+                          >
+                            {busyId === deal.id ? "Restoring…" : "Restore"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePermanentDelete(deal.id)}
+                            disabled={busyId === deal.id}
+                            className="deal-list-item-delete"
+                          >
+                            Delete Forever
+                          </button>
+                        </>
                       )}
                     </>
                   )}
