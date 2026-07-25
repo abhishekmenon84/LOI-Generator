@@ -45,10 +45,10 @@ function typeMeta(documentType) {
 
 const PRIORITY_COLORS = { green: "#10b981", yellow: "#f59e0b", grey: "#94a3b8" };
 
-function ThreadRow({ deal, allSiblingsHaveGreen, onUnlink, onSetPriority }) {
+function ThreadRow({ deal, anySiblingIsGreen, onUnlink, onSetPriority }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const meta = typeMeta(deal.documentType);
-  const faded = allSiblingsHaveGreen && deal.priority !== "green";
+  const faded = anySiblingIsGreen && deal.priority !== "green";
   const fadeOpacity = deal.priority === "yellow" ? 0.75 : 0.5;
   return (
     <div
@@ -200,7 +200,7 @@ export default function KanbanCard({
             <ThreadRow
               key={child.id}
               deal={child}
-              allSiblingsHaveGreen={childThreads.some((c) => c.priority === "green")}
+              anySiblingIsGreen={childThreads.some((c) => c.priority === "green")}
               onUnlink={onUnlinkChild}
               onSetPriority={onSetChildPriority}
             />

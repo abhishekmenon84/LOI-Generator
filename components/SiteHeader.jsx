@@ -7,6 +7,7 @@ import SignOutButton from "./SignOutButton";
 export default function SiteHeader({ isLoggedIn = false }) {
   const [theme, setTheme] = useState("dark");
   const [logoUrl, setLogoUrl] = useState(null);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("app-theme") || "dark";
@@ -30,8 +31,15 @@ export default function SiteHeader({ isLoggedIn = false }) {
   return (
     <nav className="site-header">
       <Link className="navbar-logo" href="/" aria-label="LOI Builder home">
-        {logoUrl ? (
-          <img src={logoUrl} alt="" className="navbar-logo-icon-img" aria-hidden="true" />
+        {logoUrl && !logoFailed ? (
+          <img
+            src={logoUrl}
+            alt=""
+            className="navbar-logo-icon-img"
+            aria-hidden="true"
+            referrerPolicy="no-referrer"
+            onError={() => setLogoFailed(true)}
+          />
         ) : (
           <div className="navbar-logo-icon" aria-hidden="true">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

@@ -15,6 +15,15 @@ export async function POST(request, { params }) {
   if (!deal._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this deal." }, { status: 403 });
   }
-  await prisma.deal.update({ where: { id: deal.id }, data: { archivedAt: null, deletedAt: null } });
+  // updateMany (not update) so a concurrent 30-day auto-purge deleting this
+  // exact row between the loadAccessibleDeal read above and this write
+  // fails cleanly (count 0) instead of throwing an unhandled P2025.
+  const { count } = await prisma.deal.updateMany({
+    where: { id: deal.id },
+    data: { archivedAt: null, deletedAt: null },
+  });
+  if (count === 0) {
+    return NextResponse.json({ error: "This deal no longer exists." }, { status: 404 });
+  }
   return NextResponse.json({ ok: true });
 }

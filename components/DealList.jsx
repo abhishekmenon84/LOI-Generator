@@ -115,20 +115,22 @@ export default function DealList({ initialDeals, initialArchived = [], initialTr
   }
 
   async function handleRestore(id) {
-    const source = view === "trash" ? trashedDeals : archivedDeals;
+    const fromView = view;
+    const source = fromView === "trash" ? trashedDeals : archivedDeals;
     const deal = source.find((d) => d.id === id);
     if (!deal) return;
     setBusyId(id);
-    if (view === "trash") setTrashedDeals((cur) => cur.filter((d) => d.id !== id));
+    if (fromView === "trash") setTrashedDeals((cur) => cur.filter((d) => d.id !== id));
     else setArchivedDeals((cur) => cur.filter((d) => d.id !== id));
     setDeals((cur) => [...cur, { ...deal }]);
     try {
       const res = await fetch(`/api/deals/${id}/restore`, { method: "POST" });
       if (!res.ok) throw new Error("Could not restore deal.");
     } catch (err) {
+      setDeals((cur) => cur.filter((d) => d.id !== id));
+      if (fromView === "trash") setTrashedDeals((cur) => [...cur, deal]);
+      else setArchivedDeals((cur) => [...cur, deal]);
       setError(err.message);
-      // Not reverting optimistic state on restore failure — the next page
-      // load will reconcile from the server's actual state either way.
     } finally {
       setBusyId(null);
     }

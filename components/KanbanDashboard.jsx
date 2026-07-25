@@ -183,11 +183,10 @@ export default function KanbanDashboard({ initialDeals, initialArchived = [], in
       const res = await fetch(`/api/deals/${dealId}/restore`, { method: "POST" });
       if (!res.ok) throw new Error("Could not restore deal.");
     } catch (err) {
+      setDeals((cur) => cur.filter((d) => d.id !== dealId));
+      if (from === "trash") setTrashedDeals((cur) => [...cur, deal]);
+      else setArchivedDeals((cur) => [...cur, deal]);
       setError(err.message);
-      // Not reverting optimistic state on restore failure — a failed restore
-      // leaving the deal visually "restored" but still archived server-side
-      // is a smaller UX issue than a full state-thrash; the next page load
-      // will reconcile from the server's actual state either way.
     }
   }
 

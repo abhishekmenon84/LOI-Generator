@@ -30,6 +30,8 @@ export default async function DashboardPage() {
     updatedAt: d.updatedAt.toISOString(),
     isShared: d._accessReason === "share",
     writeAccess: d._writeAccess,
+    parentDealId: d.parentDealId,
+    priority: d.priority,
   });
 
   const serializedDeals = deals.map(serialize);
