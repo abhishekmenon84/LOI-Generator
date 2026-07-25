@@ -6,6 +6,7 @@ import SiteFooter from "../../../components/SiteFooter";
 import TrialBanner from "../../../components/TrialBanner";
 import CreateOrgForm from "../../../components/CreateOrgForm";
 import OrgMembersPanel from "../../../components/OrgMembersPanel";
+import OrgLogoSettings from "../../../components/OrgLogoSettings";
 import SubscribeButtons from "../../../components/SubscribeButtons";
 import { SEAT_TIERS } from "../../../lib/orgBilling";
 
@@ -53,6 +54,7 @@ export default async function OrgSettingsPage() {
                 <SubscribeButtons orgId={org.id} tiers={SEAT_TIERS} />
               </div>
             )}
+            <OrgLogoSettings orgId={org.id} initialLogoUrl={org.logoUrl} />
             <OrgMembersPanel
               org={{
                 id: org.id,

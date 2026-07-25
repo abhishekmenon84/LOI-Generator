@@ -195,6 +195,15 @@ body {
   flex-shrink: 0;
 }
 
+.navbar-logo-icon-img {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+}
+
 .navbar-wordmark {
   font-size: 1rem;
   font-weight: 700;
