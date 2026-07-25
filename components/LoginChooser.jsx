@@ -4,7 +4,7 @@ export default function LoginChooser({ onChoose }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 480 }}>
       <p style={{ color: "var(--text-secondary)", marginBottom: 8 }}>
-        How are you using LOI Builder?
+        How are you using Ledgerlot?
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <button

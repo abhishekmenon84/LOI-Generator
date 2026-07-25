@@ -52,7 +52,7 @@ export default function OrgLogoSettings({ orgId, initialLogoUrl }) {
     <div style={{ marginBottom: 24 }}>
       <h2>Company Logo</h2>
       <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: 12 }}>
-        Paste a link to your logo image. It replaces the default LOI Builder logo in the header for everyone in this organization.
+        Paste a link to your logo image. It replaces the default Ledgerlot logo in the header for everyone in this organization.
       </p>
       {saved && (
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
