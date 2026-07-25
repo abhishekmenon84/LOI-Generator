@@ -67,13 +67,12 @@ export default function KanbanColumn({
                 onPermanentDelete={stage === "trash" && onPermanentDelete ? () => onPermanentDelete(deal.id) : undefined}
               />
             ) : (
-              <KanbanCardWithDropdown
+              <KanbanCard
                 key={deal.id}
                 deal={deal}
                 onDragStart={onDragStart}
-                onStageChangeDropdown={onStageChangeDropdown}
-                onArchive={onArchive}
-                onTrash={onTrash}
+                onArchive={deal.writeAccess ? onArchive : undefined}
+                onTrash={deal.writeAccess ? onTrash : undefined}
                 childThreads={childrenByParent?.get(deal.id) || []}
                 onUnlinkChild={onUnlinkChild}
                 onSetChildPriority={onSetChildPriority}
@@ -85,37 +84,5 @@ export default function KanbanColumn({
         )}
       </div>
     </div>
-  );
-}
-
-function KanbanCardWithDropdown({ deal, onDragStart, onStageChangeDropdown, onArchive, onTrash, childThreads, onUnlinkChild, onSetChildPriority, onAddOffer, onLinkChild }) {
-  const stageControl = deal.writeAccess ? (
-    <select
-      value={deal.stage}
-      onChange={(e) => onStageChangeDropdown(deal.id, e.target.value)}
-      onClick={(e) => e.preventDefault()}
-      aria-label={`Change stage for ${deal.name}`}
-      className="kanban-card-stage-select"
-    >
-      <option value="draft">Draft</option>
-      <option value="active">Active</option>
-      <option value="pending">Pending</option>
-      <option value="closed">Closed</option>
-    </select>
-  ) : null;
-
-  return (
-    <KanbanCard
-      deal={deal}
-      onDragStart={onDragStart}
-      stageControl={stageControl}
-      onArchive={deal.writeAccess ? onArchive : undefined}
-      onTrash={deal.writeAccess ? onTrash : undefined}
-      childThreads={childThreads}
-      onUnlinkChild={onUnlinkChild}
-      onSetChildPriority={onSetChildPriority}
-      onAddOffer={onAddOffer}
-      onLinkChild={onLinkChild}
-    />
   );
 }

@@ -81,7 +81,6 @@ export default function KanbanCard({
   deal,
   onDragStart,
   compact = false,
-  stageControl,
   onArchive,
   onTrash,
   onRestore,
@@ -98,10 +97,10 @@ export default function KanbanCard({
   const href = `${meta.buildPath}?deal=${deal.id}`;
 
   function navigate(e) {
-    // Ignore clicks that originated on interactive children (buttons, the
-    // stage-change select, nested thread links/menus) — those already
-    // stopPropagation() or preventDefault() themselves as needed; this
-    // handler only fires for clicks on the card's own background.
+    // Ignore clicks that originated on interactive children (buttons,
+    // nested thread links/menus) — those already stopPropagation() or
+    // preventDefault() themselves as needed; this handler only fires for
+    // clicks on the card's own background.
     if (e.defaultPrevented) return;
     router.push(href);
   }
@@ -176,7 +175,6 @@ export default function KanbanCard({
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {stageControl}
             {(onArchive || onTrash) && (
               <div style={{ display: "flex", gap: 4 }}>
                 {onArchive && (
