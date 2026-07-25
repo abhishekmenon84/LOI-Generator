@@ -2,11 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import FolderReasonModal from "./FolderReasonModal";
 
+// Real Ledger.documentType values (see components/KanbanCard.jsx's TYPE_META
+// and app/api/ledgers/route.js's VALID_DOC_TYPES) -- this list intentionally
+// differs from the old Deal-era DOCUMENT_TYPES (which used
+// "commercial_lease_loi" and per-type page-builder paths); those old paths
+// are moot now anyway since creation navigates to the Folder workspace route.
 const DOCUMENT_TYPES = [
-  { value: "purchase_loi", label: "Business + Real Estate Purchase LOI", badge: "Purchase LOI", buildPath: "/app" },
-  { value: "commercial_lease_loi", label: "Commercial Lease LOI", badge: "Lease LOI", buildPath: "/app/lease" },
-  { value: "residential_lease", label: "Residential Lease (New Brunswick)", badge: "Residential Lease", buildPath: "/app/residential-lease" },
+  { value: "purchase_loi", label: "Business + Real Estate Purchase LOI", badge: "Purchase LOI" },
+  { value: "commercial_lease", label: "Commercial Lease LOI", badge: "Lease LOI" },
+  { value: "residential_lease", label: "Residential Lease (New Brunswick)", badge: "Residential Lease" },
 ];
 
 function typeMeta(documentType) {
@@ -24,10 +30,18 @@ function relativeTime(isoString) {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-export default function DealList({ initialDeals, initialArchived = [], initialTrashed = [], userOrgs = [] }) {
+// NOTE: `/ledgerboard/folder/[folderId]` (the real three-panel workspace
+// route) does not exist yet -- Task 3 builds it. Until then, use the same
+// placeholder destination Task 2's KanbanDashboard.jsx uses for its "onOpen"
+// handler, so both dashboard views agree on one placeholder pending Task 3.
+function workspacePlaceholderPath(folderId) {
+  return `/dashboard?folder=${folderId}`;
+}
+
+export default function DealList({ initialFolders, initialArchived = [], initialTrashed = [], userOrgs = [] }) {
   const router = useRouter();
   const [view, setView] = useState("active");
-  const [deals, setDeals] = useState(initialDeals);
+  const [deals, setDeals] = useState(initialFolders);
   const [archivedDeals, setArchivedDeals] = useState(initialArchived);
   const [trashedDeals, setTrashedDeals] = useState(initialTrashed);
   const [pickingType, setPickingType] = useState(false);
@@ -36,10 +50,11 @@ export default function DealList({ initialDeals, initialArchived = [], initialTr
   const [newDealName, setNewDealName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
-  const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
-  const [deleting, setDeleting] = useState(false);
   const [nameShake, setNameShake] = useState(false);
   const [busyId, setBusyId] = useState(null);
+
+  // { folderId, action: "archive" | "trash" | "restore", from: "archive" | "trash" | undefined }
+  const [reasonModal, setReasonModal] = useState(null);
 
   const visibleDeals = view === "active" ? deals : view === "archive" ? archivedDeals : trashedDeals;
 
@@ -65,90 +80,121 @@ export default function DealList({ initialDeals, initialArchived = [], initialTr
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch("/api/deals", {
+      const folderRes = await fetch("/api/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, documentType: selectedType, ...(selectedOrgId ? { orgId: selectedOrgId } : {}) }),
+        body: JSON.stringify({ name, ...(selectedOrgId ? { orgId: selectedOrgId } : {}) }),
       });
-      if (!res.ok) throw new Error("Could not create deal.");
-      const { id } = await res.json();
-      router.push(`${typeMeta(selectedType).buildPath}?deal=${id}`);
+      if (!folderRes.ok) {
+        const body = await folderRes.json().catch(() => ({}));
+        throw new Error(body.error || "Could not create folder.");
+      }
+      const folder = await folderRes.json();
+
+      const ledgerRes = await fetch("/api/ledgers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderId: folder.id, documentType: selectedType, name }),
+      });
+      if (!ledgerRes.ok) {
+        const body = await ledgerRes.json().catch(() => ({}));
+        throw new Error(body.error || "Folder was created, but could not create its ledger.");
+      }
+
+      router.push(workspacePlaceholderPath(folder.id));
     } catch (err) {
       setError(err.message);
       setCreating(false);
     }
   }
 
-  async function handleDelete(id) {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/deals/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        const deal = deals.find((d) => d.id === id);
-        setDeals((prev) => prev.filter((d) => d.id !== id));
-        if (deal) setTrashedDeals((cur) => [...cur, { ...deal }]);
-      } else {
-        setError("Could not delete deal.");
+  function openReasonModal(folderId, action, from) {
+    setReasonModal({ folderId, action, from });
+  }
+
+  async function handleReasonConfirm(reason) {
+    const modal = reasonModal;
+    setReasonModal(null);
+    if (!modal) return;
+    const { folderId, action, from } = modal;
+
+    if (action === "archive") {
+      const deal = deals.find((d) => d.id === folderId);
+      if (!deal) return;
+      setBusyId(folderId);
+      setDeals((cur) => cur.filter((d) => d.id !== folderId));
+      setArchivedDeals((cur) => [...cur, { ...deal }]);
+      try {
+        const res = await fetch(`/api/folders/${folderId}/archive`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        });
+        if (!res.ok) throw new Error("Could not archive deal.");
+      } catch (err) {
+        setDeals((cur) => [...cur, deal]);
+        setArchivedDeals((cur) => cur.filter((d) => d.id !== folderId));
+        setError(err.message);
+      } finally {
+        setBusyId(null);
       }
-    } finally {
-      setDeleting(false);
-      setConfirmingDeleteId(null);
+      return;
+    }
+
+    if (action === "trash") {
+      const deal = deals.find((d) => d.id === folderId);
+      if (!deal) return;
+      setBusyId(folderId);
+      setDeals((cur) => cur.filter((d) => d.id !== folderId));
+      setTrashedDeals((cur) => [...cur, { ...deal }]);
+      try {
+        const res = await fetch(`/api/folders/${folderId}/trash`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        });
+        if (!res.ok) throw new Error("Could not move deal to trash.");
+      } catch (err) {
+        setDeals((cur) => [...cur, deal]);
+        setTrashedDeals((cur) => cur.filter((d) => d.id !== folderId));
+        setError(err.message);
+      } finally {
+        setBusyId(null);
+      }
+      return;
+    }
+
+    if (action === "restore") {
+      const source = from === "trash" ? trashedDeals : archivedDeals;
+      const deal = source.find((d) => d.id === folderId);
+      if (!deal) return;
+      setBusyId(folderId);
+      if (from === "trash") setTrashedDeals((cur) => cur.filter((d) => d.id !== folderId));
+      else setArchivedDeals((cur) => cur.filter((d) => d.id !== folderId));
+      setDeals((cur) => [...cur, { ...deal }]);
+      try {
+        const res = await fetch(`/api/folders/${folderId}/restore`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        });
+        if (!res.ok) throw new Error("Could not restore deal.");
+      } catch (err) {
+        setDeals((cur) => cur.filter((d) => d.id !== folderId));
+        if (from === "trash") setTrashedDeals((cur) => [...cur, deal]);
+        else setArchivedDeals((cur) => [...cur, deal]);
+        setError(err.message);
+      } finally {
+        setBusyId(null);
+      }
     }
   }
 
-  async function handleArchive(id) {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-    setBusyId(id);
-    setDeals((cur) => cur.filter((d) => d.id !== id));
-    setArchivedDeals((cur) => [...cur, { ...deal }]);
-    try {
-      const res = await fetch(`/api/deals/${id}/archive`, { method: "POST" });
-      if (!res.ok) throw new Error("Could not archive deal.");
-    } catch (err) {
-      setDeals((cur) => [...cur, deal]);
-      setArchivedDeals((cur) => cur.filter((d) => d.id !== id));
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleRestore(id) {
-    const fromView = view;
-    const source = fromView === "trash" ? trashedDeals : archivedDeals;
-    const deal = source.find((d) => d.id === id);
-    if (!deal) return;
-    setBusyId(id);
-    if (fromView === "trash") setTrashedDeals((cur) => cur.filter((d) => d.id !== id));
-    else setArchivedDeals((cur) => cur.filter((d) => d.id !== id));
-    setDeals((cur) => [...cur, { ...deal }]);
-    try {
-      const res = await fetch(`/api/deals/${id}/restore`, { method: "POST" });
-      if (!res.ok) throw new Error("Could not restore deal.");
-    } catch (err) {
-      setDeals((cur) => cur.filter((d) => d.id !== id));
-      if (fromView === "trash") setTrashedDeals((cur) => [...cur, deal]);
-      else setArchivedDeals((cur) => [...cur, deal]);
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handlePermanentDelete(id) {
-    if (!window.confirm("Permanently delete this deal? This cannot be undone.")) return;
-    setBusyId(id);
-    setTrashedDeals((cur) => cur.filter((d) => d.id !== id));
-    try {
-      const res = await fetch(`/api/deals/${id}/permanent`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Could not permanently delete deal.");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const reasonModalFolderName = (() => {
+    if (!reasonModal) return "";
+    const all = [...deals, ...archivedDeals, ...trashedDeals];
+    return all.find((d) => d.id === reasonModal.folderId)?.name || "";
+  })();
 
   return (
     <div>
@@ -307,40 +353,25 @@ export default function DealList({ initialDeals, initialArchived = [], initialTr
                   <div className="deal-list-item-meta">Edited {relativeTime(deal.updatedAt)}</div>
                 </div>
                 <div className="deal-list-item-actions">
-                  {view === "active" && confirmingDeleteId === deal.id ? (
+                  {view === "active" ? (
                     <>
-                      <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Move to trash?</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(deal.id)}
-                        disabled={deleting}
-                        className="deal-list-item-delete"
-                      >
-                        {deleting ? "Moving…" : "Confirm"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingDeleteId(null)}
-                        disabled={deleting}
-                        style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "8px 14px", borderRadius: 8, cursor: "pointer" }}
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : view === "active" ? (
-                    <>
-                      <a className="marketing-cta-button" href={`${meta.buildPath}?deal=${deal.id}`}>Resume</a>
+                      <a className="marketing-cta-button" href={workspacePlaceholderPath(deal.id)}>Resume</a>
                       {deal.writeAccess && (
                         <>
                           <button
                             type="button"
-                            onClick={() => handleArchive(deal.id)}
+                            onClick={() => openReasonModal(deal.id, "archive")}
                             disabled={busyId === deal.id}
                             style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "8px 14px", borderRadius: 8, cursor: "pointer" }}
                           >
                             Archive
                           </button>
-                          <button type="button" onClick={() => setConfirmingDeleteId(deal.id)} className="deal-list-item-delete">
+                          <button
+                            type="button"
+                            onClick={() => openReasonModal(deal.id, "trash")}
+                            disabled={busyId === deal.id}
+                            className="deal-list-item-delete"
+                          >
                             Delete
                           </button>
                         </>
@@ -351,7 +382,7 @@ export default function DealList({ initialDeals, initialArchived = [], initialTr
                       {deal.writeAccess && (
                         <button
                           type="button"
-                          onClick={() => handleRestore(deal.id)}
+                          onClick={() => openReasonModal(deal.id, "restore", "archive")}
                           disabled={busyId === deal.id}
                           className="marketing-cta-button"
                         >
@@ -362,24 +393,14 @@ export default function DealList({ initialDeals, initialArchived = [], initialTr
                   ) : (
                     <>
                       {deal.writeAccess && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleRestore(deal.id)}
-                            disabled={busyId === deal.id}
-                            className="marketing-cta-button"
-                          >
-                            {busyId === deal.id ? "Restoring…" : "Restore"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handlePermanentDelete(deal.id)}
-                            disabled={busyId === deal.id}
-                            className="deal-list-item-delete"
-                          >
-                            Delete Forever
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          onClick={() => openReasonModal(deal.id, "restore", "trash")}
+                          disabled={busyId === deal.id}
+                          className="marketing-cta-button"
+                        >
+                          {busyId === deal.id ? "Restoring…" : "Restore"}
+                        </button>
                       )}
                     </>
                   )}
@@ -389,6 +410,13 @@ export default function DealList({ initialDeals, initialArchived = [], initialTr
           })}
         </ul>
       )}
+
+      <FolderReasonModal
+        action={reasonModal?.action}
+        folderName={reasonModalFolderName}
+        onConfirm={handleReasonConfirm}
+        onCancel={() => setReasonModal(null)}
+      />
     </div>
   );
 }

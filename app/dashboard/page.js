@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
-import { hasBusinessOrgMembership, listAccessibleDeals, listLifecycleDeals, listUserOrgs } from "../../lib/orgAccess";
+import { hasBusinessOrgMembership, listUserOrgs } from "../../lib/orgAccess";
 import { listAccessibleFolders } from "../../lib/folderAccess";
 import { prisma } from "../../lib/prisma";
 import SiteHeader from "../../components/SiteHeader";
@@ -20,38 +20,43 @@ export default async function DashboardPage() {
 
   const isBusiness = await hasBusinessOrgMembership(session.user.id);
 
+  // Both branches need the same underlying Folder data (all folders
+  // including archived/trashed, plus batched participant names and each
+  // folder's "primary" documentType derived from its first-created Ledger)
+  // -- fetched once here rather than duplicated per branch, since both use
+  // identical listAccessibleFolders options.
+  const allFolders = await listAccessibleFolders(session.user.id, { includeArchived: true, includeTrashed: true });
+  const userOrgs = await listUserOrgs(session.user.id);
+
+  const folderIds = allFolders.map((f) => f.id);
+  const [participants, primaryLedgers] = folderIds.length > 0
+    ? await Promise.all([
+        prisma.folderParticipant.findMany({
+          where: { folderId: { in: folderIds } },
+          include: { user: { select: { name: true, email: true } } },
+        }),
+        prisma.ledger.findMany({
+          where: { folderId: { in: folderIds } },
+          select: { folderId: true, documentType: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        }),
+      ])
+    : [[], []];
+  const participantNamesByFolder = new Map();
+  for (const p of participants) {
+    const list = participantNamesByFolder.get(p.folderId) || [];
+    list.push(p.user.name || p.user.email);
+    participantNamesByFolder.set(p.folderId, list);
+  }
+  // First-created Ledger per Folder stands in as the folder's "primary"
+  // document type for the card/list's type pill -- a bare Folder has no
+  // documentType of its own, only its child Ledgers do.
+  const primaryDocTypeByFolder = new Map();
+  for (const l of primaryLedgers) {
+    if (!primaryDocTypeByFolder.has(l.folderId)) primaryDocTypeByFolder.set(l.folderId, l.documentType);
+  }
+
   if (isBusiness) {
-    const allFolders = await listAccessibleFolders(session.user.id, { includeArchived: true, includeTrashed: true });
-    const userOrgs = await listUserOrgs(session.user.id);
-
-    const folderIds = allFolders.map((f) => f.id);
-    const [participants, primaryLedgers] = folderIds.length > 0
-      ? await Promise.all([
-          prisma.folderParticipant.findMany({
-            where: { folderId: { in: folderIds } },
-            include: { user: { select: { name: true, email: true } } },
-          }),
-          prisma.ledger.findMany({
-            where: { folderId: { in: folderIds } },
-            select: { folderId: true, documentType: true, createdAt: true },
-            orderBy: { createdAt: "asc" },
-          }),
-        ])
-      : [[], []];
-    const participantNamesByFolder = new Map();
-    for (const p of participants) {
-      const list = participantNamesByFolder.get(p.folderId) || [];
-      list.push(p.user.name || p.user.email);
-      participantNamesByFolder.set(p.folderId, list);
-    }
-    // First-created Ledger per Folder stands in as the folder's "primary"
-    // document type for the card's type pill -- a bare Folder has no
-    // documentType of its own, only its child Ledgers do.
-    const primaryDocTypeByFolder = new Map();
-    for (const l of primaryLedgers) {
-      if (!primaryDocTypeByFolder.has(l.folderId)) primaryDocTypeByFolder.set(l.folderId, l.documentType);
-    }
-
     const serializeFolder = (f) => ({
       id: f.id,
       name: f.name,
@@ -88,26 +93,21 @@ export default async function DashboardPage() {
     );
   }
 
-  const deals = await listAccessibleDeals(session.user.id);
-  const archivedDeals = await listLifecycleDeals(session.user.id, "archive");
-  const trashedDeals = await listLifecycleDeals(session.user.id, "trash");
-  const userOrgs = await listUserOrgs(session.user.id);
-
-  const serialize = (d) => ({
-    id: d.id,
-    name: d.name,
-    documentType: d.documentType,
-    stage: d.stage,
-    updatedAt: d.updatedAt.toISOString(),
-    isShared: d._accessReason === "share",
-    writeAccess: d._writeAccess,
-    parentDealId: d.parentDealId,
-    priority: d.priority,
+  const serialize = (f) => ({
+    id: f.id,
+    name: f.name,
+    documentType: primaryDocTypeByFolder.get(f.id) || null,
+    stage: f.stage,
+    updatedAt: f.updatedAt.toISOString(),
+    isShared: f._accessReason === "participant",
+    writeAccess: f._writeAccess,
+    parentFolderId: f.parentFolderId,
+    priority: f.priority,
   });
 
-  const serializedDeals = deals.map(serialize);
-  const serializedArchived = archivedDeals.map(serialize);
-  const serializedTrashed = trashedDeals.map(serialize);
+  const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt).map(serialize);
+  const archivedFolders = allFolders.filter((f) => !!f.archivedAt && !f.deletedAt).map(serialize);
+  const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serialize);
 
   return (
     <>
@@ -116,9 +116,9 @@ export default async function DashboardPage() {
         <h1>Your Ledgers</h1>
         <p>Signed in as {session.user.email}.</p>
         <DealList
-          initialDeals={serializedDeals}
-          initialArchived={serializedArchived}
-          initialTrashed={serializedTrashed}
+          initialFolders={activeFolders}
+          initialArchived={archivedFolders}
+          initialTrashed={trashedFolders}
           userOrgs={userOrgs}
         />
       </main>
