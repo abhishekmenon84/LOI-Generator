@@ -32,7 +32,7 @@ export default function Navbar() {
     <nav className="navbar">
       {/* Logo and Version */}
       <div className="navbar-brand">
-        <a className="navbar-logo" href="/" aria-label="LOI Builder home">
+        <a className="navbar-logo" href="/" aria-label="Ledgerlot home">
           {logoUrl && !logoFailed ? (
             <img
               src={logoUrl}
@@ -53,7 +53,7 @@ export default function Navbar() {
               </svg>
             </div>
           )}
-          <span className="navbar-wordmark">LOI<span>Builder</span></span>
+          <span className="navbar-wordmark">Ledger<span>lot</span></span>
         </a>
         <span className="navbar-version-badge">v1.0.0</span>
         <div className="navbar-badge navbar-badge-inline" role="status" aria-live="polite">
@@ -65,7 +65,7 @@ export default function Navbar() {
       {/* Controls */}
       <div className="navbar-controls">
         <Link href="/dashboard" className="navbar-dashboard-link">
-          Dashboard
+          Ledgerboard
         </Link>
 
         <select

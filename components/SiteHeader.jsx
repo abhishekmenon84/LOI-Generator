@@ -30,7 +30,7 @@ export default function SiteHeader({ isLoggedIn = false }) {
 
   return (
     <nav className="site-header">
-      <Link className="navbar-logo" href="/" aria-label="LOI Builder home">
+      <Link className="navbar-logo" href="/" aria-label="Ledgerlot home">
         {logoUrl && !logoFailed ? (
           <img
             src={logoUrl}
@@ -51,11 +51,11 @@ export default function SiteHeader({ isLoggedIn = false }) {
             </svg>
           </div>
         )}
-        <span className="navbar-wordmark">LOI<span>Builder</span></span>
+        <span className="navbar-wordmark">Ledger<span>lot</span></span>
       </Link>
 
       <div className="site-header-links">
-        {isLoggedIn && <Link href="/dashboard">Dashboard</Link>}
+        {isLoggedIn && <Link href="/dashboard">Ledgerboard</Link>}
         {isLoggedIn && <Link href="/settings/organization">Organization</Link>}
         <Link href="/about">About</Link>
         <Link href="/v1">What&apos;s in v1</Link>

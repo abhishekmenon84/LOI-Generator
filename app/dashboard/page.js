@@ -7,7 +7,7 @@ import DealList from "../../components/DealList";
 import KanbanDashboard from "../../components/KanbanDashboard";
 
 export const metadata = {
-  title: "Dashboard — LOI Builder",
+  title: "Ledgerboard — Ledgerlot",
 };
 
 export default async function DashboardPage() {
@@ -43,7 +43,7 @@ export default async function DashboardPage() {
       <>
         <SiteHeader isLoggedIn={true} />
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 28px" }}>
-          <h1 style={{ marginBottom: 4 }}>Deal Pipeline</h1>
+          <h1 style={{ marginBottom: 4 }}>Ledgerboard</h1>
           <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Signed in as {session.user.email}.</p>
           <KanbanDashboard
             initialDeals={serializedDeals}
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
     <>
       <SiteHeader isLoggedIn={true} />
       <main className="marketing-page">
-        <h1>Your Deals</h1>
+        <h1>Your Ledgers</h1>
         <p>Signed in as {session.user.email}.</p>
         <DealList
           initialDeals={serializedDeals}
