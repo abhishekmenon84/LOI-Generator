@@ -49,7 +49,19 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: "This person is already a member." }, { status: 400 });
   }
 
-  await prisma.membership.create({ data: { userId: invitedUser.id, orgId: org.id, role: "member" } });
+  // getUserMembership only returns active rows, so a previously-deactivated
+  // member's row wouldn't be caught by the check above — look it up
+  // directly (ignoring active state) and reactivate rather than attempting
+  // a second insert, which would violate the (userId, orgId) unique
+  // constraint and throw an unhandled 500.
+  const inactiveRow = await prisma.membership.findUnique({
+    where: { userId_orgId: { userId: invitedUser.id, orgId: org.id } },
+  });
+  if (inactiveRow) {
+    await prisma.membership.update({ where: { id: inactiveRow.id }, data: { active: true } });
+  } else {
+    await prisma.membership.create({ data: { userId: invitedUser.id, orgId: org.id, role: "member" } });
+  }
   await maybeAutoUpgradeTier(org.id);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;

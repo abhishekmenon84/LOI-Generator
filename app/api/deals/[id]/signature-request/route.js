@@ -33,6 +33,9 @@ export async function POST(request, { params }) {
   if (!(await canManageSignatureRequest(deal, session.user.id))) {
     return NextResponse.json({ error: "Not authorized to send this deal for signature." }, { status: 403 });
   }
+  if (deal.deletedAt) {
+    return NextResponse.json({ error: "This deal is in Trash and cannot be sent for signature. Restore it first.", code: "DEAL_TRASHED" }, { status: 409 });
+  }
 
   const body = await request.json().catch(() => ({}));
   const participants = Array.isArray(body.participants) ? body.participants : [];

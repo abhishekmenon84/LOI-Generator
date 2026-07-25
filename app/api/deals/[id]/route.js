@@ -47,6 +47,9 @@ export async function PATCH(request, { params }) {
   if (deal.locked) {
     return NextResponse.json({ error: "This document has been fully signed and can no longer be edited.", code: "DEAL_LOCKED" }, { status: 409 });
   }
+  if (deal.deletedAt) {
+    return NextResponse.json({ error: "This deal is in Trash and can no longer be edited. Restore it first.", code: "DEAL_TRASHED" }, { status: 409 });
+  }
 
   const body = await request.json().catch(() => ({}));
   const data = {};
