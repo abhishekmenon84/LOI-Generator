@@ -11,7 +11,7 @@ const FEATURES = [
   "Combine real estate and business-operations deals in a single document — no need to draft two separate letters for a mixed acquisition.",
   "Live, itemized purchase-price allocation with calculated totals and dollars-in-words, updated in real time as you fill out the form.",
   "Free account with email-only sign-in — no password to remember.",
-  "Deals save automatically and resume from any device via your dashboard.",
+  "Deals save automatically and resume from any device via your Ledgerboard.",
   "Additional guided templates beyond the combo business+real estate flow — residential real estate, commercial lease, franchise acquisition, employment offer, and asset-only purchase.",
   "State and jurisdiction-aware clauses that flag or auto-include language relevant to specific US states or Canadian provinces.",
 ];

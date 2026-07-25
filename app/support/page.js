@@ -26,7 +26,7 @@ const FAQS = [
   },
   {
     q: "Does Ledgerlot save my draft?",
-    a: "Yes — sign in with a free account and your deal saves automatically. You can pick up where you left off from your dashboard on any device.",
+    a: "Yes — sign in with a free account and your deal saves automatically. You can pick up where you left off from your Ledgerboard on any device.",
   },
   {
     q: "I found a bug or have a question — how do I reach you?",
