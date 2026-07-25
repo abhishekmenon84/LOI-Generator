@@ -11,7 +11,7 @@ import SubscribeButtons from "../../../components/SubscribeButtons";
 import { SEAT_TIERS } from "../../../lib/orgBilling";
 
 export const metadata = {
-  title: "Organization Settings — LOI Builder",
+  title: "Organization Settings — Ledgerlot",
 };
 
 export default async function OrgSettingsPage() {

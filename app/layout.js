@@ -1,12 +1,12 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "LOI Builder — Letter of Intent Generator for Business & Real Estate Deals",
+  title: "Ledgerlot — Letter of Intent Generator for Business & Real Estate Deals",
   description:
     "The fastest way to draft a combined business and real estate Letter of Intent. Free, no signup — export a polished Word, PDF, or Google Doc.",
   keywords: "letter of intent, LOI generator, business acquisition, real estate LOI, purchase agreement",
   openGraph: {
-    title: "LOI Builder — Professional Letter of Intent Generator",
+    title: "Ledgerlot — Professional Letter of Intent Generator",
     description: "The fastest way to draft a combined business and real estate Letter of Intent. Free, no signup.",
     type: "website",
   },

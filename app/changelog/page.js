@@ -3,8 +3,8 @@ import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
 export const metadata = {
-  title: "Changelog — LOI Builder",
-  description: "A running log of what's shipped in LOI Builder.",
+  title: "Changelog — Ledgerlot",
+  description: "A running log of what's shipped in Ledgerlot.",
 };
 
 const ENTRIES = [

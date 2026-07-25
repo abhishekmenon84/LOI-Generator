@@ -2,7 +2,7 @@ import SiteHeader from "../../../components/SiteHeader";
 import SiteFooter from "../../../components/SiteFooter";
 
 export const metadata = {
-  title: "Check your email — LOI Builder",
+  title: "Check your email — Ledgerlot",
 };
 
 export default function CheckEmailPage() {

@@ -3,8 +3,8 @@ import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
 export const metadata = {
-  title: "About — LOI Builder",
-  description: "What LOI Builder is and who built it.",
+  title: "About — Ledgerlot",
+  description: "What Ledgerlot is and who built it.",
 };
 
 export default async function AboutPage() {
@@ -15,9 +15,9 @@ export default async function AboutPage() {
     <>
       <SiteHeader isLoggedIn={isLoggedIn} />
       <main className="marketing-page">
-        <h1>About LOI Builder</h1>
+        <h1>About Ledgerlot</h1>
         <p>
-          LOI Builder is a free, modern tool for generating non-binding Letters of Intent for
+          Ledgerlot is a free, modern tool for generating non-binding Letters of Intent for
           combined business and real estate acquisitions. It handles the parts that are tedious
           to write by hand — itemized purchase-price allocation with calculated totals, dollars-in-words
           conversion, and consistent legal structure — so you can produce a polished, professional

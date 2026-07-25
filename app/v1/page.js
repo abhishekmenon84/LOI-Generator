@@ -3,8 +3,8 @@ import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 
 export const metadata = {
-  title: "What's in v1 — LOI Builder",
-  description: "The current feature set of LOI Builder.",
+  title: "What's in v1 — Ledgerlot",
+  description: "The current feature set of Ledgerlot.",
 };
 
 const FEATURES = [
@@ -26,7 +26,7 @@ export default async function V1Page() {
       <main className="marketing-page">
         <h1>What&apos;s in v1</h1>
         <p>
-          The current version of LOI Builder focuses on getting a professional, combined
+          The current version of Ledgerlot focuses on getting a professional, combined
           business-and-real-estate Letter of Intent into your hands as fast as possible.
         </p>
         <ul>
