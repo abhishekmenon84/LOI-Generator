@@ -99,7 +99,7 @@ export async function POST(request, { params }) {
   await Promise.all(
     signerSlots.map((s) =>
       resend.emails.send({
-        from: "LOI Builder <onboarding@resend.dev>",
+        from: "Ledgerlot <onboarding@resend.dev>",
         to: s.email,
         subject: `Please sign: ${deal.name}`,
         html: `<p>You've been asked to sign <strong>${escapeHtml(deal.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.</p><p><a href="${appUrl}/sign/${s.signingToken}">Review and sign</a></p>`,

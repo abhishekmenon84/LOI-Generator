@@ -67,10 +67,10 @@ export async function POST(request, { params }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
   await resend.emails.send({
-    from: "LOI Builder <onboarding@resend.dev>",
+    from: "Ledgerlot <onboarding@resend.dev>",
     to: email,
-    subject: `You've been added to ${org.name} on LOI Builder`,
-    html: `<p>You've been added as a member of <strong>${escapeHtml(org.name)}</strong> on LOI Builder.</p><p><a href="${appUrl}/login">Sign in</a> with this email address (${escapeHtml(email)}) to get started.</p>`,
+    subject: `You've been added to ${org.name} on Ledgerlot`,
+    html: `<p>You've been added as a member of <strong>${escapeHtml(org.name)}</strong> on Ledgerlot.</p><p><a href="${appUrl}/login">Sign in</a> with this email address (${escapeHtml(email)}) to get started.</p>`,
   });
 
   return NextResponse.json({ ok: true }, { status: 201 });
