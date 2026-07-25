@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
-import { loadAccessibleFolder } from "../../../../lib/folderAccess";
+import { loadAccessibleFolder, getFolderAncestorChain } from "../../../../lib/folderAccess";
 
 const VALID_STAGES = ["draft", "active", "pending", "closed"];
 
@@ -14,6 +14,23 @@ export async function GET(request, { params }) {
   if (!folder) {
     return NextResponse.json({ error: "Folder not found." }, { status: 404 });
   }
+
+  // Phase 5 Task 3: resolve the ancestor chain server-side (rather than making
+  // the Folder workspace page do N+1 client-side fetches) using Phase 3's
+  // getFolderAncestorChain helper, which returns ancestor IDs nearest-first.
+  const ancestorIds = await getFolderAncestorChain(folder.id);
+  const ancestorFolders = ancestorIds.length > 0
+    ? await prisma.folder.findMany({ where: { id: { in: ancestorIds } } })
+    : [];
+  const ancestorById = new Map(ancestorFolders.map((f) => [f.id, f]));
+  // getFolderAncestorChain returns nearest-first; reverse so the breadcrumb
+  // reads root-first (oldest ancestor first, immediate parent last).
+  const ancestors = ancestorIds
+    .map((id) => ancestorById.get(id))
+    .filter(Boolean)
+    .reverse()
+    .map((f) => ({ id: f.id, name: f.name }));
+
   return NextResponse.json({
     id: folder.id,
     name: folder.name,
@@ -22,6 +39,7 @@ export async function GET(request, { params }) {
     parentFolderId: folder.parentFolderId,
     orgId: folder.orgId,
     readOnly: !folder._writeAccess,
+    ancestors,
   });
 }
 

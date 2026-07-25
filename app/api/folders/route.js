@@ -65,9 +65,18 @@ export async function GET(request) {
   }
   const { searchParams } = new URL(request.url);
   const orgId = searchParams.get("orgId");
+  // "parentFolderId" filter added in Phase 5 Task 3 for the Folder workspace's
+  // subfolder-tree panel (matches the existing "orgId" query-param pattern).
+  // Pass the literal string "null" to fetch root-level folders (no parent).
+  const parentFolderIdParam = searchParams.get("parentFolderId");
+  const hasParentFilter = parentFolderIdParam !== null;
+  const parentFolderId = parentFolderIdParam === "null" ? null : parentFolderIdParam;
 
   const folders = await listAccessibleFolders(session.user.id);
-  const scoped = orgId ? folders.filter((f) => f.orgId === orgId) : folders;
+  let scoped = orgId ? folders.filter((f) => f.orgId === orgId) : folders;
+  if (hasParentFilter) {
+    scoped = scoped.filter((f) => f.parentFolderId === parentFolderId);
+  }
 
   const participants = scoped.length > 0
     ? await prisma.folderParticipant.findMany({
@@ -82,6 +91,23 @@ export async function GET(request) {
     participantNamesByFolder.set(p.folderId, list);
   }
 
+  // "ledgers" per-folder enrichment added in Phase 5 Task 3 (matching the
+  // existing "participantNames" enrichment pattern just above) so the Folder
+  // workspace's tree panel can render each subfolder's nested Ledgers without
+  // a separate new API route (Task 3 explicitly produces no new API).
+  const ledgers = scoped.length > 0
+    ? await prisma.ledger.findMany({
+        where: { folderId: { in: scoped.map((f) => f.id) } },
+        select: { id: true, folderId: true, name: true, documentType: true },
+      })
+    : [];
+  const ledgersByFolder = new Map();
+  for (const l of ledgers) {
+    const list = ledgersByFolder.get(l.folderId) || [];
+    list.push({ id: l.id, name: l.name, documentType: l.documentType });
+    ledgersByFolder.set(l.folderId, list);
+  }
+
   return NextResponse.json({
     folders: scoped.map((f) => ({
       id: f.id,
@@ -92,6 +118,7 @@ export async function GET(request) {
       orgId: f.orgId,
       readOnly: !f._writeAccess,
       participantNames: participantNamesByFolder.get(f.id) || [],
+      ledgers: ledgersByFolder.get(f.id) || [],
     })),
   });
 }
