@@ -3,32 +3,36 @@
 import { useState } from "react";
 import KanbanCard from "./KanbanCard";
 
-const STAGE_DOTS = {
-  draft: "var(--text-muted)",
-  active: "var(--accent)",
-  pending: "#f59e0b",
-  closed: "#10b981",
-  archive: "var(--text-muted)",
-  trash: "#ef4444",
+// Exact dot colors from the design handoff's STATUS_META (~L419-426).
+const STATUS_DOTS = {
+  draft: "oklch(58% 0.01 264)",
+  active: "oklch(45% 0.15 300)",
+  pending: "oklch(72% 0.15 75)",
+  closed: "oklch(62% 0.15 155)",
+  archive: "oklch(60% 0.01 264)",
+  trash: "oklch(58% 0.18 25)",
 };
+
+const DRAG_ACTIVE_MAIN = "oklch(89% 0.03 300 / 0.5)";
+const IDLE_MAIN = "oklch(93.5% 0.008 60 / 0.7)";
+const DRAG_ACTIVE_SIDE = "oklch(89% 0.03 300 / 0.5)";
+const IDLE_SIDE = "oklch(94% 0.006 60 / 0.5)";
 
 export default function KanbanColumn({
   stage,
   label,
-  deals,
+  folders,
   onDragStart,
   onDrop,
-  onStageChangeDropdown,
   onArchive,
   onTrash,
   onRestore,
-  onPermanentDelete,
   side = false,
   childrenByParent,
-  onUnlinkChild,
-  onSetChildPriority,
-  onAddOffer,
-  onLinkChild,
+  onUnnestChild,
+  onCyclePriority,
+  onNest,
+  onOpen,
 }) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -43,41 +47,62 @@ export default function KanbanColumn({
         setDragOver(false);
         onDrop(e, stage);
       }}
-      className={`kanban-column${side ? " kanban-column-side" : ""}${dragOver ? " kanban-column-dragover" : ""}`}
+      style={{
+        flex: side ? "0 0 192px" : "0 0 272px",
+        minWidth: side ? 192 : 272,
+        background: dragOver ? (side ? DRAG_ACTIVE_SIDE : DRAG_ACTIVE_MAIN) : (side ? IDLE_SIDE : IDLE_MAIN),
+        borderRadius: 14,
+        padding: side ? 12 : 14,
+        minHeight: side ? 110 : 140,
+        opacity: side ? 0.88 : 1,
+        transition: "background .12s",
+      }}
     >
-      <div className="kanban-column-header">
-        <div className="kanban-column-title">
-          <span className="kanban-column-dot" style={{ background: STAGE_DOTS[stage] }} />
-          <span className="kanban-column-label">{label}</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: side ? 12 : 14, padding: side ? "0 2px" : "0 4px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: side ? 7 : 8 }}>
+          <span style={{ width: side ? 8 : 9, height: side ? 8 : 9, borderRadius: "50%", display: "inline-block", background: STATUS_DOTS[stage] }} />
+          <span style={{ fontWeight: side ? 650 : 700, fontSize: side ? 13 : 14.5, color: side ? "oklch(40% 0.012 264)" : undefined }}>{label}</span>
         </div>
-        <span className="kanban-column-count">{deals.length}</span>
+        <span
+          style={{
+            fontSize: side ? 11 : 12,
+            fontWeight: 600,
+            color: side ? "oklch(50% 0.012 264)" : "oklch(46% 0.015 264)",
+            background: "oklch(99% 0.003 60)",
+            padding: side ? "1px 7px" : "2px 8px",
+            borderRadius: 20,
+          }}
+        >
+          {folders.length}
+        </span>
       </div>
-      <div className="kanban-column-body">
-        {deals.length === 0 ? (
-          <p className="kanban-column-empty">{side ? "Empty" : "No deals here yet."}</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: side ? 8 : 10 }}>
+        {folders.length === 0 ? (
+          <div style={{ fontSize: side ? 12 : 13, color: side ? "oklch(58% 0.01 264)" : "oklch(55% 0.01 264)", padding: side ? "6px 2px" : "10px 4px" }}>
+            {side ? "Empty" : "No folders here yet."}
+          </div>
         ) : (
-          deals.map((deal) =>
+          folders.map((folder) =>
             side ? (
               <KanbanCard
-                key={deal.id}
-                deal={deal}
+                key={folder.id}
+                folder={folder}
                 onDragStart={onDragStart}
                 compact
-                onRestore={onRestore ? () => onRestore(deal.id, stage) : undefined}
-                onPermanentDelete={stage === "trash" && onPermanentDelete ? () => onPermanentDelete(deal.id) : undefined}
+                onRestore={onRestore ? () => onRestore(folder.id) : undefined}
               />
             ) : (
               <KanbanCard
-                key={deal.id}
-                deal={deal}
+                key={folder.id}
+                folder={folder}
                 onDragStart={onDragStart}
-                onArchive={deal.writeAccess ? onArchive : undefined}
-                onTrash={deal.writeAccess ? onTrash : undefined}
-                childThreads={childrenByParent?.get(deal.id) || []}
-                onUnlinkChild={onUnlinkChild}
-                onSetChildPriority={onSetChildPriority}
-                onAddOffer={onAddOffer}
-                onLinkChild={onLinkChild}
+                onArchive={folder.writeAccess ? onArchive : undefined}
+                onTrash={folder.writeAccess ? onTrash : undefined}
+                childThreads={childrenByParent?.get(folder.id) || []}
+                onUnnestChild={onUnnestChild}
+                onCyclePriority={onCyclePriority}
+                onNest={onNest}
+                onOpen={onOpen}
               />
             )
           )

@@ -69,6 +69,19 @@ export async function GET(request) {
   const folders = await listAccessibleFolders(session.user.id);
   const scoped = orgId ? folders.filter((f) => f.orgId === orgId) : folders;
 
+  const participants = scoped.length > 0
+    ? await prisma.folderParticipant.findMany({
+        where: { folderId: { in: scoped.map((f) => f.id) } },
+        include: { user: { select: { name: true, email: true } } },
+      })
+    : [];
+  const participantNamesByFolder = new Map();
+  for (const p of participants) {
+    const list = participantNamesByFolder.get(p.folderId) || [];
+    list.push(p.user.name || p.user.email);
+    participantNamesByFolder.set(p.folderId, list);
+  }
+
   return NextResponse.json({
     folders: scoped.map((f) => ({
       id: f.id,
@@ -78,6 +91,7 @@ export async function GET(request) {
       parentFolderId: f.parentFolderId,
       orgId: f.orgId,
       readOnly: !f._writeAccess,
+      participantNames: participantNamesByFolder.get(f.id) || [],
     })),
   });
 }
