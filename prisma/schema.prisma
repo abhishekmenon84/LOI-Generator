@@ -27,6 +27,7 @@ model Organization {
   name                 String
   accountType          String   @default("individual") // "individual" | "real_estate_agency" | "company" | "corporation"
   isPersonal           Boolean  @default(true)
+  logoUrl              String?
   planTier             String   @default("trial") // "trial" | "tier_1_10" | "tier_11_30" | "tier_31_50" | "enterprise" | "expired"
   trialEndsAt          DateTime?
   stripeCustomerId     String?  @unique
