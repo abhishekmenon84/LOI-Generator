@@ -20,6 +20,9 @@ model User {
   dealsCreated        Deal[]      @relation("DealCreator")
   dealSharesReceived  DealShare[] @relation("DealShareRecipient")
   dealSharesGranted   DealShare[] @relation("DealShareGrantor")
+  foldersCreated      Folder[]    @relation("FolderCreator")
+  ledgersCreated      Ledger[]    @relation("LedgerCreator")
+  folderParticipations FolderParticipant[]
 }
 
 model Organization {
@@ -37,6 +40,7 @@ model Organization {
 
   memberships Membership[]
   deals       Deal[]
+  folders     Folder[]
 }
 
 model Membership {
@@ -186,4 +190,73 @@ model SignatureEvent {
   geoRegion         String?
   geoCity           String?
   signedAt          DateTime @default(now())
+}
+
+model Folder {
+  id              String    @id @default(cuid())
+  orgId           String
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdBy       User      @relation("FolderCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  name            String
+  stage           String    @default("draft") // "draft" | "active" | "pending" | "closed"
+  priority        String?   // "green" | "yellow" | "grey" | null
+  archivedAt      DateTime?
+  deletedAt       DateTime?
+  parentFolderId  String?
+  parent          Folder?   @relation("FolderTree", fields: [parentFolderId], references: [id], onDelete: Cascade)
+  children        Folder[]  @relation("FolderTree")
+  ledgers         Ledger[]
+  participants    FolderParticipant[]
+  auditEvents     FolderAuditEvent[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([orgId])
+  @@index([createdByUserId])
+  @@index([parentFolderId])
+}
+
+model FolderParticipant {
+  id            String   @id @default(cuid())
+  folderId      String
+  folder        Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission    String   @default("read") // "read" | "write"
+  addedByUserId String
+  createdAt     DateTime @default(now())
+
+  @@unique([folderId, userId])
+  @@index([folderId])
+  @@index([userId])
+}
+
+model FolderAuditEvent {
+  id         String   @id @default(cuid())
+  folderId   String
+  folder     Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  actorUserId String
+  action     String   // "archived" | "trashed" | "restored" | "created" | "moved" | "linked_child" | "unlinked_child"
+  reason     String?  // mandatory for archived/trashed/restored, null for system-generated events like "created"
+  createdAt  DateTime @default(now())
+
+  @@index([folderId])
+}
+
+model Ledger {
+  id              String   @id @default(cuid())
+  folderId        String
+  folder          Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdBy       User     @relation("LedgerCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  name            String
+  documentType    String   @default("purchase_loi")
+  formData        Json
+  locked          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([folderId])
+  @@index([createdByUserId])
 }
