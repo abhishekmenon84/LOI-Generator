@@ -6,7 +6,7 @@ import { getUserMembership } from "../../../../../lib/orgAccess";
 import { isOrgActive } from "../../../../../lib/orgBilling";
 import { uploadFile } from "../../../../../lib/blobStorage";
 
-async function requireAdminActiveOrg(orgId, userId) {
+export async function requireAdminActiveOrg(orgId, userId) {
   const membership = await getUserMembership(userId, orgId);
   if (!membership || membership.role !== "admin") return { error: "Admin access required.", status: 403 };
   const org = await prisma.organization.findUnique({ where: { id: orgId } });

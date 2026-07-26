@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { getUserMembership } from "../../../../../../lib/orgAccess";
-import { isOrgActive } from "../../../../../../lib/orgBilling";
 import { deleteFile } from "../../../../../../lib/blobStorage";
+import { requireAdminActiveOrg } from "../route";
 
 const VALID_ANCHOR_TYPES = new Set(["signature", "date", "initials", "text", "checkbox", "radio"]);
 
@@ -67,13 +67,9 @@ export async function PATCH(request, { params }) {
   if (!template) {
     return NextResponse.json({ error: "Template not found." }, { status: 404 });
   }
-  const membership = await getUserMembership(session.user.id, template.orgId);
-  if (!membership || membership.role !== "admin") {
-    return NextResponse.json({ error: "Admin access required." }, { status: 403 });
-  }
-  const org = await prisma.organization.findUnique({ where: { id: template.orgId } });
-  if (!isOrgActive(org)) {
-    return NextResponse.json({ error: "Your organization's trial has ended. Subscribe to continue.", code: "TRIAL_EXPIRED" }, { status: 402 });
+  const gate = await requireAdminActiveOrg(template.orgId, session.user.id);
+  if (gate.error) {
+    return NextResponse.json({ error: gate.error, ...(gate.code ? { code: gate.code } : {}) }, { status: gate.status });
   }
 
   const body = await request.json().catch(() => ({}));
@@ -103,9 +99,9 @@ export async function DELETE(request, { params }) {
   if (!template) {
     return NextResponse.json({ error: "Template not found." }, { status: 404 });
   }
-  const membership = await getUserMembership(session.user.id, template.orgId);
-  if (!membership || membership.role !== "admin") {
-    return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+  const gate = await requireAdminActiveOrg(template.orgId, session.user.id);
+  if (gate.error) {
+    return NextResponse.json({ error: gate.error, ...(gate.code ? { code: gate.code } : {}) }, { status: gate.status });
   }
   await prisma.customTemplate.delete({ where: { id: template.id } });
   try {
