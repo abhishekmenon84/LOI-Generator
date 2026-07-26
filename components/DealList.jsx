@@ -30,12 +30,8 @@ function relativeTime(isoString) {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
-// NOTE: `/ledgerboard/folder/[folderId]` (the real three-panel workspace
-// route) does not exist yet -- Task 3 builds it. Until then, use the same
-// placeholder destination Task 2's KanbanDashboard.jsx uses for its "onOpen"
-// handler, so both dashboard views agree on one placeholder pending Task 3.
-function workspacePlaceholderPath(folderId) {
-  return `/dashboard?folder=${folderId}`;
+function workspacePath(folderId) {
+  return `/ledgerboard/folder/${folderId}`;
 }
 
 export default function DealList({ initialFolders, initialArchived = [], initialTrashed = [], userOrgs = [] }) {
@@ -101,7 +97,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
         throw new Error(body.error || "Folder was created, but could not create its ledger.");
       }
 
-      router.push(workspacePlaceholderPath(folder.id));
+      router.push(workspacePath(folder.id));
     } catch (err) {
       setError(err.message);
       setCreating(false);
@@ -130,7 +126,10 @@ export default function DealList({ initialFolders, initialArchived = [], initial
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason }),
         });
-        if (!res.ok) throw new Error("Could not archive deal.");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Could not archive deal.");
+        }
       } catch (err) {
         setDeals((cur) => [...cur, deal]);
         setArchivedDeals((cur) => cur.filter((d) => d.id !== folderId));
@@ -153,7 +152,10 @@ export default function DealList({ initialFolders, initialArchived = [], initial
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason }),
         });
-        if (!res.ok) throw new Error("Could not move deal to trash.");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Could not move deal to trash.");
+        }
       } catch (err) {
         setDeals((cur) => [...cur, deal]);
         setTrashedDeals((cur) => cur.filter((d) => d.id !== folderId));
@@ -178,7 +180,10 @@ export default function DealList({ initialFolders, initialArchived = [], initial
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason }),
         });
-        if (!res.ok) throw new Error("Could not restore deal.");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Could not restore deal.");
+        }
       } catch (err) {
         setDeals((cur) => cur.filter((d) => d.id !== folderId));
         if (from === "trash") setTrashedDeals((cur) => [...cur, deal]);
@@ -355,7 +360,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                 <div className="deal-list-item-actions">
                   {view === "active" ? (
                     <>
-                      <a className="marketing-cta-button" href={workspacePlaceholderPath(deal.id)}>Resume</a>
+                      <a className="marketing-cta-button" href={workspacePath(deal.id)}>Resume</a>
                       {deal.writeAccess && (
                         <>
                           <button

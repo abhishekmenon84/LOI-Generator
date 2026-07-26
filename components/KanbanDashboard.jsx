@@ -181,7 +181,10 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason }),
         });
-        if (!res.ok) throw new Error("Could not archive folder.");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Could not archive folder.");
+        }
       } catch (err) {
         setFolders((cur) => [...cur, folder]);
         setArchivedFolders((cur) => cur.filter((f) => f.id !== folderId));
@@ -201,7 +204,10 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason }),
         });
-        if (!res.ok) throw new Error("Could not move folder to trash.");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Could not move folder to trash.");
+        }
       } catch (err) {
         setFolders((cur) => [...cur, folder]);
         setTrashedFolders((cur) => cur.filter((f) => f.id !== folderId));
@@ -223,7 +229,10 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason }),
         });
-        if (!res.ok) throw new Error("Could not restore folder.");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Could not restore folder.");
+        }
       } catch (err) {
         setFolders((cur) => cur.filter((f) => f.id !== folderId));
         if (from === "trash") setTrashedFolders((cur) => [...cur, folder]);
@@ -355,7 +364,7 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
             onUnnestChild={handleUnnestChild}
             onCyclePriority={handleCyclePriority}
             onNest={handleNest}
-            onOpen={(id) => router.push(`/dashboard?folder=${id}`)}
+            onOpen={(id) => router.push(`/ledgerboard/folder/${id}`)}
           />
         ))}
 

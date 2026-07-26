@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import { loadAccessibleFolder, listAccessibleFolders } from "../../../lib/folderAccess";
-import { getUserMembership } from "../../../lib/orgAccess";
+import { getUserMembership, getPersonalOrgId } from "../../../lib/orgAccess";
 
 export async function POST(request) {
   const session = await auth();
@@ -12,14 +12,17 @@ export async function POST(request) {
 
   const body = await request.json().catch(() => ({}));
   const name = (body.name || "").trim();
-  const orgId = body.orgId;
+  let orgId = body.orgId;
   const parentFolderId = body.parentFolderId || null;
 
   if (!name) {
     return NextResponse.json({ error: "A folder name is required." }, { status: 400 });
   }
   if (!orgId) {
-    return NextResponse.json({ error: "An orgId is required." }, { status: 400 });
+    orgId = await getPersonalOrgId(session.user.id);
+    if (!orgId) {
+      return NextResponse.json({ error: "No organization found for this account." }, { status: 500 });
+    }
   }
 
   const membership = await getUserMembership(session.user.id, orgId);

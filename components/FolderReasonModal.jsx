@@ -12,7 +12,7 @@ export default function FolderReasonModal({ action, folderName, onConfirm, onCan
 
   if (!action) return null;
   const config = ACTION_CONFIG[action];
-  const disabled = !reason.trim();
+  const disabled = reason.trim().length < 10;
 
   const handleConfirm = () => {
     if (disabled) return;
@@ -45,6 +45,7 @@ export default function FolderReasonModal({ action, folderName, onConfirm, onCan
             onChange={(e) => setReason(e.target.value)}
             style={{ padding: "10px 12px", borderRadius: 9, border: "1px solid oklch(88% 0.008 60)", fontSize: 13.5, fontFamily: "inherit", outline: "none", resize: "vertical", color: "inherit" }}
           />
+          <span style={{ fontSize: 11.5, color: "oklch(55% 0.01 264)" }}>At least 10 characters</span>
         </label>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button
