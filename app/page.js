@@ -25,7 +25,7 @@ export default async function HomePage() {
             <span>·</span>
             <span>Save &amp; resume deals</span>
             <span>·</span>
-            <span>Export to Word, PDF, or Google Doc</span>
+            <span>Export to Word or PDF</span>
           </div>
         </div>
 

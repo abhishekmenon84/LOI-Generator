@@ -26,7 +26,7 @@ export default async function AboutPage() {
         <p>
           Sign in with just your email — no password required — and your deals are saved
           automatically so you can pick up where you left off, from any device, then export
-          straight to Word, PDF, or Google Doc.
+          straight to Word or PDF.
         </p>
         <p>
           <strong>Created by Abhishek Menon.</strong>
