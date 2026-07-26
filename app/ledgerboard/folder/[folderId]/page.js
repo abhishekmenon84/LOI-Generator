@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import FolderBreadcrumb from "../../../../components/FolderBreadcrumb";
 import FolderTreePanel from "../../../../components/FolderTreePanel";
 import LOIForm from "../../../../components/LOIForm";
@@ -56,13 +56,23 @@ const DOC_TYPE_CONFIG = {
 
 const noopExportState = { loading: false, format: null, error: null, success: null };
 
+// Fix round 1 (Important #2): Ledger-scoped export doesn't exist yet (no
+// /api/export/... route accepts a ledgerId), so exporting here can't work.
+// Rather than a silent no-op, surface an honest, visible message via the
+// same exportState contract app/app/page.js uses ({loading, format, error,
+// success}) so the Form components' existing error-banner rendering picks
+// it up -- a disclosed limitation instead of dead silence.
+const EXPORT_UNAVAILABLE_MESSAGE = "Export isn't available in this workspace yet.";
+
 export default function FolderWorkspacePage() {
   const params = useParams();
+  const router = useRouter();
   const folderId = params.folderId;
 
   const [folder, setFolder] = useState(null);
   const [ancestors, setAncestors] = useState([]);
   const [subfolders, setSubfolders] = useState([]);
+  const [folderLedgers, setFolderLedgers] = useState([]);
   const [loadError, setLoadError] = useState(null);
 
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -72,11 +82,18 @@ export default function FolderWorkspacePage() {
   const [ledger, setLedger] = useState(null); // {id, folderId, name, documentType, formData, locked, readOnly}
   const [ledgerData, setLedgerData] = useState(null); // just the formData, edited locally
   const [ledgerLoadError, setLedgerLoadError] = useState(null);
+  const [exportState, setExportState] = useState(noopExportState);
   const saveTimeoutRef = useRef(null);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
   // preferred approach over N+1 client fetches) and its direct subfolders.
+  //
+  // Fix round 1 (Important #1): GET /api/folders/[id] now also returns this
+  // folder's OWN `ledgers` array (documents created directly in this folder,
+  // not in a subfolder). Previously only subfolder Ledgers were fetched
+  // (via GET /api/folders?parentFolderId=), so Ledgers created directly in
+  // the current folder never appeared anywhere in the tree after creation.
   useEffect(() => {
     if (!folderId) return;
     let cancelled = false;
@@ -90,6 +107,7 @@ export default function FolderWorkspacePage() {
         if (cancelled) return;
         setFolder(data);
         setAncestors(data.ancestors || []);
+        setFolderLedgers(data.ledgers || []);
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err.message);
@@ -128,6 +146,7 @@ export default function FolderWorkspacePage() {
     }
     let cancelled = false;
     setLedgerLoadError(null);
+    setExportState(noopExportState);
     fetch(`/api/ledgers/${selectedLedgerId}`)
       .then((res) => {
         if (!res.ok) throw new Error("Ledger not found.");
@@ -178,7 +197,9 @@ export default function FolderWorkspacePage() {
   }, [ledgerData, selectedLedgerId, ledgerReadOnly]);
 
   function handleNavigateFolder(id) {
-    window.location.href = `/ledgerboard/folder/${id}`;
+    // Fix round 1 (Minor #7): use next/navigation's client-side router
+    // instead of a full page reload, matching FolderBreadcrumb's next/link.
+    router.push(`/ledgerboard/folder/${id}`);
   }
 
   async function handleRenameFolder(id, name) {
@@ -187,7 +208,9 @@ export default function FolderWorkspacePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     }).catch(() => {});
-    if (id === folderId) {
+    // Fix round 1 (Minor #4): compare against the fetched folder object's own
+    // `.id`, not the raw `folderId` route param, for correctness/clarity.
+    if (folder && id === folder.id) {
       setFolder((f) => (f ? { ...f, name } : f));
     } else {
       setAncestors((prev) => prev.map((a) => (a.id === id ? { ...a, name } : a)));
@@ -204,10 +227,25 @@ export default function FolderWorkspacePage() {
     if (!res || !res.ok) return;
     const created = await res.json().catch(() => null);
     if (!created) return;
+    // Fix round 1 (Important #1): reflect the newly created Ledger in the
+    // current folder's own ledgers list immediately, so it shows up in the
+    // tree right away rather than only after a reload.
+    setFolderLedgers((prev) => [
+      ...prev,
+      { id: created.id, name: created.name, documentType: created.documentType },
+    ]);
     setSelectedLedgerId(created.id);
   }
 
-  const hasNoActiveLedger = !selectedLedgerId;
+  function handleExport() {
+    setExportState({
+      loading: false,
+      format: null,
+      error: EXPORT_UNAVAILABLE_MESSAGE,
+      success: null,
+    });
+  }
+
   const hasActiveLedger = !!selectedLedgerId;
   const docSelected = !!selectedLedgerId;
 
@@ -248,6 +286,7 @@ export default function FolderWorkspacePage() {
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <FolderTreePanel
           folder={folder}
+          folderLedgers={folderLedgers}
           ancestors={ancestors}
           subfolders={subfolders}
           collapsed={leftCollapsed}
@@ -283,11 +322,11 @@ export default function FolderWorkspacePage() {
               <config.Form
                 data={ledgerData}
                 onChange={setLedgerData}
-                onExport={() => {}}
+                onExport={handleExport}
                 onClearDraft={() =>
                   setLedgerData({ ...config.defaultData, currentDate: todayLabel() })
                 }
-                exportState={noopExportState}
+                exportState={exportState}
                 readOnly={ledgerReadOnly}
               />
             )

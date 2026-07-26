@@ -31,6 +31,15 @@ export async function GET(request, { params }) {
     .reverse()
     .map((f) => ({ id: f.id, name: f.name }));
 
+  // Phase 5 Task 3 fix round 1 (Important #1): this folder's OWN Ledgers
+  // (documents created directly in the current folder, not in a subfolder)
+  // were never returned anywhere, so they never appeared in the tree panel.
+  // Mirrors the `ledgers` enrichment already added to GET /api/folders.
+  const ledgers = await prisma.ledger.findMany({
+    where: { folderId: folder.id },
+    select: { id: true, name: true, documentType: true },
+  });
+
   return NextResponse.json({
     id: folder.id,
     name: folder.name,
@@ -40,6 +49,7 @@ export async function GET(request, { params }) {
     orgId: folder.orgId,
     readOnly: !folder._writeAccess,
     ancestors,
+    ledgers,
   });
 }
 

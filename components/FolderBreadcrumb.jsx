@@ -54,13 +54,13 @@ export default function FolderBreadcrumb({ ancestors = [], current, selectedDocN
         {currentIsStatic ? (
           <span style={{ fontWeight: 700, color: staticColor, cursor: "default" }}>{current?.name}</span>
         ) : (
-          <Link
-            href="#"
-            onClick={(e) => e.preventDefault()}
-            style={{ fontWeight: 600, color: activeColor, textDecoration: "none", cursor: "default" }}
-          >
+          // Fix round 1 (Minor #8): plain span instead of an inert
+          // Link href="#" that preventDefaults its own click -- matches how
+          // the handoff renders all breadcrumb segments as clickable spans,
+          // not anchor tags with dead hrefs.
+          <span style={{ fontWeight: 600, color: activeColor, cursor: "default" }}>
             {current?.name}
-          </Link>
+          </span>
         )}
         {selectedDocName ? <span style={{ color: sepColor }}>&rsaquo;</span> : null}
       </span>
