@@ -237,8 +237,16 @@ export default function FolderWorkspacePage() {
   // Debounced autosave -- identical shape to app/app/page.js's autosave
   // useEffect, just pointed at PATCH /api/ledgers/[id] instead of
   // PATCH /api/deals/[id].
+  //
+  // Final whole-branch review (Critical/Important #1 defense-in-depth): also
+  // require `config` to be present, i.e. never autosave when there's no
+  // DOC_TYPE_CONFIG entry for the selected Ledger's documentType (this is
+  // the case for "custom_template" Ledgers, which have their own dedicated
+  // screen and must never be loaded into this generic state in the first
+  // place -- see handleSelectLedger below, which is the primary fix. This
+  // guard is cheap insurance in case some other path still selects one).
   useEffect(() => {
-    if (!ledgerData || !selectedLedgerId || ledgerReadOnly) return;
+    if (!ledgerData || !selectedLedgerId || ledgerReadOnly || !config) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       fetch(`/api/ledgers/${selectedLedgerId}`, {
@@ -250,7 +258,7 @@ export default function FolderWorkspacePage() {
       });
     }, 1000);
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [ledgerData, selectedLedgerId, ledgerReadOnly]);
+  }, [ledgerData, selectedLedgerId, ledgerReadOnly, config]);
 
   const fileReadOnly = !!(fileData && fileData.readOnly);
 
@@ -275,7 +283,27 @@ export default function FolderWorkspacePage() {
   // onSelectLedger/onSelectFile must clear each other -- selecting one
   // always deselects the other, so the middle/right panel conditional never
   // has to consider "both selected" as a possible state.
-  function handleSelectLedger(id) {
+  //
+  // Final whole-branch review (Critical + Important #1): a "custom_template"
+  // Ledger has no entry in DOC_TYPE_CONFIG -- there is no dynamic form/editor
+  // for it, and it's handled entirely by the dedicated
+  // /ledgerboard/custom-template/[ledgerId] screen (signer-role assignment
+  // over a fixed PDF). Previously, clicking one here still loaded it into
+  // this page's generic selectedLedgerId/ledgerData state: the middle panel
+  // correctly showed a "no editor" message, but the autosave useEffect above
+  // wasn't gated on `config` and could PATCH {formData: ledgerData} back to
+  // the server, wholesale-replacing (not merging) the Ledger's
+  // templateId/signerRoleAssignments -- the only data that makes it
+  // meaningful. It also meant the dedicated screen was unreachable except via
+  // the one-shot redirect right after creation. Routing away here instead
+  // means a custom_template Ledger is never actually selected into this
+  // page's state at all, so the autosave effect never fires for it, and the
+  // Ledger stays reachable by clicking it in the tree at any time.
+  function handleSelectLedger(id, documentType) {
+    if (documentType === "custom_template") {
+      router.push(`/ledgerboard/custom-template/${id}`);
+      return;
+    }
     setSelectedFileId(null);
     setSelectedLedgerId(id);
   }
@@ -419,11 +447,25 @@ export default function FolderWorkspacePage() {
     // Stash the templateId on the new Ledger so the signer-assignment screen
     // can resolve the template without re-picking it. PATCH /api/ledgers/[id]
     // replaces `formData` wholesale, so this must happen before navigating.
-    await fetch(`/api/ledgers/${created.id}`, {
+    //
+    // Final whole-branch review (Important #2): previously this PATCH's
+    // failure was swallowed with a bare `.catch(() => {})` and `res.ok` was
+    // never checked, so a failed PATCH still navigated into the
+    // signer-assignment screen, which would immediately show "This Ledger
+    // has no associated template." with no explanation, leaving an orphaned
+    // empty Ledger behind. Now check res.ok and surface a clear error via
+    // the same templatesError state this create-flow already uses for its
+    // other failure cases, instead of navigating.
+    const patchRes = await fetch(`/api/ledgers/${created.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ formData: { templateId: template.id } }),
-    }).catch(() => {});
+    }).catch(() => null);
+    if (!patchRes || !patchRes.ok) {
+      setTemplatesError("Could not set up that template. Please try again.");
+      setCreatingFromTemplateId(null);
+      return;
+    }
     router.push(`/ledgerboard/custom-template/${created.id}`);
   }
 

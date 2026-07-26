@@ -23,7 +23,7 @@ const DOC_ICONS = { ledger: "📝", file: "📎" };
 function LedgerRow({ doc, isSelected, onSelectLedger }) {
   return (
     <div
-      onClick={() => onSelectLedger?.(doc.id)}
+      onClick={() => onSelectLedger?.(doc.id, doc.documentType)}
       style={{
         display: "flex",
         alignItems: "center",
