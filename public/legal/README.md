@@ -11,7 +11,7 @@ New Brunswick government Attachment A PDF (Form 6, Parts 1-9, "Additional Inform
 from the Residential Tenancies Tribunal. The replacement must:
 
 - Keep the exact filename `nb-residential-lease-attachment-a.pdf` (referenced by path in
-  `app/api/export/residential-lease/pdf/route.js` and the docx/gdoc routes).
+  `app/api/export/residential-lease/pdf/route.js` and the docx route).
 - Be the complete, unmodified government document — this tool never edits or regenerates
   Attachment A's content, per the form's own legal notice that alterations are void.
 
