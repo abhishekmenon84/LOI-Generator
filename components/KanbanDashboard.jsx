@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import KanbanColumn from "./KanbanColumn";
 import FolderReasonModal from "./FolderReasonModal";
@@ -19,6 +19,9 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
   const [trashedFolders, setTrashedFolders] = useState(initialTrashedFolders);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [creating, setCreating] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [newFolderName, setNewFolderName] = useState("");
@@ -248,25 +251,38 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
     return all.find((f) => f.id === reasonModal.folderId)?.name || "";
   }, [reasonModal, folders, archivedFolders, trashedFolders]);
 
-  const filteredFolders = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return folders;
-    return folders.filter((f) => {
-      if (f.name.toLowerCase().includes(q)) return true;
-      return (f.participantNames || []).some((n) => n.toLowerCase().includes(q));
-    });
-  }, [folders, search]);
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) {
+      setSearchResults(null);
+      setSearchError(null);
+      return;
+    }
+    setSearchLoading(true);
+    setSearchError(null);
+    const timeout = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(q)}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Search failed.");
+          return res.json();
+        })
+        .then((data) => setSearchResults(data.results || []))
+        .catch((err) => setSearchError(err.message))
+        .finally(() => setSearchLoading(false));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   const childrenByParent = useMemo(() => {
     const map = new Map();
-    for (const f of filteredFolders) {
+    for (const f of folders) {
       if (f.parentFolderId) {
         if (!map.has(f.parentFolderId)) map.set(f.parentFolderId, []);
         map.get(f.parentFolderId).push(f);
       }
     }
     return map;
-  }, [filteredFolders]);
+  }, [folders]);
 
   return (
     <div>
@@ -349,46 +365,92 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
         </div>
       )}
 
-      <div className="kanban-board">
-        {STAGES.map((s) => (
+      {searchResults !== null ? (
+        <div style={{ padding: "8px 4px" }}>
+          {searchLoading && <p style={{ color: "var(--text-secondary)" }}>Searching…</p>}
+          {searchError && (
+            <div className="status-banner status-error" role="alert" style={{ marginBottom: 16 }}>
+              ⚠️ {searchError}
+            </div>
+          )}
+          {!searchLoading && !searchError && searchResults.length === 0 && (
+            <p style={{ color: "var(--text-secondary)" }}>No folders or ledgers match "{search.trim()}".</p>
+          )}
+          {!searchLoading && searchResults.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {searchResults.map((r) => (
+                <div
+                  key={`${r.type}-${r.id}`}
+                  onClick={() => router.push(`/ledgerboard/folder/${r.folderId}`)}
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-panel)",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600 }}>
+                      {r.type === "ledger" ? "📝 " : "📁 "}
+                      {r.name}
+                    </div>
+                    {r.type === "ledger" && (
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>in {r.folderName}</div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{r.orgName}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="kanban-board">
+          {STAGES.map((s) => (
+            <KanbanColumn
+              key={s.key}
+              stage={s.key}
+              label={s.label}
+              folders={folders.filter((f) => f.stage === s.key && !f.parentFolderId)}
+              onDragStart={handleDragStart}
+              onDrop={handleDrop}
+              onArchive={(id) => openReasonModal(id, "archive")}
+              onTrash={(id) => openReasonModal(id, "trash")}
+              childrenByParent={childrenByParent}
+              onUnnestChild={handleUnnestChild}
+              onCyclePriority={handleCyclePriority}
+              onNest={handleNest}
+              onOpen={(id) => router.push(`/ledgerboard/folder/${id}`)}
+            />
+          ))}
+
+          <div className="kanban-board-divider" aria-hidden="true" />
+
           <KanbanColumn
-            key={s.key}
-            stage={s.key}
-            label={s.label}
-            folders={filteredFolders.filter((f) => f.stage === s.key && !f.parentFolderId)}
+            stage="archive"
+            label="Archive"
+            folders={archivedFolders}
             onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            onArchive={(id) => openReasonModal(id, "archive")}
-            onTrash={(id) => openReasonModal(id, "trash")}
-            childrenByParent={childrenByParent}
-            onUnnestChild={handleUnnestChild}
-            onCyclePriority={handleCyclePriority}
-            onNest={handleNest}
-            onOpen={(id) => router.push(`/ledgerboard/folder/${id}`)}
+            onDrop={() => {}}
+            side
+            onRestore={(id) => openReasonModal(id, "restore", "archive")}
           />
-        ))}
-
-        <div className="kanban-board-divider" aria-hidden="true" />
-
-        <KanbanColumn
-          stage="archive"
-          label="Archive"
-          folders={archivedFolders}
-          onDragStart={handleDragStart}
-          onDrop={() => {}}
-          side
-          onRestore={(id) => openReasonModal(id, "restore", "archive")}
-        />
-        <KanbanColumn
-          stage="trash"
-          label="Trash"
-          folders={trashedFolders}
-          onDragStart={handleDragStart}
-          onDrop={() => {}}
-          side
-          onRestore={(id) => openReasonModal(id, "restore", "trash")}
-        />
-      </div>
+          <KanbanColumn
+            stage="trash"
+            label="Trash"
+            folders={trashedFolders}
+            onDragStart={handleDragStart}
+            onDrop={() => {}}
+            side
+            onRestore={(id) => openReasonModal(id, "restore", "trash")}
+          />
+        </div>
+      )}
 
       <FolderReasonModal
         action={reasonModal?.action}
