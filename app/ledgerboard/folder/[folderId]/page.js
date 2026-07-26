@@ -97,6 +97,7 @@ export default function FolderWorkspacePage() {
   const [fileLoadError, setFileLoadError] = useState(null);
   const fileSaveTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [uploadError, setUploadError] = useState(null);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
@@ -281,15 +282,23 @@ export default function FolderWorkspacePage() {
   async function handleUploadFile(fileList) {
     const file = fileList && fileList[0];
     if (!file) return;
+    setUploadError(null);
     const body = new FormData();
     body.append("file", file);
     const res = await fetch(`/api/folders/${folderId}/files`, {
       method: "POST",
       body,
     }).catch(() => null);
-    if (!res || !res.ok) return;
+    if (!res || !res.ok) {
+      const errBody = await res?.json().catch(() => ({})) ?? {};
+      setUploadError(errBody.error || "Upload failed. Please try again.");
+      return;
+    }
     const created = await res.json().catch(() => null);
-    if (!created) return;
+    if (!created) {
+      setUploadError("Upload failed. Please try again.");
+      return;
+    }
     // Mirrors handleAddLedger's existing refresh-after-create pattern: reflect
     // the newly uploaded FolderFile in the current folder's own files list
     // immediately, so it shows up in the tree right away.
@@ -387,6 +396,20 @@ export default function FolderWorkspacePage() {
         current={{ name: folder.name }}
         selectedDocName={ledger ? ledger.name : undefined}
       />
+
+      {uploadError ? (
+        <div
+          style={{
+            color: "oklch(45% 0.18 25)",
+            padding: "10px 20px",
+            background: "oklch(96% 0.03 25)",
+            borderBottom: "1px solid oklch(85% 0.05 25)",
+            fontSize: "13px",
+          }}
+        >
+          ⚠️ {uploadError}
+        </div>
+      ) : null}
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <input
