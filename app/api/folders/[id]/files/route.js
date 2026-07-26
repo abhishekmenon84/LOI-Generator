@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFTextField, PDFCheckBox, PDFRadioGroup } from "pdf-lib";
 import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { uploadFile } from "../../../../../lib/blobStorage";
 
-const ACROFORM_TYPE_MAP = {
-  PDFTextField: "text",
-  PDFCheckBox: "checkbox",
-  PDFRadioGroup: "radio",
-};
+// Classifies an AcroForm field by its concrete class using `instanceof`
+// rather than `field.constructor.name`. Next.js production builds minify
+// pdf-lib's bundle, which renames classes like `PDFTextField` to
+// single-letter identifiers -- `constructor.name` would silently return the
+// minified name (e.g. "e") and never match a string-keyed map, causing every
+// field to fall through to the default. `instanceof` compares against the
+// actual class reference (not its stringified name), so it survives
+// minification.
+function classifyField(field) {
+  if (field instanceof PDFCheckBox) return "checkbox";
+  if (field instanceof PDFRadioGroup) return "radio";
+  if (field instanceof PDFTextField) return "text";
+  return "text";
+}
 
 // Resolves the page index (0-based) that a given AcroForm widget annotation
 // is rendered on.
@@ -97,24 +106,48 @@ export async function POST(request, { params }) {
       const form = pdfDoc.getForm();
       const fields = form.getFields();
       if (fields.length > 0) {
-        fieldTier = "auto_detected";
         for (const field of fields) {
-          const type = ACROFORM_TYPE_MAP[field.constructor.name] || "text";
-          const widget = field.acroField.getWidgets()[0];
-          if (!widget) continue;
-          const rect = widget.getRectangle();
-          const pageIndex = resolveWidgetPageIndex(pdfDoc, widget);
-          const page = pdfDoc.getPage(pageIndex);
-          const { width: pw, height: ph } = page.getSize();
-          anchorsToCreate.push({
-            type,
-            label: field.getName(),
-            page: pageIndex,
-            xPct: (rect.x / pw) * 100,
-            yPct: (rect.y / ph) * 100,
-            widthPct: (rect.width / pw) * 100,
-            heightPct: (rect.height / ph) * 100,
-          });
+          // Each field's rectangle/page resolution is isolated in its own
+          // try/catch: `getRectangle()` genuinely throws on a malformed
+          // /Rect in real-world PDFs, and one bad widget must not discard
+          // the anchors already successfully built for every other field.
+          try {
+            const type = classifyField(field);
+            const widget = field.acroField.getWidgets()[0];
+            if (!widget) continue;
+            const rect = widget.getRectangle();
+            const pageIndex = resolveWidgetPageIndex(pdfDoc, widget);
+            const page = pdfDoc.getPage(pageIndex);
+            const { width: pw, height: ph } = page.getSize();
+
+            const xPct = (rect.x / pw) * 100;
+            const widthPct = (rect.width / pw) * 100;
+            const heightPct = (rect.height / ph) * 100;
+            // PDF rectangles are measured from the page's BOTTOM-left
+            // origin (rect.y = distance up from the bottom), but this
+            // value will be consumed as a CSS `top` percentage (measured
+            // from the page's TOP) by the anchor editor UI. Convert here
+            // so `yPct` always means "distance from the top" -- do not
+            // revert this to the raw bottom-origin value.
+            const yPctFromBottom = (rect.y / ph) * 100;
+            const yPct = 100 - yPctFromBottom - heightPct;
+
+            anchorsToCreate.push({
+              type,
+              label: field.getName(),
+              page: pageIndex,
+              xPct,
+              yPct,
+              widthPct,
+              heightPct,
+            });
+          } catch (fieldErr) {
+            // Skip this one malformed field; keep processing the rest.
+            continue;
+          }
+        }
+        if (anchorsToCreate.length > 0) {
+          fieldTier = "auto_detected";
         }
       }
     } catch (err) {
