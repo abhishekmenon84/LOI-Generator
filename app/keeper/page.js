@@ -10,6 +10,7 @@ import OrgLogoSettings from "../../components/OrgLogoSettings";
 import SubscribeButtons from "../../components/SubscribeButtons";
 import KeeperTabs from "../../components/KeeperTabs";
 import KeeperReceipts from "../../components/KeeperReceipts";
+import KeeperTemplates from "../../components/KeeperTemplates";
 import { SEAT_TIERS } from "../../lib/orgBilling";
 
 export const metadata = {
@@ -64,7 +65,7 @@ export default async function KeeperPage() {
                     currentUserId={session.user.id}
                   />
                 ),
-                templates: <p style={{ color: "var(--text-secondary)" }}>Custom templates are coming in a future update.</p>,
+                templates: <KeeperTemplates orgId={org.id} />,
                 branding: <OrgLogoSettings orgId={org.id} initialLogoUrl={org.logoUrl} />,
                 billing:
                   org.planTier === "trial" || org.planTier === "expired" ? (
