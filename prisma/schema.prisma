@@ -41,6 +41,7 @@ model Organization {
   memberships Membership[]
   deals       Deal[]
   folders     Folder[]
+  receipts    Receipt[]
 }
 
 model Membership {
@@ -61,6 +62,20 @@ model Membership {
 model ProcessedWebhookEvent {
   id          String   @id // Stripe event.id — dedup key
   processedAt DateTime @default(now())
+}
+
+model Receipt {
+  id                String   @id @default(cuid())
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  stripeInvoiceId   String   @unique
+  amountPaid        Int
+  currency          String
+  status            String
+  hostedInvoiceUrl  String?
+  createdAt         DateTime @default(now())
+
+  @@index([orgId])
 }
 
 model Account {

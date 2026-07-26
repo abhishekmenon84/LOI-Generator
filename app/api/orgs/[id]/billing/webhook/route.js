@@ -51,5 +51,28 @@ export async function POST(request) {
     }
   }
 
+  if (event.type === "invoice.paid") {
+    const invoice = event.data.object;
+    const org = await prisma.organization.findUnique({ where: { stripeCustomerId: invoice.customer } });
+    if (org) {
+      await prisma.receipt.upsert({
+        where: { stripeInvoiceId: invoice.id },
+        create: {
+          orgId: org.id,
+          stripeInvoiceId: invoice.id,
+          amountPaid: invoice.amount_paid,
+          currency: invoice.currency,
+          status: invoice.status,
+          hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+        },
+        update: {
+          amountPaid: invoice.amount_paid,
+          status: invoice.status,
+          hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+        },
+      });
+    }
+  }
+
   return NextResponse.json({ received: true });
 }
