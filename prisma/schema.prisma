@@ -23,6 +23,7 @@ model User {
   foldersCreated      Folder[]    @relation("FolderCreator")
   ledgersCreated      Ledger[]    @relation("LedgerCreator")
   folderParticipations FolderParticipant[]
+  uploadedFiles       FolderFile[]
 }
 
 model Organization {
@@ -224,6 +225,7 @@ model Folder {
   ledgers         Ledger[]
   participants    FolderParticipant[]
   auditEvents     FolderAuditEvent[]
+  files           FolderFile[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -274,4 +276,39 @@ model Ledger {
 
   @@index([folderId])
   @@index([createdByUserId])
+}
+
+model FolderFile {
+  id                String   @id @default(cuid())
+  folderId          String
+  folder            Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  name              String
+  fileUrl           String
+  mimeType          String
+  pageCount         Int?
+  fieldTier         String   @default("plain") // "plain" | "auto_detected" | "manual"
+  formValues        Json?
+  uploadedByUserId  String
+  uploadedBy        User     @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  anchors FolderFileAnchor[]
+
+  @@index([folderId])
+}
+
+model FolderFileAnchor {
+  id           String     @id @default(cuid())
+  folderFileId String
+  folderFile   FolderFile @relation(fields: [folderFileId], references: [id], onDelete: Cascade)
+  type         String     // "signature" | "date" | "initials" | "text" | "checkbox" | "radio"
+  label        String
+  page         Int
+  xPct         Float
+  yPct         Float
+  widthPct     Float
+  heightPct    Float
+
+  @@index([folderFileId])
 }
