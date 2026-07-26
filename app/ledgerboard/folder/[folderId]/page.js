@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import FolderBreadcrumb from "../../../../components/FolderBreadcrumb";
 import FolderTreePanel from "../../../../components/FolderTreePanel";
+import FolderFileViewer from "../../../../components/FolderFileViewer";
 import LOIForm from "../../../../components/LOIForm";
 import LOIPreview from "../../../../components/LOIPreview";
 import LeaseForm from "../../../../components/LeaseForm";
@@ -73,6 +74,7 @@ export default function FolderWorkspacePage() {
   const [ancestors, setAncestors] = useState([]);
   const [subfolders, setSubfolders] = useState([]);
   const [folderLedgers, setFolderLedgers] = useState([]);
+  const [folderFiles, setFolderFiles] = useState([]);
   const [loadError, setLoadError] = useState(null);
 
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -84,6 +86,17 @@ export default function FolderWorkspacePage() {
   const [ledgerLoadError, setLedgerLoadError] = useState(null);
   const [exportState, setExportState] = useState(noopExportState);
   const saveTimeoutRef = useRef(null);
+
+  // Phase 7 Task 6: selectedFileId/fileData mirror selectedLedgerId/ledger.
+  // A tree row click sets exactly ONE of {selectedLedgerId, selectedFileId}
+  // and clears the other (see handleSelectLedger/handleSelectFile below),
+  // so "which one is active" is always derivable from which id is non-null
+  // -- there is never a state where both are set.
+  const [selectedFileId, setSelectedFileId] = useState(null);
+  const [fileData, setFileData] = useState(null); // full GET /api/folders/files/[fileId] response
+  const [fileLoadError, setFileLoadError] = useState(null);
+  const fileSaveTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
@@ -108,6 +121,10 @@ export default function FolderWorkspacePage() {
         setFolder(data);
         setAncestors(data.ancestors || []);
         setFolderLedgers(data.ledgers || []);
+        // Phase 7 Task 6: GET /api/folders/[id] now also returns this
+        // folder's own `files` array (FolderFiles uploaded directly here),
+        // mirroring `ledgers` immediately above.
+        setFolderFiles(data.files || []);
       })
       .catch((err) => {
         if (!cancelled) setLoadError(err.message);
@@ -117,14 +134,16 @@ export default function FolderWorkspacePage() {
       .then((res) => (res.ok ? res.json() : { folders: [] }))
       .then((data) => {
         if (cancelled) return;
-        // GET /api/folders now returns each folder's own `ledgers` array
-        // (Phase 5 Task 3 enrichment, matching the existing `participantNames`
-        // pattern) so the tree panel can render nested Ledgers without a
+        // GET /api/folders now returns each folder's own `ledgers` and
+        // `files` arrays (Phase 5 Task 3 / Phase 7 Task 6 enrichments,
+        // matching the existing `participantNames` pattern) so the tree
+        // panel can render nested Ledgers and FolderFiles without a
         // separate new API route.
         const children = (data.folders || []).map((sf) => ({
           id: sf.id,
           name: sf.name,
           ledgers: sf.ledgers || [],
+          files: sf.files || [],
         }));
         setSubfolders(children);
       })
@@ -170,6 +189,32 @@ export default function FolderWorkspacePage() {
     };
   }, [selectedLedgerId]);
 
+  // Load the selected FolderFile whenever selection changes -- mirrors the
+  // Ledger-detail-loading useEffect immediately above.
+  useEffect(() => {
+    if (!selectedFileId) {
+      setFileData(null);
+      return;
+    }
+    let cancelled = false;
+    setFileLoadError(null);
+    fetch(`/api/folders/files/${selectedFileId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("File not found.");
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setFileData(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setFileLoadError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFileId]);
+
   const config = ledger ? DOC_TYPE_CONFIG[ledger.documentType] : null;
   const model = useMemo(() => {
     if (!config || !ledgerData) return null;
@@ -195,6 +240,65 @@ export default function FolderWorkspacePage() {
     }, 1000);
     return () => clearTimeout(saveTimeoutRef.current);
   }, [ledgerData, selectedLedgerId, ledgerReadOnly]);
+
+  const fileReadOnly = !!(fileData && fileData.readOnly);
+
+  // Debounced autosave for a selected FolderFile's formValues -- identical
+  // 1-second-debounce shape to the Ledger autosave useEffect immediately
+  // above, just retargeted to PATCH /api/folders/files/[fileId].
+  useEffect(() => {
+    if (!fileData || !selectedFileId || fileReadOnly) return;
+    if (fileSaveTimeoutRef.current) clearTimeout(fileSaveTimeoutRef.current);
+    fileSaveTimeoutRef.current = setTimeout(() => {
+      fetch(`/api/folders/files/${selectedFileId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formValues: fileData.formValues || {} }),
+      }).catch(() => {
+        // Best-effort autosave, matching the Ledger autosave precedent.
+      });
+    }, 1000);
+    return () => clearTimeout(fileSaveTimeoutRef.current);
+  }, [fileData, selectedFileId, fileReadOnly]);
+
+  // onSelectLedger/onSelectFile must clear each other -- selecting one
+  // always deselects the other, so the middle/right panel conditional never
+  // has to consider "both selected" as a possible state.
+  function handleSelectLedger(id) {
+    setSelectedFileId(null);
+    setSelectedLedgerId(id);
+  }
+
+  function handleSelectFile(id) {
+    setSelectedLedgerId(null);
+    setSelectedFileId(id);
+  }
+
+  function handleFieldChange(anchorId, value) {
+    setFileData((prev) => (prev ? { ...prev, formValues: { ...(prev.formValues || {}), [anchorId]: value } } : prev));
+  }
+
+  async function handleUploadFile(fileList) {
+    const file = fileList && fileList[0];
+    if (!file) return;
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch(`/api/folders/${folderId}/files`, {
+      method: "POST",
+      body,
+    }).catch(() => null);
+    if (!res || !res.ok) return;
+    const created = await res.json().catch(() => null);
+    if (!created) return;
+    // Mirrors handleAddLedger's existing refresh-after-create pattern: reflect
+    // the newly uploaded FolderFile in the current folder's own files list
+    // immediately, so it shows up in the tree right away.
+    setFolderFiles((prev) => [
+      ...prev,
+      { id: created.id, name: created.name, mimeType: created.mimeType, fieldTier: created.fieldTier },
+    ]);
+    handleSelectFile(created.id);
+  }
 
   function handleNavigateFolder(id) {
     // Fix round 1 (Minor #7): use next/navigation's client-side router
@@ -234,7 +338,7 @@ export default function FolderWorkspacePage() {
       ...prev,
       { id: created.id, name: created.name, documentType: created.documentType },
     ]);
-    setSelectedLedgerId(created.id);
+    handleSelectLedger(created.id);
   }
 
   function handleExport() {
@@ -247,6 +351,7 @@ export default function FolderWorkspacePage() {
   }
 
   const hasActiveLedger = !!selectedLedgerId;
+  const hasActiveFile = !!selectedFileId;
   const docSelected = !!selectedLedgerId;
 
   if (loadError) {
@@ -284,18 +389,31 @@ export default function FolderWorkspacePage() {
       />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            handleUploadFile(e.target.files);
+            e.target.value = "";
+          }}
+        />
         <FolderTreePanel
           folder={folder}
           folderLedgers={folderLedgers}
+          files={folderFiles}
           ancestors={ancestors}
           subfolders={subfolders}
           collapsed={leftCollapsed}
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
           selectedLedgerId={selectedLedgerId}
-          onSelectLedger={setSelectedLedgerId}
+          onSelectLedger={handleSelectLedger}
+          selectedFileId={selectedFileId}
+          onSelectFile={handleSelectFile}
           onNavigateFolder={handleNavigateFolder}
           onRenameFolder={handleRenameFolder}
           onAddLedger={handleAddLedger}
+          onUploadFile={() => fileInputRef.current?.click()}
         />
 
         <div
@@ -307,7 +425,15 @@ export default function FolderWorkspacePage() {
             background: "oklch(97% 0.006 60)",
           }}
         >
-          {hasActiveLedger ? (
+          {hasActiveFile ? (
+            fileLoadError ? (
+              <div style={{ color: "oklch(45% 0.18 25)" }}>⚠️ {fileLoadError}</div>
+            ) : !fileData ? (
+              <div style={{ padding: "40px", color: "oklch(45% 0.01 264)" }}>Loading…</div>
+            ) : (
+              <FolderFileViewer file={fileData} onFieldChange={handleFieldChange} readOnly={fileReadOnly} />
+            )
+          ) : hasActiveLedger ? (
             ledgerLoadError ? (
               <div style={{ color: "oklch(45% 0.18 25)" }}>⚠️ {ledgerLoadError}</div>
             ) : !ledgerData || !config ? (
@@ -455,7 +581,9 @@ export default function FolderWorkspacePage() {
                 fontSize: "13px",
               }}
             >
-              Select a document to preview it here.
+              {hasActiveFile
+                ? "This file's preview is shown inline in the main panel."
+                : "Select a document to preview it here."}
             </div>
           ) : null}
         </div>

@@ -6,15 +6,16 @@ import { useState } from "react";
 // (Design/real-estate-deal-kanban-board/project/Ledgerlot App.dc.html, ~L159-214)
 // and its buildAncestorItems() / buildSubfolderItems() logic (~L689-724).
 //
-// Simplification vs. the handoff (documented per Task 3 Step 2): the handoff's
-// "+ Add" affordance offers a two-choice menu ("New Ledger from template" /
-// "Upload from computer"). File uploads are out of scope for this phase
-// (targeted for a later phase), so this component renders a single "+ New
-// Ledger" button instead of a dropdown -- there is only one real choice
-// available yet. A future phase adding file uploads should turn this back
-// into a proper two-choice menu rather than assuming this was an oversight.
+// Simplification vs. the handoff (documented per Task 6 Step 2): the handoff's
+// "+ Add" affordance is a two-choice DROPDOWN menu ("New Ledger from
+// template" / "Upload from computer"). File uploads are no longer out of
+// scope (Phase 7 wires FolderFile upload end-to-end), but rather than build
+// the dropdown this component renders two adjacent buttons -- "+ New Ledger"
+// and "+ Upload file" -- which cover the same two choices more simply. A
+// future pass can fold these into a real dropdown to match the handoff pixel
+// for pixel if desired.
 
-const DOC_ICONS = { ledger: "📝" };
+const DOC_ICONS = { ledger: "📝", file: "📎" };
 
 // Shared Ledger-row rendering, used both for the current folder's own
 // Ledgers and for each subfolder's nested Ledgers (Fix round 1, Important
@@ -35,6 +36,41 @@ function LedgerRow({ doc, isSelected, onSelectLedger }) {
       }}
     >
       <span style={{ fontSize: "12px", flex: "0 0 auto" }}>{DOC_ICONS.ledger}</span>
+      <span
+        style={{
+          fontSize: "12.5px",
+          fontWeight: isSelected ? 700 : 500,
+          color: isSelected ? "oklch(45% 0.15 300)" : "oklch(35% 0.01 264)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {doc.name}
+      </span>
+    </div>
+  );
+}
+
+// Shared FolderFile-row rendering, parallel to LedgerRow immediately above --
+// same treatment (icon, selection highlight, single click handler), just a
+// distinct 📎 icon and a separate onSelectFile callback/selectedFileId so a
+// FolderFile selection is tracked independently of a Ledger selection.
+function FileRow({ doc, isSelected, onSelectFile }) {
+  return (
+    <div
+      onClick={() => onSelectFile?.(doc.id)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "7px",
+        padding: "6px 8px",
+        borderRadius: "7px",
+        cursor: "pointer",
+        background: isSelected ? "oklch(93% 0.03 300)" : "transparent",
+      }}
+    >
+      <span style={{ fontSize: "12px", flex: "0 0 auto" }}>{DOC_ICONS.file}</span>
       <span
         style={{
           fontSize: "12.5px",
@@ -127,15 +163,19 @@ function FolderRow({ folder, isEditing, editValue, onStartEdit, onEditChange, on
 export default function FolderTreePanel({
   folder,
   folderLedgers = [],
+  files = [],
   ancestors = [],
   subfolders = [],
   collapsed,
   onToggleCollapse,
   selectedLedgerId,
   onSelectLedger,
+  selectedFileId,
+  onSelectFile,
   onNavigateFolder,
   onRenameFolder,
   onAddLedger,
+  onUploadFile,
 }) {
   // editingId shape: "ancestor:<id>" | "subfolder:<id>" -- mirrors the
   // handoff's editingId convention (~L692, ~L707) so rename state is scoped
@@ -291,7 +331,7 @@ export default function FolderTreePanel({
                 right under this row, reusing the same LedgerRow used for
                 subfolder Ledgers so a new Ledger is always reachable in the
                 tree, not just briefly visible via auto-selection. */}
-            {folderLedgers.length > 0 ? (
+            {folderLedgers.length > 0 || files.length > 0 ? (
               <div style={{ paddingLeft: "28px" }}>
                 {folderLedgers.map((doc) => (
                   <LedgerRow
@@ -299,6 +339,14 @@ export default function FolderTreePanel({
                     doc={doc}
                     isSelected={selectedLedgerId === doc.id}
                     onSelectLedger={onSelectLedger}
+                  />
+                ))}
+                {files.map((doc) => (
+                  <FileRow
+                    key={doc.id}
+                    doc={doc}
+                    isSelected={selectedFileId === doc.id}
+                    onSelectFile={onSelectFile}
                   />
                 ))}
               </div>
@@ -324,6 +372,7 @@ export default function FolderTreePanel({
           const isEditing = editingId === editId;
           const expanded = expandedSubfolders[sf.id] ?? true;
           const ledgers = sf.ledgers || [];
+          const sfFiles = sf.files || [];
           return (
             <div key={sf.id} style={{ marginBottom: "4px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 8px", borderRadius: "8px" }}>
@@ -402,6 +451,14 @@ export default function FolderTreePanel({
                       onSelectLedger={onSelectLedger}
                     />
                   ))}
+                  {sfFiles.map((doc) => (
+                    <FileRow
+                      key={doc.id}
+                      doc={doc}
+                      isSelected={selectedFileId === doc.id}
+                      onSelectFile={onSelectFile}
+                    />
+                  ))}
                 </div>
               ) : null}
             </div>
@@ -409,25 +466,42 @@ export default function FolderTreePanel({
         })}
       </div>
 
-      {/* "+ Add" affordance -- simplified to a single button per this component's
-          top-of-file comment (upload-from-computer is out of scope this phase). */}
-      <div style={{ padding: "10px", borderTop: "1px solid oklch(93% 0.006 60)" }}>
+      {/* "+ Add" affordance -- per this component's top-of-file comment, two
+          adjacent buttons rather than the handoff's dropdown menu. */}
+      <div style={{ padding: "10px", borderTop: "1px solid oklch(93% 0.006 60)", display: "flex", gap: "8px" }}>
         <button
           type="button"
           onClick={onAddLedger}
           style={{
-            width: "100%",
-            padding: "9px 12px",
+            flex: 1,
+            padding: "9px 10px",
             borderRadius: "8px",
             border: "none",
             background: "oklch(45% 0.15 300)",
             color: "white",
             fontWeight: 600,
-            fontSize: "12.5px",
+            fontSize: "12px",
             cursor: "pointer",
           }}
         >
-          + New Ledger from template
+          + New Ledger
+        </button>
+        <button
+          type="button"
+          onClick={onUploadFile}
+          style={{
+            flex: 1,
+            padding: "9px 10px",
+            borderRadius: "8px",
+            border: "1px solid oklch(45% 0.15 300)",
+            background: "white",
+            color: "oklch(45% 0.15 300)",
+            fontWeight: 600,
+            fontSize: "12px",
+            cursor: "pointer",
+          }}
+        >
+          + Upload file
         </button>
       </div>
     </div>
