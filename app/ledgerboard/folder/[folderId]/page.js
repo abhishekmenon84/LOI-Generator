@@ -99,6 +99,16 @@ export default function FolderWorkspacePage() {
   const fileInputRef = useRef(null);
   const [uploadError, setUploadError] = useState(null);
 
+  // Phase 7b Task 4: "New Ledger from template" picker state. `folder.orgId`
+  // is already present in GET /api/folders/[id]'s response (confirmed at
+  // app/api/folders/[id]/route.js line 56), so no new route/field is needed
+  // -- this page just fetches the org's templates on open.
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState(null);
+  const [creatingFromTemplateId, setCreatingFromTemplateId] = useState(null);
+
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
   // preferred approach over N+1 client fetches) and its direct subfolders.
@@ -350,6 +360,73 @@ export default function FolderWorkspacePage() {
     handleSelectLedger(created.id);
   }
 
+  // Phase 7b Task 4: opens the template picker and fetches the org's
+  // templates. `folder.orgId` comes straight from the already-loaded folder
+  // state (see the GET /api/folders/[folderId] effect above) -- no extra
+  // folder fetch needed here.
+  function handleAddFromTemplate() {
+    setTemplatePickerOpen(true);
+    setTemplatesError(null);
+    if (!folder?.orgId) return;
+    setTemplatesLoading(true);
+    fetch(`/api/orgs/${folder.orgId}/templates`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Could not load templates.");
+        return res.json();
+      })
+      .then((data) => {
+        setTemplates(data.templates || []);
+      })
+      .catch((err) => {
+        setTemplatesError(err.message);
+      })
+      .finally(() => {
+        setTemplatesLoading(false);
+      });
+  }
+
+  function closeTemplatePicker() {
+    setTemplatePickerOpen(false);
+    setTemplatesError(null);
+    setCreatingFromTemplateId(null);
+  }
+
+  // On picking a template: POST /api/ledgers with documentType:
+  // "custom_template" (per app/api/ledgers/route.js's VALID_DOC_TYPES) and
+  // the template's own name as the new Ledger's name, then navigate to the
+  // dedicated signer-assignment screen instead of selecting it into the
+  // normal three-panel view -- a custom_template Ledger has no dynamic-form
+  // editor in DOC_TYPE_CONFIG above.
+  async function handlePickTemplate(template) {
+    setCreatingFromTemplateId(template.id);
+    setTemplatesError(null);
+    const res = await fetch("/api/ledgers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folderId, documentType: "custom_template", name: template.name }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setTemplatesError("Could not create a Ledger from that template. Please try again.");
+      setCreatingFromTemplateId(null);
+      return;
+    }
+    const created = await res.json().catch(() => null);
+    if (!created) {
+      setTemplatesError("Could not create a Ledger from that template. Please try again.");
+      setCreatingFromTemplateId(null);
+      return;
+    }
+    // Stash the templateId on the new Ledger so the signer-assignment screen
+    // can resolve the template without re-picking it. PATCH /api/ledgers/[id]
+    // replaces `formData` wholesale, so this must happen before navigating.
+    await fetch(`/api/ledgers/${created.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ formData: { templateId: template.id } }),
+    }).catch(() => {});
+    router.push(`/ledgerboard/custom-template/${created.id}`);
+  }
+
   function handleExport() {
     setExportState({
       loading: false,
@@ -436,6 +513,7 @@ export default function FolderWorkspacePage() {
           onNavigateFolder={handleNavigateFolder}
           onRenameFolder={handleRenameFolder}
           onAddLedger={handleAddLedger}
+          onAddFromTemplate={handleAddFromTemplate}
           onUploadFile={() => fileInputRef.current?.click()}
         />
 
@@ -611,6 +689,75 @@ export default function FolderWorkspacePage() {
           ) : null}
         </div>
       </div>
+
+      {/* Template picker -- same plain overlay/modal convention as
+          FolderReasonModal.jsx (fixed full-bleed backdrop, click-outside to
+          close, centered white card). */}
+      {templatePickerOpen ? (
+        <div
+          onClick={closeTemplatePicker}
+          style={{ position: "fixed", inset: 0, background: "rgba(30,25,20,.32)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "white", borderRadius: 16, padding: "26px 26px 22px", width: 420, maxHeight: "70vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(30,25,15,.25)" }}
+          >
+            <div style={{ fontWeight: 750, fontSize: 17, marginBottom: 14 }}>New Ledger from template</div>
+
+            {templatesError ? (
+              <div style={{ color: "oklch(45% 0.18 25)", fontSize: "13px", marginBottom: "12px" }}>⚠️ {templatesError}</div>
+            ) : null}
+
+            {templatesLoading ? (
+              <div style={{ padding: "24px 0", color: "oklch(50% 0.01 264)", fontSize: "13px" }}>Loading templates…</div>
+            ) : templates.length === 0 ? (
+              <div style={{ padding: "24px 0", color: "oklch(50% 0.01 264)", fontSize: "13px" }}>
+                This organization has no custom templates yet.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "18px" }}>
+                {templates.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handlePickTemplate(t)}
+                    disabled={!!creatingFromTemplateId}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      borderRadius: "9px",
+                      border: "1px solid oklch(88% 0.008 60)",
+                      background: creatingFromTemplateId === t.id ? "oklch(93% 0.03 300)" : "white",
+                      color: "oklch(30% 0.01 264)",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: creatingFromTemplateId ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    <span>{t.name}</span>
+                    <span style={{ fontSize: "11px", color: "oklch(55% 0.01 264)", fontWeight: 500 }}>
+                      {creatingFromTemplateId === t.id ? "Creating…" : `${t.pageCount} pg`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={closeTemplatePicker}
+                style={{ padding: "9px 16px", borderRadius: 9, border: "none", background: "oklch(94% 0.005 60)", color: "oklch(35% 0.01 264)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

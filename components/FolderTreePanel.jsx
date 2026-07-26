@@ -6,14 +6,13 @@ import { useState } from "react";
 // (Design/real-estate-deal-kanban-board/project/Ledgerlot App.dc.html, ~L159-214)
 // and its buildAncestorItems() / buildSubfolderItems() logic (~L689-724).
 //
-// Simplification vs. the handoff (documented per Task 6 Step 2): the handoff's
-// "+ Add" affordance is a two-choice DROPDOWN menu ("New Ledger from
-// template" / "Upload from computer"). File uploads are no longer out of
-// scope (Phase 7 wires FolderFile upload end-to-end), but rather than build
-// the dropdown this component renders two adjacent buttons -- "+ New Ledger"
-// and "+ Upload file" -- which cover the same two choices more simply. A
-// future pass can fold these into a real dropdown to match the handoff pixel
-// for pixel if desired.
+// Phase 7b Task 4: now that there are THREE choices ("New Ledger", "New
+// Ledger from template", "Upload file"), this reverts to the handoff's
+// original "+ Add" DROPDOWN treatment (previously simplified to two adjacent
+// buttons per Phase 7a Task 6, when there were only two choices) rather than
+// letting the footer grow into an ever-widening button row. The menu itself
+// is a plain absolutely-positioned list -- no new UI library -- matching
+// FolderReasonModal.jsx's plain-inline-style overlay convention.
 
 const DOC_ICONS = { ledger: "📝", file: "📎" };
 
@@ -175,6 +174,7 @@ export default function FolderTreePanel({
   onNavigateFolder,
   onRenameFolder,
   onAddLedger,
+  onAddFromTemplate,
   onUploadFile,
 }) {
   // editingId shape: "ancestor:<id>" | "subfolder:<id>" -- mirrors the
@@ -185,6 +185,8 @@ export default function FolderTreePanel({
   // Per-subfolder expand/collapse for the nested Ledgers list. Defaults to
   // expanded, matching the handoff's `expanded ?? true` fallback (~L709).
   const [expandedSubfolders, setExpandedSubfolders] = useState({});
+  // Whether the "+ Add" dropdown menu is open. Closed on any option click.
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   function startEdit(id, currentName) {
     setEditingId(id);
@@ -466,14 +468,24 @@ export default function FolderTreePanel({
         })}
       </div>
 
-      {/* "+ Add" affordance -- per this component's top-of-file comment, two
-          adjacent buttons rather than the handoff's dropdown menu. */}
-      <div style={{ padding: "10px", borderTop: "1px solid oklch(93% 0.006 60)", display: "flex", gap: "8px" }}>
+      {/* "+ Add" affordance -- a single button that opens a small inline
+          dropdown menu with the three add-options, per this component's
+          top-of-file comment. */}
+      <div style={{ padding: "10px", borderTop: "1px solid oklch(93% 0.006 60)", position: "relative" }}>
+        {addMenuOpen ? (
+          // Click-outside-to-close backdrop, same overlay convention as
+          // FolderReasonModal.jsx (a full-bleed transparent layer whose
+          // onClick closes the menu; the menu itself stops propagation).
+          <div
+            onClick={() => setAddMenuOpen(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 40 }}
+          />
+        ) : null}
         <button
           type="button"
-          onClick={onAddLedger}
+          onClick={() => setAddMenuOpen((v) => !v)}
           style={{
-            flex: 1,
+            width: "100%",
             padding: "9px 10px",
             borderRadius: "8px",
             border: "none",
@@ -484,25 +496,91 @@ export default function FolderTreePanel({
             cursor: "pointer",
           }}
         >
-          + New Ledger
+          + Add
         </button>
-        <button
-          type="button"
-          onClick={onUploadFile}
-          style={{
-            flex: 1,
-            padding: "9px 10px",
-            borderRadius: "8px",
-            border: "1px solid oklch(45% 0.15 300)",
-            background: "white",
-            color: "oklch(45% 0.15 300)",
-            fontWeight: 600,
-            fontSize: "12px",
-            cursor: "pointer",
-          }}
-        >
-          + Upload file
-        </button>
+        {addMenuOpen ? (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              bottom: "calc(100% + 4px)",
+              left: "10px",
+              right: "10px",
+              background: "white",
+              borderRadius: "9px",
+              border: "1px solid oklch(88% 0.008 60)",
+              boxShadow: "0 10px 30px rgba(30,25,15,.18)",
+              overflow: "hidden",
+              zIndex: 41,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setAddMenuOpen(false);
+                onAddLedger?.();
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "10px 12px",
+                border: "none",
+                background: "white",
+                color: "oklch(30% 0.01 264)",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              + New Ledger
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAddMenuOpen(false);
+                onAddFromTemplate?.();
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "10px 12px",
+                border: "none",
+                borderTop: "1px solid oklch(93% 0.006 60)",
+                background: "white",
+                color: "oklch(30% 0.01 264)",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              + New Ledger from template
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAddMenuOpen(false);
+                onUploadFile?.();
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "10px 12px",
+                border: "none",
+                borderTop: "1px solid oklch(93% 0.006 60)",
+                background: "white",
+                color: "oklch(30% 0.01 264)",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              + Upload file
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
