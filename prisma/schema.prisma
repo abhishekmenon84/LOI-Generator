@@ -24,6 +24,7 @@ model User {
   ledgersCreated      Ledger[]    @relation("LedgerCreator")
   folderParticipations FolderParticipant[]
   uploadedFiles       FolderFile[]
+  templatesCreated    CustomTemplate[]
 }
 
 model Organization {
@@ -43,6 +44,7 @@ model Organization {
   deals       Deal[]
   folders     Folder[]
   receipts    Receipt[]
+  customTemplates CustomTemplate[]
 }
 
 model Membership {
@@ -311,4 +313,36 @@ model FolderFileAnchor {
   heightPct    Float
 
   @@index([folderFileId])
+}
+
+model CustomTemplate {
+  id              String   @id @default(cuid())
+  orgId           String
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name            String
+  pdfUrl          String
+  pageCount       Int
+  createdByUserId String
+  createdBy       User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  anchors TemplateAnchor[]
+
+  @@index([orgId])
+}
+
+model TemplateAnchor {
+  id         String         @id @default(cuid())
+  templateId String
+  template   CustomTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  type       String         // "signature" | "date" | "initials" | "text" | "checkbox" | "radio"
+  role       String         // admin-defined signer role label, e.g. "Buyer" -- distinct name from FolderFileAnchor.label (see Task 3's note on reconciling this at the AnchorEditor call site)
+  page       Int
+  xPct       Float
+  yPct       Float
+  widthPct   Float
+  heightPct  Float
+
+  @@index([templateId])
 }
