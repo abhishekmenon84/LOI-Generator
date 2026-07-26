@@ -32,8 +32,8 @@ export async function POST(request, { params }) {
     const checkoutSession = await createOrgSubscriptionCheckout({
       org,
       tier,
-      successUrl: `${origin}/settings/organization?billing=success`,
-      cancelUrl: `${origin}/settings/organization?billing=cancelled`,
+      successUrl: `${origin}/keeper?billing=success`,
+      cancelUrl: `${origin}/keeper?billing=cancelled`,
     });
     return NextResponse.json({ checkoutUrl: checkoutSession.url });
   } catch (err) {
