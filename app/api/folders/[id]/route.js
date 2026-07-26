@@ -40,6 +40,13 @@ export async function GET(request, { params }) {
     select: { id: true, name: true, documentType: true },
   });
 
+  // Phase 7 Task 6: this folder's own FolderFiles (uploaded directly here,
+  // not in a subfolder), mirroring the `ledgers` fetch immediately above.
+  const files = await prisma.folderFile.findMany({
+    where: { folderId: folder.id },
+    select: { id: true, name: true, mimeType: true, fieldTier: true },
+  });
+
   return NextResponse.json({
     id: folder.id,
     name: folder.name,
@@ -50,6 +57,7 @@ export async function GET(request, { params }) {
     readOnly: !folder._writeAccess,
     ancestors,
     ledgers,
+    files,
   });
 }
 

@@ -111,6 +111,23 @@ export async function GET(request) {
     ledgersByFolder.set(l.folderId, list);
   }
 
+  // "files" per-folder enrichment added in Phase 7 Task 6, mirroring the
+  // "ledgers" enrichment immediately above (same batched-query pattern) so
+  // the Folder workspace's tree panel can render each subfolder's nested
+  // FolderFiles without a separate new API route.
+  const files = scoped.length > 0
+    ? await prisma.folderFile.findMany({
+        where: { folderId: { in: scoped.map((f) => f.id) } },
+        select: { id: true, folderId: true, name: true, mimeType: true, fieldTier: true },
+      })
+    : [];
+  const filesByFolder = new Map();
+  for (const file of files) {
+    const list = filesByFolder.get(file.folderId) || [];
+    list.push({ id: file.id, name: file.name, mimeType: file.mimeType, fieldTier: file.fieldTier });
+    filesByFolder.set(file.folderId, list);
+  }
+
   return NextResponse.json({
     folders: scoped.map((f) => ({
       id: f.id,
@@ -122,6 +139,7 @@ export async function GET(request) {
       readOnly: !f._writeAccess,
       participantNames: participantNamesByFolder.get(f.id) || [],
       ledgers: ledgersByFolder.get(f.id) || [],
+      files: filesByFolder.get(f.id) || [],
     })),
   });
 }
