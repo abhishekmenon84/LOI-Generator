@@ -694,14 +694,14 @@ export default function FolderWorkspacePage() {
               panel's empty state (handoff's showPreviewContent / showPreviewEmpty,
               ~L260-271). Only rendered when the panel itself isn't collapsed. */}
           {!rightCollapsed && docSelected && model ? (
-            <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "0 24px 40px" }}>
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "0 12px 20px" }}>
               <div
                 style={{
                   width: "100%",
                   maxWidth: "480px",
                   background: "white",
                   boxShadow: "0 8px 30px rgba(30,25,15,.14)",
-                  padding: "48px 44px",
+                  padding: "32px 28px",
                   fontFamily: "'Source Serif 4',Georgia,serif",
                   color: "oklch(20% 0.01 264)",
                   minHeight: "600px",
