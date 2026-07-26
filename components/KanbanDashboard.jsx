@@ -398,6 +398,9 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
                     <div style={{ fontWeight: 600 }}>
                       {r.type === "ledger" ? "📝 " : "📁 "}
                       {r.name}
+                      {r.archived && (
+                        <span style={{ fontWeight: 400, color: "var(--text-secondary)" }}> (Archived)</span>
+                      )}
                     </div>
                     {r.type === "ledger" && (
                       <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>in {r.folderName}</div>

@@ -16,7 +16,15 @@ export async function GET(request) {
   }
   const qLower = q.toLowerCase();
 
-  const accessibleFolders = await listAccessibleFolders(session.user.id);
+  // includeArchived surfaces archived folders in search; includeTrashed is
+  // deliberately omitted (trashed is a distinct, more-hidden state than
+  // archived). Note listAccessibleFolders' lifecycleFilter combines both
+  // flags into a single OR on deletedAt, so a trashed-but-not-yet-purged
+  // folder (within the retention window) can still come back even with
+  // includeTrashed false -- filter those out explicitly here rather than
+  // changing the shared helper's behavior for its other callers.
+  const accessibleFolders = (await listAccessibleFolders(session.user.id, { includeArchived: true }))
+    .filter((f) => !f.deletedAt);
   if (accessibleFolders.length === 0) {
     return NextResponse.json({ results: [] });
   }
@@ -29,9 +37,10 @@ export async function GET(request) {
   });
   const orgNameById = new Map(orgs.map((o) => [o.id, o.isPersonal ? "Personal" : o.name]));
 
-  const folderResults = accessibleFolders
-    .filter((f) => f.name.toLowerCase().includes(qLower))
-    .map((f) => ({
+  const folderResultsById = new Map();
+  for (const f of accessibleFolders) {
+    if (!f.name.toLowerCase().includes(qLower)) continue;
+    folderResultsById.set(f.id, {
       type: "folder",
       id: f.id,
       name: f.name,
@@ -39,9 +48,34 @@ export async function GET(request) {
       folderName: f.name,
       orgName: orgNameById.get(f.orgId) || "",
       stage: f.stage,
-    }));
+      archived: !!f.archivedAt,
+    });
+  }
 
   const accessibleFolderIds = accessibleFolders.map((f) => f.id);
+
+  const matchingParticipants = await prisma.folderParticipant.findMany({
+    where: { folderId: { in: accessibleFolderIds } },
+    include: { user: { select: { name: true, email: true } } },
+  });
+  for (const p of matchingParticipants) {
+    const participantName = p.user.name || p.user.email;
+    if (!participantName.toLowerCase().includes(qLower)) continue;
+    if (folderResultsById.has(p.folderId)) continue;
+    const parent = folderById.get(p.folderId);
+    if (!parent) continue;
+    folderResultsById.set(p.folderId, {
+      type: "folder",
+      id: parent.id,
+      name: parent.name,
+      folderId: parent.id,
+      folderName: parent.name,
+      orgName: orgNameById.get(parent.orgId) || "",
+      stage: parent.stage,
+      archived: !!parent.archivedAt,
+    });
+  }
+
   const matchingLedgers = await prisma.ledger.findMany({
     where: {
       folderId: { in: accessibleFolderIds },
@@ -58,9 +92,11 @@ export async function GET(request) {
       folderId: l.folderId,
       folderName: parent?.name || "",
       orgName: parent ? orgNameById.get(parent.orgId) || "" : "",
+      archived: !!parent?.archivedAt,
     };
   });
 
+  const folderResults = [...folderResultsById.values()];
   folderResults.sort((a, b) => a.name.localeCompare(b.name));
   ledgerResults.sort((a, b) => a.name.localeCompare(b.name));
 
