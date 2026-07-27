@@ -15,6 +15,25 @@ export async function GET(request, { params }) {
   if (!deal) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
+
+  // Resolve this Deal's corresponding Ledger, if any, using the same
+  // (name, documentType, createdAt) matching heuristic the one-off
+  // scripts/backfill-signature-ledger-ids.mjs script used -- see that
+  // script for the full rationale. A Deal with zero or multiple (ambiguous)
+  // matches resolves to ledgerId: null rather than crashing.
+  let ledgerId = null;
+  const ledgerCandidates = await prisma.ledger.findMany({
+    where: {
+      name: deal.name,
+      documentType: deal.documentType,
+      createdAt: deal.createdAt,
+    },
+    select: { id: true },
+  });
+  if (ledgerCandidates.length === 1) {
+    ledgerId = ledgerCandidates[0].id;
+  }
+
   return NextResponse.json({
     id: deal.id,
     name: deal.name,
@@ -23,6 +42,7 @@ export async function GET(request, { params }) {
     stage: deal.stage,
     locked: deal.locked,
     readOnly: !deal._writeAccess,
+    ledgerId,
   });
 }
 

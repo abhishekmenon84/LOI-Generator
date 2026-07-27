@@ -11,7 +11,7 @@ import { buildResidentialLeaseModel } from "../../../lib/residentialLeaseEngine"
 
 function DocumentPreview({ documentType, formData }) {
   if (documentType === "purchase_loi") return <LOIPreview model={buildLOIModel(formData)} />;
-  if (documentType === "commercial_lease_loi") return <LeasePreview model={buildLeaseModel(formData)} />;
+  if (documentType === "commercial_lease") return <LeasePreview model={buildLeaseModel(formData)} />;
   if (documentType === "residential_lease") return <ResidentialLeasePreview model={buildResidentialLeaseModel(formData)} />;
   return null;
 }

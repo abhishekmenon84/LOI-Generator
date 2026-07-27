@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from "react";
 
-export default function DocumentAuditPanel({ dealId, isOpen, onClose }) {
+export default function DocumentAuditPanel({ ledgerId, isOpen, onClose }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!isOpen || !dealId) return;
-    fetch(`/api/deals/${dealId}/signature-audit`)
+    if (!isOpen || !ledgerId) return;
+    fetch(`/api/ledgers/${ledgerId}/signature-audit`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Could not load audit trail."))))
       .then(setData)
       .catch((err) => setError(err.message));
-  }, [isOpen, dealId]);
+  }, [isOpen, ledgerId]);
 
   if (!isOpen) return null;
 

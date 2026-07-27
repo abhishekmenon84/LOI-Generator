@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ROLES_BY_DOCUMENT_TYPE, ROLE_LABELS } from "../lib/signerRoles";
 
-export default function SendForSignatureModal({ dealId, documentType, isOpen, onClose, onSent }) {
+export default function SendForSignatureModal({ ledgerId, documentType, isOpen, onClose, onSent }) {
   const [participants, setParticipants] = useState([
     { kind: "signer", role: ROLES_BY_DOCUMENT_TYPE[documentType]?.[0] || "other", roleOtherLabel: "", name: "", email: "" },
   ]);
@@ -28,7 +28,7 @@ export default function SendForSignatureModal({ dealId, documentType, isOpen, on
     setSending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/deals/${dealId}/signature-request`, {
+      const res = await fetch(`/api/ledgers/${ledgerId}/signature-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ participants }),

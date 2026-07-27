@@ -34,6 +34,7 @@ function ResidentialLeasePageInner() {
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [readOnly, setReadOnly] = useState(false);
+  const [ledgerId, setLedgerId] = useState(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [sendForSignatureOpen, setSendForSignatureOpen] = useState(false);
   const [auditPanelOpen, setAuditPanelOpen] = useState(false);
@@ -64,6 +65,7 @@ function ResidentialLeasePageInner() {
           return;
         }
         setReadOnly(!!deal.readOnly || !!deal.locked);
+        setLedgerId(deal.ledgerId || null);
         setData({
           ...DEFAULT_RESIDENTIAL_LEASE_DATA,
           currentDate: todayLabel(),
@@ -174,8 +176,16 @@ function ResidentialLeasePageInner() {
             <DocumentActionBar
               readOnly={readOnly}
               onShare={() => setShareModalOpen(true)}
-              onSendForSignature={() => setSendForSignatureOpen(true)}
-              onAudit={() => setAuditPanelOpen(true)}
+              onSendForSignature={() =>
+                ledgerId
+                  ? setSendForSignatureOpen(true)
+                  : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so it can't be sent for signature." }))
+              }
+              onAudit={() =>
+                ledgerId
+                  ? setAuditPanelOpen(true)
+                  : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so there is no audit trail." }))
+              }
             />
           }
         />
@@ -183,13 +193,13 @@ function ResidentialLeasePageInner() {
       </div>
       <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
       <SendForSignatureModal
-        dealId={dealId}
+        ledgerId={ledgerId}
         documentType="residential_lease"
         isOpen={sendForSignatureOpen}
         onClose={() => setSendForSignatureOpen(false)}
         onSent={() => setExportState((s) => ({ ...s, success: "Sent for signature." }))}
       />
-      <DocumentAuditPanel dealId={dealId} isOpen={auditPanelOpen} onClose={() => setAuditPanelOpen(false)} />
+      <DocumentAuditPanel ledgerId={ledgerId} isOpen={auditPanelOpen} onClose={() => setAuditPanelOpen(false)} />
     </>
   );
 }
