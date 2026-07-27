@@ -55,6 +55,23 @@ function resolveWidgetPageIndex(pdfDoc, widget) {
 // app/api/folders/[id]/files/route.js). Returns [] on any failure or when
 // the PDF has no AcroForm at all (the common case for this project's real
 // form corpus, which is flat and encrypted -- see lib/pdfNormalize.js).
+//
+// Iterates over EVERY widget a field has, not just the first
+// (getWidgets()[0]). A single logical AcroForm field can legitimately have
+// several widget annotations:
+//   - A PDFRadioGroup's options are each their own widget sharing one
+//     field name -- taking only the first widget silently drops every
+//     other option and mislabels the one box that survives as if it were
+//     the whole field.
+//   - Any field type can be "multi-widget" (the same logical field
+//     repeated across pages, e.g. an initials box on every page) -- taking
+//     only the first widget drops every occurrence after the first page.
+// One anchor is emitted per widget. For a radio group, every option's
+// anchor shares `radioGroup = field.getName()` (the field name is the
+// natural, already-available stable identifier tying the options
+// together) so the group renders as a single logical choice in
+// AnchorEditor, matching how app/templates/new/page.js's own ML-detected
+// checkbox grouping sets radioGroup for the "detected" sourceTier.
 async function extractAcroFormFields(buffer) {
   const fields = [];
   let pdfDoc;
@@ -67,38 +84,44 @@ async function extractAcroFormFields(buffer) {
   const form = pdfDoc.getForm();
   const acroFields = form.getFields();
   for (const field of acroFields) {
-    try {
-      const type = classifyField(field);
-      const widget = field.acroField.getWidgets()[0];
-      if (!widget) continue;
-      const rect = widget.getRectangle();
-      const pageIndex = resolveWidgetPageIndex(pdfDoc, widget);
-      const page = pdfDoc.getPage(pageIndex);
-      const { width: pw, height: ph } = page.getSize();
+    const type = classifyField(field);
+    const radioGroup = type === "radio" ? field.getName() : "";
+    const widgets = field.acroField.getWidgets();
 
-      const xPct = (rect.x / pw) * 100;
-      const widthPct = (rect.width / pw) * 100;
-      const heightPct = (rect.height / ph) * 100;
-      const yPctFromBottom = (rect.y / ph) * 100;
-      const yPct = 100 - yPctFromBottom - heightPct;
+    for (const widget of widgets) {
+      // Each widget's rectangle/page resolution is isolated in its own
+      // try/catch (matching app/api/folders/[id]/files/route.js): one
+      // malformed widget must not discard the anchors already built for
+      // every other widget of this same field, let alone every other
+      // field.
+      try {
+        const rect = widget.getRectangle();
+        const pageIndex = resolveWidgetPageIndex(pdfDoc, widget);
+        const page = pdfDoc.getPage(pageIndex);
+        const { width: pw, height: ph } = page.getSize();
 
-      fields.push({
-        type,
-        label: field.getName(),
-        page: pageIndex,
-        xPct,
-        yPct,
-        widthPct,
-        heightPct,
-        required: false,
-        radioGroup: "",
-        signerRole: "",
-        confidence: null,
-      });
-    } catch {
-      // Skip this one malformed widget; keep processing the rest, matching
-      // the folders/[id]/files upload route's per-field isolation.
-      continue;
+        const xPct = (rect.x / pw) * 100;
+        const widthPct = (rect.width / pw) * 100;
+        const heightPct = (rect.height / ph) * 100;
+        const yPctFromBottom = (rect.y / ph) * 100;
+        const yPct = 100 - yPctFromBottom - heightPct;
+
+        fields.push({
+          type,
+          label: field.getName(),
+          page: pageIndex,
+          xPct,
+          yPct,
+          widthPct,
+          heightPct,
+          required: false,
+          radioGroup,
+          signerRole: "",
+          confidence: null,
+        });
+      } catch {
+        continue;
+      }
     }
   }
   return fields;
