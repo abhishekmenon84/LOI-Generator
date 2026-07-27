@@ -193,7 +193,7 @@ function LeasePageInner() {
       <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
       <SendForSignatureModal
         ledgerId={ledgerId}
-        documentType="commercial_lease_loi"
+        documentType="commercial_lease"
         isOpen={sendForSignatureOpen}
         onClose={() => setSendForSignatureOpen(false)}
         onSent={() => setExportState((s) => ({ ...s, success: "Sent for signature." }))}
