@@ -7,16 +7,6 @@ function Html({ html }) {
 export default function LOIPreview({ model }) {
   return (
     <div className="preview-panel">
-      {/* ── Toolbar ──────────────────────────────────────── */}
-      <div className="preview-toolbar" aria-label="Preview panel">
-        <div className="preview-toolbar-badge">
-          <span className="preview-toolbar-live-dot" aria-hidden="true" />
-          Live Preview
-        </div>
-        <span className="preview-toolbar-label">Updates in real-time as you type</span>
-        <span className="preview-toolbar-icon" aria-hidden="true">📄</span>
-      </div>
-
       {/* ── Document Paper ────────────────────────────────── */}
       <div className="document-paper">
         <div id="loi-content">

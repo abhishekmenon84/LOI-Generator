@@ -7,15 +7,6 @@ function Html({ html }) {
 export default function LeasePreview({ model }) {
   return (
     <div className="preview-panel">
-      <div className="preview-toolbar" aria-label="Preview panel">
-        <div className="preview-toolbar-badge">
-          <span className="preview-toolbar-live-dot" aria-hidden="true" />
-          Live Preview
-        </div>
-        <span className="preview-toolbar-label">Updates in real-time as you type</span>
-        <span className="preview-toolbar-icon" aria-hidden="true">📄</span>
-      </div>
-
       <div className="document-paper">
         <div id="loi-content">
           <div className="preview-header">Letter of Intent to Lease</div>

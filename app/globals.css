@@ -793,49 +793,6 @@ select option {
 }
 
 /* ── Preview Panel ───────────────────────────────────────── */
-.preview-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-shrink: 0;
-  animation: fadeSlideUp 0.4s var(--ease) both;
-}
-
-.preview-toolbar-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.73rem;
-  font-weight: 700;
-  color: var(--col-re);
-  background: rgba(52,211,153,0.1);
-  border: 1px solid rgba(52,211,153,0.25);
-  padding: 4px 10px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.preview-toolbar-live-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--col-re);
-  border-radius: 50%;
-  box-shadow: 0 0 6px var(--col-re);
-  animation: pulse-dot 1.5s infinite;
-}
-
-.preview-toolbar-label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.preview-toolbar-icon {
-  margin-left: auto;
-  font-size: 1.1rem;
-  color: var(--text-muted);
-}
 
 /* ── Document Paper Frame ────────────────────────────────── */
 .document-paper {
@@ -846,7 +803,7 @@ select option {
     0 1px 0 rgba(255,255,255,0.05),
     var(--shadow-xl),
     0 0 0 1px rgba(255,255,255,0.06);
-  padding: 56px 60px;
+  padding: 32px 28px;
   min-height: 600px;
   animation: fadeSlideUp 0.5s var(--ease) both;
   flex: 1;
@@ -871,13 +828,8 @@ select option {
 }
 
 .highlight-blank {
-  background-color: rgba(255,237,128,0.5);
-  padding: 0 3px;
-  border-radius: 2px;
   font-weight: 700;
   color: #1a1a1a;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
 }
 
 .preview-table {
