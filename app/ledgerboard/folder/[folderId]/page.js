@@ -316,16 +316,34 @@ export default function FolderWorkspacePage() {
   // means a custom_template Ledger is never actually selected into this
   // page's state at all, so the autosave effect never fires for it, and the
   // Ledger stays reachable by clicking it in the tree at any time.
+  // Fix round 2 (Critical/Important, task-7-review.md): switching the
+  // selected Ledger (or File) must always close any open
+  // signature/audit-trail UI rather than let it silently follow the switch.
+  // Without this, sendForSignatureOpen/auditPanelOpen stay true across the
+  // switch, and the modals' ledgerId props swap out from under the user once
+  // the new Ledger's data loads -- for SendForSignatureModal this can result
+  // in a still-filled-in participants form POSTing to the WRONG Ledger's
+  // /signature-request endpoint if the user doesn't notice. Closing both
+  // modals here is the primary fix; see also the key={ledger?.id} props
+  // below, which are defense-in-depth for the (rare) case a modal is opened
+  // again for a new Ledger before this component fully re-renders.
+  function closeSignatureModals() {
+    setSendForSignatureOpen(false);
+    setAuditPanelOpen(false);
+  }
+
   function handleSelectLedger(id, documentType) {
     if (documentType === "custom_template") {
       router.push(`/ledgerboard/custom-template/${id}`);
       return;
     }
+    closeSignatureModals();
     setSelectedFileId(null);
     setSelectedLedgerId(id);
   }
 
   function handleSelectFile(id) {
+    closeSignatureModals();
     setSelectedLedgerId(null);
     setSelectedFileId(id);
   }
@@ -797,10 +815,23 @@ export default function FolderWorkspacePage() {
       {/* Task 7: send-for-signature / audit-trail modals for the currently
           selected Ledger. Only reachable via the actionBar buttons rendered
           inside the hasActiveLedger && config branch above, so ledger.id is
-          always non-null whenever these could actually be opened. */}
+          always non-null whenever these could actually be opened.
+
+          Fix round 2 (Critical/Important, task-7-review.md): key={ledger?.id}
+          on both forces React to fully unmount/remount them whenever the
+          selected Ledger changes, resetting SendForSignatureModal's internal
+          participants useState (which has no effect tied to ledgerId
+          changing) and DocumentAuditPanel's stale data/error state, instead
+          of letting the same component instance's state silently carry over
+          to a new ledgerId prop. This is defense-in-depth alongside
+          closeSignatureModals() in handleSelectLedger/handleSelectFile
+          above, which is the primary fix (it closes the modal outright on
+          switch, so the remount-with-fresh-state behavior here mostly
+          matters for the brief window before that state update commits). */}
       {hasActiveLedger && config ? (
         <>
           <SendForSignatureModal
+            key={ledger?.id}
             ledgerId={ledger?.id}
             documentType={ledger?.documentType}
             isOpen={sendForSignatureOpen}
@@ -808,6 +839,7 @@ export default function FolderWorkspacePage() {
             onSent={() => setSendForSignatureOpen(false)}
           />
           <DocumentAuditPanel
+            key={ledger?.id}
             ledgerId={ledger?.id}
             isOpen={auditPanelOpen}
             onClose={() => setAuditPanelOpen(false)}
