@@ -12,11 +12,11 @@ import path from "path";
 
 const ATTACHMENT_A_PATH = path.join(process.cwd(), "public", "legal", "nb-residential-lease-attachment-a.pdf");
 
-async function buildDealPdf(deal) {
-  if (deal.documentType === "purchase_loi") return buildLOIPdf(buildLOIModel(deal.formData));
-  if (deal.documentType === "commercial_lease_loi") return buildLeasePdf(buildLeaseModel(deal.formData));
-  if (deal.documentType === "residential_lease") {
-    const generated = await buildResidentialLeasePdf(buildResidentialLeaseModel(deal.formData));
+async function buildDealPdf(ledger) {
+  if (ledger.documentType === "purchase_loi") return buildLOIPdf(buildLOIModel(ledger.formData));
+  if (ledger.documentType === "commercial_lease") return buildLeasePdf(buildLeaseModel(ledger.formData));
+  if (ledger.documentType === "residential_lease") {
+    const generated = await buildResidentialLeasePdf(buildResidentialLeaseModel(ledger.formData));
     return mergePdfBuffers(generated, ATTACHMENT_A_PATH);
   }
   throw new Error("Unsupported document type.");
@@ -25,7 +25,7 @@ async function buildDealPdf(deal) {
 export async function GET(request, { params }) {
   const sigRequest = await prisma.signatureRequest.findUnique({
     where: { verifyCode: params.verifyCode },
-    include: { deal: true, signers: { include: { signatureEvent: true } } },
+    include: { ledger: true, signers: { include: { signatureEvent: true } } },
   });
   if (!sigRequest || sigRequest.status !== "fully_executed") {
     return NextResponse.json({ error: "No fully executed document found for this code." }, { status: 404 });
@@ -40,7 +40,7 @@ export async function GET(request, { params }) {
 
   let integrityValid = false;
   try {
-    const pdfBuffer = await buildDealPdf(sigRequest.deal);
+    const pdfBuffer = await buildDealPdf(sigRequest.ledger);
     const signedSlots = signerSlots.map((s) => ({
       name: s.name,
       roleLabel: getRoleLabel(s.role, s.roleOtherLabel),
@@ -56,7 +56,7 @@ export async function GET(request, { params }) {
   }
 
   return NextResponse.json({
-    dealName: sigRequest.deal.name,
+    dealName: sigRequest.ledger.name,
     signers: publicSigners,
     integrityValid,
   });

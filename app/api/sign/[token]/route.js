@@ -11,15 +11,15 @@ import { mergePdfBuffers } from "../../../../lib/pdfMerge";
 
 const ATTACHMENT_A_PATH = path.join(process.cwd(), "public", "legal", "nb-residential-lease-attachment-a.pdf");
 
-async function buildDealPdf(deal) {
-  if (deal.documentType === "purchase_loi") {
-    return buildLOIPdf(buildLOIModel(deal.formData));
+async function buildDealPdf(ledger) {
+  if (ledger.documentType === "purchase_loi") {
+    return buildLOIPdf(buildLOIModel(ledger.formData));
   }
-  if (deal.documentType === "commercial_lease_loi") {
-    return buildLeasePdf(buildLeaseModel(deal.formData));
+  if (ledger.documentType === "commercial_lease") {
+    return buildLeasePdf(buildLeaseModel(ledger.formData));
   }
-  if (deal.documentType === "residential_lease") {
-    const generated = await buildResidentialLeasePdf(buildResidentialLeaseModel(deal.formData));
+  if (ledger.documentType === "residential_lease") {
+    const generated = await buildResidentialLeasePdf(buildResidentialLeaseModel(ledger.formData));
     return mergePdfBuffers(generated, ATTACHMENT_A_PATH);
   }
   throw new Error("Unsupported document type.");
@@ -28,7 +28,7 @@ async function buildDealPdf(deal) {
 async function loadSlotByToken(token) {
   const slot = await prisma.signerSlot.findUnique({
     where: { signingToken: token },
-    include: { request: { include: { deal: true } } },
+    include: { request: { include: { ledger: true } } },
   });
   if (!slot || slot.kind !== "signer") return null;
   return slot;
@@ -47,9 +47,9 @@ export async function GET(request, { params }) {
   }
 
   return NextResponse.json({
-    dealName: slot.request.deal.name,
-    documentType: slot.request.deal.documentType,
-    formData: slot.request.deal.formData,
+    dealName: slot.request.ledger.name,
+    documentType: slot.request.ledger.documentType,
+    formData: slot.request.ledger.formData,
     signerName: slot.name,
     signerRole: slot.roleOtherLabel || slot.role,
   });
@@ -74,8 +74,8 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: "A signature and consent confirmation are required." }, { status: 400 });
   }
 
-  const deal = slot.request.deal;
-  const pdfBuffer = await buildDealPdf(deal);
+  const ledger = slot.request.ledger;
+  const pdfBuffer = await buildDealPdf(ledger);
   const documentHash = hashDocument(pdfBuffer);
 
   const forwardedFor = request.headers.get("x-forwarded-for");
