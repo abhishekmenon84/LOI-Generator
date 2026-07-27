@@ -9,7 +9,7 @@
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test test/*.mjs",
+    "test": "node --test",
     "postinstall": "prisma generate"
   },
   "dependencies": {

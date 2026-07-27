@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { slugifyLabel, uniqueKey, labelForBox } from "../lib/formFieldKeys.js";
+import { slugifyLabel, uniqueKey, labelForBox } from "../lib/formFieldKeys.mjs";
 
 test("slugifyLabel normalizes to snake_case", () => {
   assert.equal(slugifyLabel("The Buyer"), "the_buyer");
@@ -22,6 +22,17 @@ test("uniqueKey appends a counter only on collision", () => {
   assert.equal(uniqueKey("buyer", taken), "buyer_2");
   taken.add("buyer_2");
   assert.equal(uniqueKey("buyer", taken), "buyer_3");
+});
+
+test("uniqueKey does not mutate the taken Set", () => {
+  const taken = new Set(["buyer", "price"]);
+  const initialSize = taken.size;
+  const result = uniqueKey("buyer", taken);
+  assert.equal(result, "buyer_2");
+  assert.equal(taken.size, initialSize);
+  assert.ok(taken.has("buyer"));
+  assert.ok(taken.has("price"));
+  assert.equal(taken.has("buyer_2"), false);
 });
 
 test("labelForBox picks the nearest text to the LEFT on the same line", () => {
