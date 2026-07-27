@@ -32,7 +32,13 @@ test("normalizePdf takes the passthrough branch for an ordinary unencrypted PDF"
   assert.equal(reloaded.getPageCount(), 2);
 });
 
-test("normalizePdf takes the raster branch for a real encrypted corpus PDF", async () => {
+test("normalizePdf takes the raster branch for a real encrypted corpus PDF", async (t) => {
+  // Design/ is gitignored (copyrighted NBREA/CREA fixtures, kept local) --
+  // skip cleanly on a fresh clone instead of failing outright.
+  if (!fs.existsSync(CORPUS_FILE)) {
+    t.skip("Design/ corpus fixture not present in this checkout -- skipping raster-branch test.");
+    return;
+  }
   const bytes = fs.readFileSync(CORPUS_FILE);
 
   const result = await normalizePdf(

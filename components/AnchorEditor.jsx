@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import AnchorBox from "./AnchorBox";
+import { patchAnchorByCid, removeAnchorByCid } from "../lib/anchorEditorState.mjs";
 
 const ANCHOR_TYPES = [
   { value: "signature", label: "Signature" },
@@ -12,8 +13,23 @@ const ANCHOR_TYPES = [
   { value: "radio", label: "Radio button" },
 ];
 
+// Client-only identifier used to track "which anchor is this" across
+// repeated edits. Deliberately NOT sent to the server (handleSaveTemplate /
+// [id]/page.js both build an explicit field whitelist that omits it) --
+// it exists only so selection/update logic can key off a stable id instead
+// of object identity, which broke under repeated edits (see C1 fix below).
+let cidCounter = 0;
+function nextCid() {
+  cidCounter += 1;
+  return `cid_${Date.now()}_${cidCounter}`;
+}
+
+function withCids(list) {
+  return (list || []).map((a) => (a._cid ? a : { ...a, _cid: nextCid() }));
+}
+
 export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAnchors, onSave, onCancel, readOnly = false }) {
-  const [anchors, setAnchors] = useState(initialAnchors || []);
+  const [anchors, setAnchors] = useState(() => withCids(initialAnchors));
   const [selectedType, setSelectedType] = useState("signature");
   const [labelInput, setLabelInput] = useState("");
   const [pageCanvases, setPageCanvases] = useState([]);
@@ -56,6 +72,7 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
     const yPct = ((e.clientY - rect.top) / rect.height) * 100;
     const label = labelInput.trim() || ANCHOR_TYPES.find((t) => t.value === selectedType).label;
     const newAnchor = {
+      _cid: nextCid(),
       type: selectedType,
       label,
       page: pageIndex,
@@ -73,8 +90,8 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
   }
 
   function handleDelete(toDelete) {
-    setAnchors((prev) => prev.filter((a) => a !== toDelete));
-    setSelectedAnchor((prev) => (prev === toDelete ? null : prev));
+    setAnchors((prev) => removeAnchorByCid(prev, toDelete._cid));
+    setSelectedAnchor((prev) => (prev && prev._cid === toDelete._cid ? null : prev));
   }
 
   function handleSelect(a) {
@@ -82,9 +99,20 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
     setSelectedAnchor(a);
   }
 
+  // C1 fix (see final-review.md): the previous version built two SEPARATE
+  // patched objects -- one folded into `anchors`, another assigned to
+  // `selectedAnchor` -- so after the first edit they were no longer the
+  // same reference and the `a === selectedAnchor` identity guard never
+  // matched again; every keystroke after the first patched a stale copy.
+  // `patchAnchorByCid` (lib/anchorEditorState.mjs) fixes this by
+  // construction: it keys off the stable `_cid` (not object identity) and
+  // derives `selected` by reading it back OUT of the freshly-updated array,
+  // so the two can never drift apart.
   function handleUpdateSelected(patch) {
-    setAnchors((prev) => prev.map((a) => (a === selectedAnchor ? { ...a, ...patch } : a)));
-    setSelectedAnchor((prev) => (prev ? { ...prev, ...patch } : prev));
+    if (!selectedAnchor) return;
+    const { anchors: updatedAnchors, selected } = patchAnchorByCid(anchors, selectedAnchor._cid, patch);
+    setAnchors(updatedAnchors);
+    setSelectedAnchor(selected);
   }
 
   async function handleSave() {
@@ -189,14 +217,14 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
           style={{ position: "relative", cursor: readOnly ? "default" : "crosshair" }}
         >
           <img src={dataUrl} alt={`Page ${i + 1}`} style={{ width: "100%", display: "block" }} />
-          {anchors.filter((a) => a.page === i).map((a, idx) => (
+          {anchors.filter((a) => a.page === i).map((a) => (
             <AnchorBox
-              key={idx}
+              key={a._cid}
               anchor={a}
               onSelect={handleSelect}
               onDelete={handleDelete}
               readOnly={readOnly}
-              selected={a === selectedAnchor}
+              selected={a._cid === selectedAnchor?._cid}
             />
           ))}
         </div>

@@ -43,6 +43,11 @@ export default function EditTemplatePage() {
 
   async function handleSave(anchors) {
     const fields = anchors.map((a, index) => ({
+      // Included so PATCH can match this anchor back to its existing
+      // FormField row and preserve its `key` (I4, final-review.md) --
+      // undefined for anchors the user newly placed in this edit session,
+      // which is exactly when a fresh key SHOULD be minted server-side.
+      id: a.id,
       label: a.label,
       type: a.type,
       page: a.page,

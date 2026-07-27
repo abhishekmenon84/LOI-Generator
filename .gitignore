@@ -8,3 +8,7 @@ node_modules/
 # Roadmap / internal planning docs — kept local, not pushed to the repo
 26-07-16-loi-builder-roadmap-and-market-analysis.md
 docs/
+
+# Copyrighted NBREA/CREA form corpus used as a local fixture for
+# Task 6/9 detection and normalization work -- never to be committed.
+Design/

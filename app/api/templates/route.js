@@ -2,10 +2,56 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import { getUserMembership, listUserOrgs, getPersonalOrgId } from "../../../lib/orgAccess";
+import { isOrgActive } from "../../../lib/orgBilling";
 import { slugifyLabel, uniqueKey } from "../../../lib/formFieldKeys.mjs";
 
 const VALID_TYPES = new Set(["text", "checkbox", "radio", "date", "signature", "initials"]);
 const VALID_SOURCE_TIERS = new Set(["acroform", "detected", "manual"]);
+
+// Mirrors requireAdminActiveOrg (app/api/orgs/[id]/templates/route.js) for
+// the newer FormTemplate routes: an admin-role check plus the
+// isOrgActive()/TRIAL_EXPIRED billing gate every other mutating org-scoped
+// route enforces. One deliberate difference -- FormTemplates (unlike the
+// legacy CustomTemplate system) may live in a user's PERSONAL org: POST
+// falls back there via getPersonalOrgId() for a user with no business org,
+// and getPersonalOrgId() also now falls back to a user's sole membership
+// when they have no personal org at all. isOrgActive() already treats
+// every personal org as active, so the only adjustment needed here is to
+// not require admin role for a personal org -- its sole member is its
+// de facto admin.
+export async function requireActiveTemplateOrgAccess(orgId, userId) {
+  const membership = await getUserMembership(userId, orgId);
+  if (!membership) return { error: "You are not a member of that organization.", status: 403 };
+  const org = await prisma.organization.findUnique({ where: { id: orgId } });
+  if (!org) return { error: "Organization not found.", status: 404 };
+  if (!org.isPersonal && membership.role !== "admin") {
+    return { error: "Admin access required.", status: 403 };
+  }
+  if (!isOrgActive(org)) {
+    return { error: "Your organization's trial has ended. Subscribe to continue.", status: 402, code: "TRIAL_EXPIRED" };
+  }
+  return { org, membership };
+}
+
+// Accepts only a URL this app's own blob storage (lib/blobStorage.js's
+// `put()`, via @vercel/blob) would have produced -- not an XSS sink today
+// (the value only ever reaches pdf.js's getDocument({url}), never rendered
+// as an href/src), but free hardening against an org member pointing a
+// template at an arbitrary external URL that every other member's browser
+// would then fetch. Hostname check matches @vercel/blob's OWN validation
+// (node_modules/@vercel/blob/dist/index.js's `.endsWith(".blob.vercel-storage.com")`)
+// rather than hardcoding the "public" access-level segment, so this stays
+// correct if the store's access level ever changes.
+function isOwnBlobUrl(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  return parsed.hostname.endsWith(".blob.vercel-storage.com");
+}
 
 // Validates the raw `fields` array from the request body against `pageCount`
 // and returns a plain-language error, or null if everything checks out.
@@ -92,6 +138,9 @@ export async function POST(request) {
   if (!pdfUrl) {
     return NextResponse.json({ error: "pdfUrl is required." }, { status: 400 });
   }
+  if (!isOwnBlobUrl(pdfUrl)) {
+    return NextResponse.json({ error: "pdfUrl must be a URL returned by this app's own upload/normalize endpoint." }, { status: 400 });
+  }
   if (!Number.isInteger(pageCount) || pageCount < 1) {
     return NextResponse.json({ error: "pageCount must be an integer of at least 1." }, { status: 400 });
   }
@@ -104,16 +153,16 @@ export async function POST(request) {
   }
 
   let orgId = body.orgId;
-  if (orgId) {
-    const membership = await getUserMembership(session.user.id, orgId);
-    if (!membership) {
-      return NextResponse.json({ error: "You are not a member of that organization." }, { status: 403 });
-    }
-  } else {
+  if (!orgId) {
     orgId = await getPersonalOrgId(session.user.id);
     if (!orgId) {
       return NextResponse.json({ error: "No organization found for this account." }, { status: 500 });
     }
+  }
+
+  const gate = await requireActiveTemplateOrgAccess(orgId, session.user.id);
+  if (gate.error) {
+    return NextResponse.json({ error: gate.error, ...(gate.code ? { code: gate.code } : {}) }, { status: gate.status });
   }
 
   const preparedFields = assignFieldKeys(fields || []);

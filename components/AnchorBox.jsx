@@ -12,8 +12,42 @@ const ANCHOR_COLORS = {
 const LOW_CONFIDENCE_COLOR = "oklch(60% 0.19 45)";
 const SELECTED_COLOR = "oklch(45% 0.2 264)";
 
+// Per-class "check this" thresholds, NOT a single global 0.75.
+//
+// The old global 0.75 cutoff fired on essentially every detected box: Task
+// 6's ground-truth measurement (lib/formDetect.js's CONFIDENCE_FLOOR
+// comment) found text boxes topped out at 0.76 and checkboxes at 0.412, so
+// a 0.75 line put ~all checkboxes and most text boxes below it -- the hint
+// carried no signal about which boxes were actually doubtful, and its
+// caption text overflowed small checkbox/radio boxes.
+//
+// Each class already has its own accept floor (CONFIDENCE_FLOOR); the rule
+// here is "hint if the score sits in roughly the bottom half of that
+// class's floor-to-observed-max range" rather than one number for every
+// class:
+//   - text:      floor 0.5, observed max 0.76  -> hint below 0.6
+//   - checkbox:  floor 0.3, observed max 0.412  -> hint below 0.35
+//   - radio:     inherits checkbox's floor/range (groupCheckboxLines only
+//                relabels type -- confidence still comes from the
+//                checkbox detector), so it uses the same threshold
+//   - signature: floor 0.5, no ground-truth signature fields measured yet
+//                -- kept at the same conservative 0.6 as text until a page
+//                with real signatures gives an observed max to tune against
+const LOW_CONFIDENCE_THRESHOLD = {
+  text: 0.6,
+  checkbox: 0.35,
+  radio: 0.35,
+  signature: 0.6,
+};
+const DEFAULT_LOW_CONFIDENCE_THRESHOLD = 0.6;
+
 export default function AnchorBox({ anchor, onSelect, onDelete, readOnly, selected }) {
-  const lowConfidence = anchor.confidence != null && anchor.confidence < 0.75;
+  // Hand-placed anchors never carry a `confidence` (it's `null`/`undefined`
+  // for anything the user drew themselves in AnchorEditor's click-to-place
+  // flow), so `!= null` here must stay -- there is no "quality" signal to
+  // second-guess for those.
+  const threshold = LOW_CONFIDENCE_THRESHOLD[anchor.type] ?? DEFAULT_LOW_CONFIDENCE_THRESHOLD;
+  const lowConfidence = anchor.confidence != null && anchor.confidence < threshold;
   const baseColor = ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text;
 
   return (
