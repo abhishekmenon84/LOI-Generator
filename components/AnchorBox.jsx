@@ -9,32 +9,53 @@ const ANCHOR_COLORS = {
   radio: "oklch(62% 0.15 75)",
 };
 
-export default function AnchorBox({ anchor, onUpdate, onDelete, readOnly }) {
+const LOW_CONFIDENCE_COLOR = "oklch(60% 0.19 45)";
+const SELECTED_COLOR = "oklch(45% 0.2 264)";
+
+export default function AnchorBox({ anchor, onSelect, onDelete, readOnly, selected }) {
+  const lowConfidence = anchor.confidence != null && anchor.confidence < 0.75;
+  const baseColor = ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text;
+
   return (
     <div
+      onClick={(e) => {
+        if (!readOnly && onSelect) {
+          e.stopPropagation();
+          onSelect(anchor);
+        }
+      }}
       style={{
         position: "absolute",
         left: `${anchor.xPct}%`,
         top: `${anchor.yPct}%`,
         width: `${anchor.widthPct}%`,
         height: `${anchor.heightPct}%`,
-        border: `2px solid ${ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text}`,
-        background: `${ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text}22`,
+        border: lowConfidence
+          ? `2px dashed ${LOW_CONFIDENCE_COLOR}`
+          : `2px solid ${selected ? SELECTED_COLOR : baseColor}`,
+        boxShadow: selected ? `0 0 0 2px ${SELECTED_COLOR}55` : "none",
+        background: `${baseColor}22`,
         borderRadius: "4px",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         fontSize: "10px",
         fontWeight: 600,
-        color: ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text,
+        color: lowConfidence ? LOW_CONFIDENCE_COLOR : baseColor,
         cursor: readOnly ? "default" : "pointer",
         pointerEvents: readOnly ? "none" : "auto",
       }}
-      title={`${anchor.type}: ${anchor.label}`}
+      title={`${anchor.type}: ${anchor.label}${lowConfidence ? " (low confidence — check this)" : ""}`}
     >
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 4px" }}>
         {anchor.label}
       </span>
+      {lowConfidence && (
+        <span style={{ fontSize: "8px", fontWeight: 700, whiteSpace: "nowrap", padding: "0 4px" }}>
+          low confidence — check this
+        </span>
+      )}
       {!readOnly && onDelete && (
         <button
           type="button"

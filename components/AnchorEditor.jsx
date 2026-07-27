@@ -18,6 +18,7 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
   const [labelInput, setLabelInput] = useState("");
   const [pageCanvases, setPageCanvases] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [selectedAnchor, setSelectedAnchor] = useState(null);
   const containerRefs = useRef([]);
 
   useEffect(() => {
@@ -54,15 +55,36 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
     const xPct = ((e.clientX - rect.left) / rect.width) * 100;
     const yPct = ((e.clientY - rect.top) / rect.height) * 100;
     const label = labelInput.trim() || ANCHOR_TYPES.find((t) => t.value === selectedType).label;
-    setAnchors((prev) => [
-      ...prev,
-      { type: selectedType, label, page: pageIndex, xPct, yPct, widthPct: 12, heightPct: 4 },
-    ]);
+    const newAnchor = {
+      type: selectedType,
+      label,
+      page: pageIndex,
+      xPct,
+      yPct,
+      widthPct: 12,
+      heightPct: 4,
+      required: false,
+      radioGroup: "",
+      signerRole: "",
+    };
+    setAnchors((prev) => [...prev, newAnchor]);
+    setSelectedAnchor(newAnchor);
     setLabelInput("");
   }
 
   function handleDelete(toDelete) {
     setAnchors((prev) => prev.filter((a) => a !== toDelete));
+    setSelectedAnchor((prev) => (prev === toDelete ? null : prev));
+  }
+
+  function handleSelect(a) {
+    if (readOnly) return;
+    setSelectedAnchor(a);
+  }
+
+  function handleUpdateSelected(patch) {
+    setAnchors((prev) => prev.map((a) => (a === selectedAnchor ? { ...a, ...patch } : a)));
+    setSelectedAnchor((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
   async function handleSave() {
@@ -94,6 +116,71 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
         </div>
       )}
 
+      {!readOnly && selectedAnchor && (
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
+            flexWrap: "wrap",
+            padding: "10px",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+          }}
+        >
+          <strong style={{ fontSize: "12px" }}>Edit field</strong>
+          <input
+            type="text"
+            placeholder="Label"
+            value={selectedAnchor.label || ""}
+            onChange={(e) => handleUpdateSelected({ label: e.target.value })}
+            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}
+          />
+          <select
+            value={selectedAnchor.type}
+            onChange={(e) => handleUpdateSelected({ type: e.target.value })}
+            style={{ padding: "6px 10px", borderRadius: "6px" }}
+          >
+            {ANCHOR_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          <label style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
+            <input
+              type="checkbox"
+              checked={!!selectedAnchor.required}
+              onChange={(e) => handleUpdateSelected({ required: e.target.checked })}
+            />
+            Required
+          </label>
+          {selectedAnchor.type === "radio" && (
+            <input
+              type="text"
+              placeholder="Radio group"
+              value={selectedAnchor.radioGroup || ""}
+              onChange={(e) => handleUpdateSelected({ radioGroup: e.target.value })}
+              style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}
+            />
+          )}
+          {(selectedAnchor.type === "signature" || selectedAnchor.type === "initials") && (
+            <input
+              type="text"
+              placeholder="Signer role (e.g. Buyer)"
+              value={selectedAnchor.signerRole || ""}
+              onChange={(e) => handleUpdateSelected({ signerRole: e.target.value })}
+              style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => setSelectedAnchor(null)}
+            style={{ background: "none", border: "1px solid var(--border)", padding: "6px 10px", borderRadius: "6px", cursor: "pointer" }}
+          >
+            Done
+          </button>
+        </div>
+      )}
+
       {pageCanvases.map((dataUrl, i) => (
         <div
           key={i}
@@ -103,7 +190,14 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
         >
           <img src={dataUrl} alt={`Page ${i + 1}`} style={{ width: "100%", display: "block" }} />
           {anchors.filter((a) => a.page === i).map((a, idx) => (
-            <AnchorBox key={idx} anchor={a} onDelete={handleDelete} readOnly={readOnly} />
+            <AnchorBox
+              key={idx}
+              anchor={a}
+              onSelect={handleSelect}
+              onDelete={handleDelete}
+              readOnly={readOnly}
+              selected={a === selectedAnchor}
+            />
           ))}
         </div>
       ))}
