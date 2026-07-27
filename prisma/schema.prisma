@@ -164,6 +164,8 @@ model SignatureRequest {
   id          String   @id @default(cuid())
   dealId      String
   deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  ledgerId    String?
+  ledger      Ledger?  @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   status      String   @default("pending") // "pending" | "fully_executed" | "voided"
   verifyCode  String   @unique
   createdByUserId String
@@ -174,6 +176,7 @@ model SignatureRequest {
   signers SignerSlot[]
 
   @@index([dealId])
+  @@index([ledgerId])
 }
 
 model SignerSlot {
@@ -275,6 +278,8 @@ model Ledger {
   locked          Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  signatureRequests SignatureRequest[]
 
   @@index([folderId])
   @@index([createdByUserId])
