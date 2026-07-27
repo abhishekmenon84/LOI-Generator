@@ -2,12 +2,14 @@
   "name": "loi-generator",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Free Letter of Intent generator for business + real estate acquisitions.",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --test test/*.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
