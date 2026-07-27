@@ -8,6 +8,9 @@ import ResizeHandle from "../../../../components/ResizeHandle";
 import FolderFileViewer from "../../../../components/FolderFileViewer";
 import LOIForm from "../../../../components/LOIForm";
 import LOIPreview from "../../../../components/LOIPreview";
+import DocumentActionBar from "../../../../components/DocumentActionBar";
+import SendForSignatureModal from "../../../../components/SendForSignatureModal";
+import DocumentAuditPanel from "../../../../components/DocumentAuditPanel";
 import LeaseForm from "../../../../components/LeaseForm";
 import LeasePreview from "../../../../components/LeasePreview";
 import ResidentialLeaseForm from "../../../../components/ResidentialLeaseForm";
@@ -115,6 +118,13 @@ export default function FolderWorkspacePage() {
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState(null);
   const [creatingFromTemplateId, setCreatingFromTemplateId] = useState(null);
+
+  // Task 7: send-for-signature / audit-trail modal open state for the
+  // currently selected Ledger, mirroring app/app/page.js's equivalent state.
+  // No shareModalOpen here -- Deal-level sharing is explicitly out of scope
+  // for this workspace (Folder-level FolderParticipant sharing covers it).
+  const [sendForSignatureOpen, setSendForSignatureOpen] = useState(false);
+  const [auditPanelOpen, setAuditPanelOpen] = useState(false);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
@@ -626,6 +636,14 @@ export default function FolderWorkspacePage() {
                 }
                 exportState={exportState}
                 readOnly={ledgerReadOnly}
+                actionBar={
+                  <DocumentActionBar
+                    readOnly={ledgerReadOnly}
+                    hideShare
+                    onSendForSignature={() => setSendForSignatureOpen(true)}
+                    onAudit={() => setAuditPanelOpen(true)}
+                  />
+                }
               />
             )
           ) : (
@@ -775,6 +793,27 @@ export default function FolderWorkspacePage() {
           ) : null}
         </div>
       </div>
+
+      {/* Task 7: send-for-signature / audit-trail modals for the currently
+          selected Ledger. Only reachable via the actionBar buttons rendered
+          inside the hasActiveLedger && config branch above, so ledger.id is
+          always non-null whenever these could actually be opened. */}
+      {hasActiveLedger && config ? (
+        <>
+          <SendForSignatureModal
+            ledgerId={ledger?.id}
+            documentType={ledger?.documentType}
+            isOpen={sendForSignatureOpen}
+            onClose={() => setSendForSignatureOpen(false)}
+            onSent={() => setSendForSignatureOpen(false)}
+          />
+          <DocumentAuditPanel
+            ledgerId={ledger?.id}
+            isOpen={auditPanelOpen}
+            onClose={() => setAuditPanelOpen(false)}
+          />
+        </>
+      ) : null}
 
       {/* Template picker -- same plain overlay/modal convention as
           FolderReasonModal.jsx (fixed full-bleed backdrop, click-outside to

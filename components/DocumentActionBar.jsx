@@ -34,10 +34,10 @@ function AuditIcon() {
 // document builder pages. Renders inline in the form-panel header instead of
 // as separately-positioned fixed buttons, which is what previously caused
 // them to overlap each other and the preview panel at narrower widths.
-export default function DocumentActionBar({ readOnly, onShare, onSendForSignature, onAudit }) {
+export default function DocumentActionBar({ readOnly, onShare, onSendForSignature, onAudit, hideShare }) {
   return (
     <div className="document-action-bar" role="group" aria-label="Document actions">
-      {!readOnly && (
+      {!readOnly && !hideShare && (
         <button type="button" className="btn-doc-action" onClick={onShare} title="Share this deal">
           <ShareIcon />
           Share
