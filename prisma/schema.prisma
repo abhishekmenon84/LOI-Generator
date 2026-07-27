@@ -25,6 +25,7 @@ model User {
   folderParticipations FolderParticipant[]
   uploadedFiles       FolderFile[]
   templatesCreated    CustomTemplate[]
+  formTemplatesCreated FormTemplate[]
 }
 
 model Organization {
@@ -45,6 +46,7 @@ model Organization {
   folders     Folder[]
   receipts    Receipt[]
   customTemplates CustomTemplate[]
+  formTemplates   FormTemplate[]
 }
 
 model Membership {
@@ -275,6 +277,9 @@ model Ledger {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  templateId String?
+  template   FormTemplate? @relation(fields: [templateId], references: [id])
+
   signatureRequests SignatureRequest[]
 
   @@index([folderId])
@@ -345,5 +350,46 @@ model TemplateAnchor {
   widthPct   Float
   heightPct  Float
 
+  @@index([templateId])
+}
+
+model FormTemplate {
+  id              String   @id @default(cuid())
+  orgId           String
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name            String
+  pdfUrl          String
+  pageCount       Int
+  sourceTier      String   @default("manual") // "acroform" | "detected" | "manual"
+  createdByUserId String
+  createdBy       User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  fields  FormField[]
+  ledgers Ledger[]
+
+  @@index([orgId])
+}
+
+model FormField {
+  id         String       @id @default(cuid())
+  templateId String
+  template   FormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  key        String
+  label      String
+  type       String   // "text" | "checkbox" | "radio" | "date" | "signature" | "initials"
+  page       Int
+  xPct       Float
+  yPct       Float
+  widthPct   Float
+  heightPct  Float
+  required   Boolean  @default(false)
+  radioGroup String?
+  signerRole String?
+  confidence Float?
+  order      Int      @default(0)
+
+  @@unique([templateId, key])
   @@index([templateId])
 }
