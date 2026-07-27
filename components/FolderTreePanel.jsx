@@ -176,6 +176,7 @@ export default function FolderTreePanel({
   onAddLedger,
   onAddFromTemplate,
   onUploadFile,
+  width = 280,
 }) {
   // editingId shape: "ancestor:<id>" | "subfolder:<id>" -- mirrors the
   // handoff's editingId convention (~L692, ~L707) so rename state is scoped
@@ -248,7 +249,7 @@ export default function FolderTreePanel({
   return (
     <div
       style={{
-        flex: "0 0 19%",
+        flex: `0 0 ${width}px`,
         background: "oklch(98.5% 0.004 60)",
         borderRight: "1px solid oklch(91% 0.006 60)",
         overflowY: "auto",

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import FolderBreadcrumb from "../../../../components/FolderBreadcrumb";
 import FolderTreePanel from "../../../../components/FolderTreePanel";
+import ResizeHandle from "../../../../components/ResizeHandle";
 import FolderFileViewer from "../../../../components/FolderFileViewer";
 import LOIForm from "../../../../components/LOIForm";
 import LOIPreview from "../../../../components/LOIPreview";
@@ -79,6 +80,12 @@ export default function FolderWorkspacePage() {
 
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  // Task 4: pixel-based panel widths, dragged via ResizeHandle. Only
+  // meaningful when the respective panel isn't collapsed -- see
+  // rightPanelFlex/middlePanelFlex below for how collapse state overrides
+  // these.
+  const [leftWidth, setLeftWidth] = useState(280); // px
+  const [rightWidth, setRightWidth] = useState(420); // px
 
   const [selectedLedgerId, setSelectedLedgerId] = useState(null);
   const [ledger, setLedger] = useState(null); // {id, folderId, name, documentType, formData, locked, readOnly}
@@ -482,6 +489,19 @@ export default function FolderWorkspacePage() {
   const hasActiveFile = !!selectedFileId;
   const docSelected = !!selectedLedgerId;
 
+  // Task 4: when the left (folder tree) panel is collapsed, the middle and
+  // right panels split the freed space equally instead of the right panel
+  // staying pinned to its fixed configured width -- "1 1 0" on both gives
+  // them equal flex-grow shares. Otherwise, today's existing behavior is
+  // preserved: middle grows to fill remaining space, right panel is a fixed
+  // pixel width.
+  const rightPanelFlex = rightCollapsed
+    ? "0 0 46px"
+    : leftCollapsed
+    ? "1 1 0" // equal split with the middle panel when the left panel is hidden
+    : `0 0 ${rightWidth}px`;
+  const middlePanelFlex = leftCollapsed && !rightCollapsed ? "1 1 0" : "1 1 auto";
+
   if (loadError) {
     return (
       <div style={{ padding: "40px", fontFamily: "'Inter',-apple-system,system-ui,sans-serif" }}>
@@ -557,11 +577,20 @@ export default function FolderWorkspacePage() {
           onAddLedger={handleAddLedger}
           onAddFromTemplate={handleAddFromTemplate}
           onUploadFile={() => fileInputRef.current?.click()}
+          width={leftWidth}
         />
+
+        {!leftCollapsed && (
+          <ResizeHandle
+            onDrag={(dx) =>
+              setLeftWidth((w) => Math.min(480, Math.max(200, w + dx)))
+            }
+          />
+        )}
 
         <div
           style={{
-            flex: "1 1 auto",
+            flex: middlePanelFlex,
             minWidth: 0,
             overflowY: "auto",
             padding: "26px 28px",
@@ -640,9 +669,24 @@ export default function FolderWorkspacePage() {
           )}
         </div>
 
+        {/* The right handle only makes sense when the right panel has a
+            fixed pixel width to drag (i.e. NOT the equal-split state, which
+            only occurs when leftCollapsed && !rightCollapsed -- see
+            rightPanelFlex above). Dragging a flex-based equal-split panel by
+            pixel delta doesn't map cleanly onto that layout, so this task
+            intentionally doesn't attempt to make the equal-split state also
+            draggable; that's a deliberate scope boundary, not an oversight. */}
+        {!rightCollapsed && !leftCollapsed && (
+          <ResizeHandle
+            onDrag={(dx) =>
+              setRightWidth((w) => Math.min(600, Math.max(280, w - dx)))
+            }
+          />
+        )}
+
         <div
           style={{
-            flex: rightCollapsed ? "0 0 46px" : "0 0 38%",
+            flex: rightPanelFlex,
             overflowY: "auto",
             background: "oklch(93% 0.012 60)",
             position: "relative",
@@ -694,14 +738,14 @@ export default function FolderWorkspacePage() {
               panel's empty state (handoff's showPreviewContent / showPreviewEmpty,
               ~L260-271). Only rendered when the panel itself isn't collapsed. */}
           {!rightCollapsed && docSelected && model ? (
-            <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "0 24px 40px" }}>
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "0 12px 20px" }}>
               <div
                 style={{
                   width: "100%",
                   maxWidth: "480px",
                   background: "white",
                   boxShadow: "0 8px 30px rgba(30,25,15,.14)",
-                  padding: "48px 44px",
+                  padding: "32px 28px",
                   fontFamily: "'Source Serif 4',Georgia,serif",
                   color: "oklch(20% 0.01 264)",
                   minHeight: "600px",

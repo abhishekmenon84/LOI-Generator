@@ -244,7 +244,7 @@ export default function KanbanCard({
             }}
             style={{ border: "none", background: "oklch(94% 0.02 300)", color: "oklch(42% 0.13 300)", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, cursor: "pointer" }}
           >
-            {childThreads.length} offer{childThreads.length === 1 ? "" : "s"} {expanded ? "▲" : "▼"}
+            {childThreads.length} sub folder{childThreads.length === 1 ? "" : "s"} {expanded ? "▲" : "▼"}
           </button>
         )}
       </div>
