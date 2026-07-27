@@ -6,6 +6,23 @@ import { isOrgActive } from "../../../../lib/orgBilling";
 
 const VALID_STAGES = ["draft", "active", "pending", "closed"];
 
+// Resolve a Deal's corresponding Ledger, if any, using the same
+// (name, documentType, createdAt) matching heuristic the one-off
+// scripts/backfill-signature-ledger-ids.mjs script used -- see that
+// script for the full rationale. A Deal with zero or multiple (ambiguous)
+// matches resolves to null rather than guessing.
+async function resolveLedgerForDeal(deal) {
+  const ledgerCandidates = await prisma.ledger.findMany({
+    where: {
+      name: deal.name,
+      documentType: deal.documentType,
+      createdAt: deal.createdAt,
+    },
+    select: { id: true, locked: true },
+  });
+  return ledgerCandidates.length === 1 ? ledgerCandidates[0] : null;
+}
+
 export async function GET(request, { params }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -16,23 +33,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: "Deal not found." }, { status: 404 });
   }
 
-  // Resolve this Deal's corresponding Ledger, if any, using the same
-  // (name, documentType, createdAt) matching heuristic the one-off
-  // scripts/backfill-signature-ledger-ids.mjs script used -- see that
-  // script for the full rationale. A Deal with zero or multiple (ambiguous)
-  // matches resolves to ledgerId: null rather than crashing.
-  let ledgerId = null;
-  const ledgerCandidates = await prisma.ledger.findMany({
-    where: {
-      name: deal.name,
-      documentType: deal.documentType,
-      createdAt: deal.createdAt,
-    },
-    select: { id: true },
-  });
-  if (ledgerCandidates.length === 1) {
-    ledgerId = ledgerCandidates[0].id;
-  }
+  const ledger = await resolveLedgerForDeal(deal);
 
   return NextResponse.json({
     id: deal.id,
@@ -40,9 +41,9 @@ export async function GET(request, { params }) {
     documentType: deal.documentType,
     formData: deal.formData,
     stage: deal.stage,
-    locked: deal.locked,
+    locked: deal.locked || !!ledger?.locked,
     readOnly: !deal._writeAccess,
-    ledgerId,
+    ledgerId: ledger?.id ?? null,
   });
 }
 
@@ -64,7 +65,8 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: "Your organization's trial has ended. Subscribe to continue.", code: "TRIAL_EXPIRED" }, { status: 402 });
   }
 
-  if (deal.locked) {
+  const ledger = await resolveLedgerForDeal(deal);
+  if (deal.locked || ledger?.locked) {
     return NextResponse.json({ error: "This document has been fully signed and can no longer be edited.", code: "DEAL_LOCKED" }, { status: 409 });
   }
   if (deal.deletedAt) {
@@ -93,7 +95,8 @@ export async function DELETE(request, { params }) {
   if (!deal._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this deal." }, { status: 403 });
   }
-  if (deal.locked) {
+  const ledger = await resolveLedgerForDeal(deal);
+  if (deal.locked || ledger?.locked) {
     return NextResponse.json({ error: "This document has been fully signed and can no longer be deleted.", code: "DEAL_LOCKED" }, { status: 409 });
   }
   await prisma.deal.update({ where: { id: deal.id }, data: { deletedAt: new Date() } });
