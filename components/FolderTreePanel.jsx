@@ -34,10 +34,10 @@ function LedgerRow({ doc, isSelected, onSelectLedger }) {
         background: isSelected ? "oklch(93% 0.03 300)" : "transparent",
       }}
     >
-      <span style={{ fontSize: "12px", flex: "0 0 auto" }}>{DOC_ICONS.ledger}</span>
+      <span style={{ fontSize: "11px", flex: "0 0 auto" }}>{DOC_ICONS.ledger}</span>
       <span
         style={{
-          fontSize: "12.5px",
+          fontSize: "11px",
           fontWeight: isSelected ? 700 : 500,
           color: isSelected ? "oklch(45% 0.15 300)" : "oklch(35% 0.01 264)",
           overflow: "hidden",
@@ -69,10 +69,10 @@ function FileRow({ doc, isSelected, onSelectFile }) {
         background: isSelected ? "oklch(93% 0.03 300)" : "transparent",
       }}
     >
-      <span style={{ fontSize: "12px", flex: "0 0 auto" }}>{DOC_ICONS.file}</span>
+      <span style={{ fontSize: "11px", flex: "0 0 auto" }}>{DOC_ICONS.file}</span>
       <span
         style={{
-          fontSize: "12.5px",
+          fontSize: "11px",
           fontWeight: isSelected ? 700 : 500,
           color: isSelected ? "oklch(45% 0.15 300)" : "oklch(35% 0.01 264)",
           overflow: "hidden",
@@ -97,7 +97,7 @@ function FolderRow({ folder, isEditing, editValue, onStartEdit, onEditChange, on
         borderRadius: "8px",
       }}
     >
-      <span style={{ fontSize: "13px", flex: "0 0 auto" }}>{icon}</span>
+      <span style={{ fontSize: "11.5px", flex: "0 0 auto" }}>{icon}</span>
       {isEditing ? (
         <input
           type="text"
@@ -146,7 +146,7 @@ function FolderRow({ folder, isEditing, editValue, onStartEdit, onEditChange, on
               background: "transparent",
               color: "oklch(60% 0.01 264)",
               cursor: "pointer",
-              fontSize: "11px",
+              fontSize: "10px",
               padding: "2px",
               flex: "0 0 auto",
             }}
@@ -176,7 +176,9 @@ export default function FolderTreePanel({
   onAddLedger,
   onAddFromTemplate,
   onUploadFile,
-  width = 280,
+  // CSS length used as the panel's flex-basis (e.g. "10%"), so the three
+  // panels stay proportional instead of pinned to pixel widths.
+  width = "10%",
 }) {
   // editingId shape: "ancestor:<id>" | "subfolder:<id>" -- mirrors the
   // handoff's editingId convention (~L692, ~L707) so rename state is scoped
@@ -249,7 +251,8 @@ export default function FolderTreePanel({
   return (
     <div
       style={{
-        flex: `0 0 ${width}px`,
+        flex: `0 0 ${width}`,
+        minWidth: 0,
         background: "oklch(98.5% 0.004 60)",
         borderRight: "1px solid oklch(91% 0.006 60)",
         overflowY: "auto",
@@ -261,7 +264,7 @@ export default function FolderTreePanel({
       <div style={{ padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span
           style={{
-            fontSize: "11px",
+            fontSize: "10px",
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.04em",
@@ -303,7 +306,7 @@ export default function FolderTreePanel({
               onCancelEdit={cancelEdit}
               onClick={() => onNavigateFolder?.(ancestor.id)}
               icon="📁"
-              fontSize="13.5px"
+              fontSize="12px"
               fontWeight={700}
             />
           );
@@ -326,7 +329,7 @@ export default function FolderTreePanel({
               onCancelEdit={cancelEdit}
               onClick={() => {}}
               icon="📁"
-              fontSize="13.5px"
+              fontSize="12px"
               fontWeight={700}
             />
             {/* Fix round 1 (Important #1): the current folder's OWN Ledgers
@@ -359,7 +362,7 @@ export default function FolderTreePanel({
 
         <div
           style={{
-            fontSize: "10.5px",
+            fontSize: "10px",
             fontWeight: 700,
             color: "oklch(58% 0.01 264)",
             textTransform: "uppercase",
@@ -381,11 +384,11 @@ export default function FolderTreePanel({
               <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 8px", borderRadius: "8px" }}>
                 <span
                   onClick={() => toggleSubfolder(sf.id)}
-                  style={{ fontSize: "11px", cursor: "pointer", color: "oklch(55% 0.01 264)", flex: "0 0 auto" }}
+                  style={{ fontSize: "10px", cursor: "pointer", color: "oklch(55% 0.01 264)", flex: "0 0 auto" }}
                 >
                   {expanded ? "▾" : "▸"}
                 </span>
-                <span style={{ fontSize: "13px", flex: "0 0 auto" }}>🗂</span>
+                <span style={{ fontSize: "11.5px", flex: "0 0 auto" }}>🗂</span>
                 {isEditing ? (
                   <input
                     type="text"
@@ -398,7 +401,7 @@ export default function FolderTreePanel({
                       if (e.key === "Escape") cancelEdit();
                     }}
                     style={{
-                      fontSize: "13px",
+                      fontSize: "11.5px",
                       fontWeight: 650,
                       border: "1px solid oklch(80% 0.02 300)",
                       borderRadius: "5px",
@@ -413,7 +416,7 @@ export default function FolderTreePanel({
                     <span
                       onClick={() => toggleSubfolder(sf.id)}
                       style={{
-                        fontSize: "13px",
+                        fontSize: "11.5px",
                         fontWeight: 650,
                         color: "oklch(32% 0.01 264)",
                         cursor: "pointer",
@@ -434,7 +437,7 @@ export default function FolderTreePanel({
                         background: "transparent",
                         color: "oklch(60% 0.01 264)",
                         cursor: "pointer",
-                        fontSize: "11px",
+                        fontSize: "10px",
                         padding: "2px",
                         flex: "0 0 auto",
                       }}
@@ -493,7 +496,7 @@ export default function FolderTreePanel({
             background: "oklch(45% 0.15 300)",
             color: "white",
             fontWeight: 600,
-            fontSize: "12px",
+            fontSize: "11px",
             cursor: "pointer",
           }}
         >
@@ -529,7 +532,7 @@ export default function FolderTreePanel({
                 border: "none",
                 background: "white",
                 color: "oklch(30% 0.01 264)",
-                fontSize: "12.5px",
+                fontSize: "11px",
                 fontWeight: 600,
                 cursor: "pointer",
               }}
@@ -551,7 +554,7 @@ export default function FolderTreePanel({
                 borderTop: "1px solid oklch(93% 0.006 60)",
                 background: "white",
                 color: "oklch(30% 0.01 264)",
-                fontSize: "12.5px",
+                fontSize: "11px",
                 fontWeight: 600,
                 cursor: "pointer",
               }}
@@ -573,7 +576,7 @@ export default function FolderTreePanel({
                 borderTop: "1px solid oklch(93% 0.006 60)",
                 background: "white",
                 color: "oklch(30% 0.01 264)",
-                fontSize: "12.5px",
+                fontSize: "11px",
                 fontWeight: 600,
                 cursor: "pointer",
               }}

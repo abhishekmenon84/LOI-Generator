@@ -83,12 +83,15 @@ export default function FolderWorkspacePage() {
 
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  // Task 4: pixel-based panel widths, dragged via ResizeHandle. Only
-  // meaningful when the respective panel isn't collapsed -- see
+  // Percentage-based panel widths (10 / 40 / 50), dragged via ResizeHandle.
+  // The middle panel takes whatever is left, so only these two are state.
+  // Only meaningful when the respective panel isn't collapsed -- see
   // rightPanelFlex/middlePanelFlex below for how collapse state overrides
   // these.
-  const [leftWidth, setLeftWidth] = useState(280); // px
-  const [rightWidth, setRightWidth] = useState(420); // px
+  const [leftPct, setLeftPct] = useState(10);
+  const [rightPct, setRightPct] = useState(50);
+  // Measured to translate a drag's pixel delta into a percentage delta.
+  const panelsRef = useRef(null);
 
   const [selectedLedgerId, setSelectedLedgerId] = useState(null);
   const [ledger, setLedger] = useState(null); // {id, folderId, name, documentType, formData, locked, readOnly}
@@ -521,14 +524,21 @@ export default function FolderWorkspacePage() {
   // right panels split the freed space equally instead of the right panel
   // staying pinned to its fixed configured width -- "1 1 0" on both gives
   // them equal flex-grow shares. Otherwise, today's existing behavior is
-  // preserved: middle grows to fill remaining space, right panel is a fixed
-  // pixel width.
+  // preserved: middle grows to fill remaining space, right panel keeps its
+  // configured share of the container width.
   const rightPanelFlex = rightCollapsed
     ? "0 0 46px"
     : leftCollapsed
     ? "1 1 0" // equal split with the middle panel when the left panel is hidden
-    : `0 0 ${rightWidth}px`;
+    : `0 0 ${rightPct}%`;
   const middlePanelFlex = leftCollapsed && !rightCollapsed ? "1 1 0" : "1 1 auto";
+
+  // A ResizeHandle reports a pixel delta; panels are sized in percent, so
+  // convert against the live container width before clamping.
+  function dragPct(dx) {
+    const w = panelsRef.current?.clientWidth || 0;
+    return w ? (dx / w) * 100 : 0;
+  }
 
   if (loadError) {
     return (
@@ -578,7 +588,7 @@ export default function FolderWorkspacePage() {
         </div>
       ) : null}
 
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div ref={panelsRef} style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <input
           ref={fileInputRef}
           type="file"
@@ -605,13 +615,13 @@ export default function FolderWorkspacePage() {
           onAddLedger={handleAddLedger}
           onAddFromTemplate={handleAddFromTemplate}
           onUploadFile={() => fileInputRef.current?.click()}
-          width={leftWidth}
+          width={`${leftPct}%`}
         />
 
         {!leftCollapsed && (
           <ResizeHandle
             onDrag={(dx) =>
-              setLeftWidth((w) => Math.min(480, Math.max(200, w + dx)))
+              setLeftPct((p) => Math.min(30, Math.max(8, p + dragPct(dx))))
             }
           />
         )}
@@ -715,7 +725,7 @@ export default function FolderWorkspacePage() {
         {!rightCollapsed && !leftCollapsed && (
           <ResizeHandle
             onDrag={(dx) =>
-              setRightWidth((w) => Math.min(600, Math.max(280, w - dx)))
+              setRightPct((p) => Math.min(70, Math.max(30, p - dragPct(dx))))
             }
           />
         )}
@@ -774,13 +784,12 @@ export default function FolderWorkspacePage() {
               panel's empty state (handoff's showPreviewContent / showPreviewEmpty,
               ~L260-271). Only rendered when the panel itself isn't collapsed. */}
           {!rightCollapsed && docSelected && model ? (
-            <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "0 12px 20px" }}>
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "0 6px 16px" }}>
               <div
                 style={{
                   width: "100%",
-                  maxWidth: "480px",
+                  maxWidth: "760px",
                   background: "white",
-                  boxShadow: "0 8px 30px rgba(30,25,15,.14)",
                   padding: "32px 28px",
                   fontFamily: "'Source Serif 4',Georgia,serif",
                   color: "oklch(20% 0.01 264)",

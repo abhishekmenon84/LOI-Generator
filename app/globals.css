@@ -246,7 +246,7 @@ body {
 /* ── Page Layout ─────────────────────────────────────────── */
 .dashboard-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 450px 1fr;
   gap: 0;
   height: calc(100vh - 60px);
   overflow: hidden;
@@ -274,7 +274,7 @@ body {
   height: 100%;
   overflow-y: auto;
   background: var(--bg-base);
-  padding: 24px;
+  padding: 8px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
 }
@@ -799,10 +799,6 @@ select option {
   background: #fff;
   color: #1a1a1a;
   border-radius: var(--radius-md);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.05),
-    var(--shadow-xl),
-    0 0 0 1px rgba(255,255,255,0.06);
   padding: 32px 28px;
   min-height: 600px;
   animation: fadeSlideUp 0.5s var(--ease) both;
