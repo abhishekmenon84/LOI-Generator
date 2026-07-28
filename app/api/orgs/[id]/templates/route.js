@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { PDFDocument } from "pdf-lib";
 import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { getUserMembership } from "../../../../../lib/orgAccess";
 import { isOrgActive } from "../../../../../lib/orgBilling";
 import { uploadFile } from "../../../../../lib/blobStorage";
+import { normalizePdf } from "../../../../../lib/pdfNormalize";
 
 export async function requireAdminActiveOrg(orgId, userId) {
   const membership = await getUserMembership(userId, orgId);
@@ -39,17 +39,17 @@ export async function POST(request, { params }) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  let pageCount;
+  let normalized;
   try {
-    const pdfDoc = await PDFDocument.load(buffer);
-    pageCount = pdfDoc.getPageCount();
+    normalized = await normalizePdf(buffer, file.name);
   } catch {
     return NextResponse.json({ error: "That file could not be read as a valid PDF." }, { status: 400 });
   }
+  const pageCount = normalized.pageCount;
 
   let uploaded;
   try {
-    uploaded = await uploadFile(buffer, file.name, "application/pdf");
+    uploaded = await uploadFile(Buffer.from(normalized.bytes), file.name, "application/pdf");
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
