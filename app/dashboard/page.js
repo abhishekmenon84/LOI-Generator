@@ -103,6 +103,7 @@ export default async function DashboardPage() {
     writeAccess: f._writeAccess,
     parentFolderId: f.parentFolderId,
     priority: f.priority,
+    favorite: f.favorite,
   });
 
   const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt).map(serialize);

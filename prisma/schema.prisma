@@ -220,6 +220,7 @@ model Folder {
   name            String
   stage           String    @default("draft") // "draft" | "active" | "pending" | "closed"
   priority        String?   // "green" | "yellow" | "grey" | null
+  favorite        Boolean   @default(false)
   archivedAt      DateTime?
   deletedAt       DateTime?
   parentFolderId  String?
