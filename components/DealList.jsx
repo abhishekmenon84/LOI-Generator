@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import FolderReasonModal from "./FolderReasonModal";
 
@@ -58,6 +58,16 @@ export default function DealList({ initialFolders, initialArchived = [], initial
     setSelectedType(documentType);
     setPickingType(false);
   }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const quickCreate = params.get("quickCreate");
+    if (quickCreate && DOCUMENT_TYPES.some((t) => t.value === quickCreate)) {
+      startCreate(quickCreate);
+      router.replace("/dashboard", { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function cancelCreate() {
     setSelectedType(null);
