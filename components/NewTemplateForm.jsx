@@ -252,6 +252,38 @@ export default function NewTemplateForm({ userOrgs = [] }) {
   const busy = stage === "normalizing" || stage === "detecting";
   const needsOrgPick = userOrgs.length > 1 && !selectedOrgId;
 
+  if (stage === "ready" && pdfInfo && anchors) {
+    return (
+      <div style={{ position: "fixed", top: "var(--site-header-height)", left: 0, right: 0, bottom: 0, background: "var(--bg-page, white)", zIndex: 10 }}>
+        {error && (
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 256,
+              zIndex: 1,
+              color: "oklch(45% 0.18 25)",
+              fontSize: 13,
+              background: "var(--bg-panel, white)",
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: "1px solid var(--border)",
+            }}
+          >
+            ⚠️ {error}
+          </div>
+        )}
+        <AnchorEditor
+          fileUrl={pdfInfo.pdfUrl}
+          pageCount={pdfInfo.pageCount}
+          anchors={anchors}
+          onSave={handleSaveTemplate}
+          onCancel={() => router.push("/templates")}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 28px" }}>
       <h1 style={{ marginBottom: 4 }}>New template</h1>
@@ -324,24 +356,6 @@ export default function NewTemplateForm({ userOrgs = [] }) {
             <div style={{ color: "oklch(45% 0.18 25)", fontSize: 13 }}>⚠️ {error}</div>
           )}
         </div>
-      )}
-
-      {stage === "ready" && pdfInfo && anchors && (
-        <>
-          <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 12 }}>
-            {pdfInfo.pageCount} page{pdfInfo.pageCount === 1 ? "" : "s"} · source: {pdfInfo.sourceTier} · normalization: {pdfInfo.strategy}
-          </p>
-          {error && (
-            <div style={{ color: "oklch(45% 0.18 25)", fontSize: 13, marginBottom: 12 }}>⚠️ {error}</div>
-          )}
-          <AnchorEditor
-            fileUrl={pdfInfo.pdfUrl}
-            pageCount={pdfInfo.pageCount}
-            anchors={anchors}
-            onSave={handleSaveTemplate}
-            onCancel={() => router.push("/templates")}
-          />
-        </>
       )}
     </div>
   );

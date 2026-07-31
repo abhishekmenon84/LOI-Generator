@@ -41,7 +41,13 @@ const LOW_CONFIDENCE_THRESHOLD = {
 };
 const DEFAULT_LOW_CONFIDENCE_THRESHOLD = 0.6;
 
-export default function AnchorBox({ anchor, onSelect, onDelete, readOnly, selected }) {
+// Drag threshold in pixels: movement below this is treated as a click
+// (select only), so a mouse that jitters a pixel or two while clicking
+// doesn't drag the anchor by a hair -- and, crucially, so a plain click
+// still opens the toolbar instead of always being swallowed as a drag.
+const DRAG_THRESHOLD_PX = 3;
+
+export default function AnchorBox({ anchor, onSelect, onDelete, onMove, onResize, readOnly, selected }) {
   // Hand-placed anchors never carry a `confidence` (it's `null`/`undefined`
   // for anything the user drew themselves in AnchorEditor's click-to-place
   // flow), so `!= null` here must stay -- there is no "quality" signal to
@@ -50,13 +56,75 @@ export default function AnchorBox({ anchor, onSelect, onDelete, readOnly, select
   const lowConfidence = anchor.confidence != null && anchor.confidence < threshold;
   const baseColor = ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text;
 
+  function handleMoveMouseDown(e) {
+    if (readOnly || !onMove) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startXPct = anchor.xPct;
+    const startYPct = anchor.yPct;
+    // The page container is this box's offsetParent (AnchorEditor renders
+    // the page image + anchors inside one `position: relative` div).
+    const containerRect = e.currentTarget.parentElement.getBoundingClientRect();
+    let dragged = false;
+
+    function onMouseMove(moveEvent) {
+      const dxPct = ((moveEvent.clientX - startX) / containerRect.width) * 100;
+      const dyPct = ((moveEvent.clientY - startY) / containerRect.height) * 100;
+      if (!dragged && Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) > DRAG_THRESHOLD_PX) {
+        dragged = true;
+      }
+      if (dragged) {
+        onMove(anchor, startXPct + dxPct, startYPct + dyPct);
+      }
+    }
+    function onMouseUp() {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      if (!dragged && onSelect) onSelect(anchor);
+    }
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
+  function handleResizeMouseDown(e) {
+    if (readOnly || !onResize) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidthPct = anchor.widthPct;
+    const startHeightPct = anchor.heightPct;
+    const containerRect = e.currentTarget.closest('[data-anchor-page="true"]').getBoundingClientRect();
+
+    function onMouseMove(moveEvent) {
+      const dxPct = ((moveEvent.clientX - startX) / containerRect.width) * 100;
+      const dyPct = ((moveEvent.clientY - startY) / containerRect.height) * 100;
+      onResize(anchor, startWidthPct + dxPct, startHeightPct + dyPct);
+    }
+    function onMouseUp() {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    }
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
+
   return (
     <div
+      onMouseDown={handleMoveMouseDown}
       onClick={(e) => {
-        if (!readOnly && onSelect) {
-          e.stopPropagation();
-          onSelect(anchor);
-        }
+        if (readOnly) return;
+        // Always stop the click from bubbling to the page container's
+        // "place a new anchor" handler -- otherwise every click on an
+        // existing anchor would also drop a brand new one underneath it.
+        e.stopPropagation();
+        // Selection itself is handled by handleMoveMouseDown's mouseup (it
+        // only fires onSelect when no drag happened), so a real drag never
+        // also re-fires a click-driven select. When there's no onMove
+        // (e.g. a future read-only usage), fall back to firing here.
+        if (onSelect && !onMove) onSelect(anchor);
       }}
       style={{
         position: "absolute",
@@ -77,7 +145,7 @@ export default function AnchorBox({ anchor, onSelect, onDelete, readOnly, select
         fontSize: "10px",
         fontWeight: 600,
         color: lowConfidence ? LOW_CONFIDENCE_COLOR : baseColor,
-        cursor: readOnly ? "default" : "pointer",
+        cursor: readOnly ? "default" : "move",
         pointerEvents: readOnly ? "none" : "auto",
       }}
       title={`${anchor.type}: ${anchor.label}${lowConfidence ? " (low confidence — check this)" : ""}`}
@@ -114,6 +182,22 @@ export default function AnchorBox({ anchor, onSelect, onDelete, readOnly, select
         >
           ×
         </button>
+      )}
+      {!readOnly && selected && onResize && (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          style={{
+            position: "absolute",
+            bottom: -5,
+            right: -5,
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            border: `2px solid ${SELECTED_COLOR}`,
+            background: "white",
+            cursor: "nwse-resize",
+          }}
+        />
       )}
     </div>
   );

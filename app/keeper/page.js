@@ -41,7 +41,7 @@ export default async function KeeperPage() {
   return (
     <>
       <SiteHeader isLoggedIn={true} />
-      <main className="marketing-page">
+      <main className="app-page">
         <h1>Keeper</h1>
         {!org ? (
           <>

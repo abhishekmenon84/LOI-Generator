@@ -51,6 +51,9 @@
   /* transitions */
   --ease: cubic-bezier(0.16,1,0.3,1);
   --dur:  180ms;
+
+  /* layout — keep in sync with .site-header's height below */
+  --site-header-height: 60px;
 }
 
 [data-theme="light"] {
@@ -117,7 +120,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 0 28px;
-  height: 60px;
+  height: var(--site-header-height);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
@@ -902,7 +905,7 @@ select option {
   justify-content: space-between;
   gap: 20px;
   padding: 0 28px;
-  height: 60px;
+  height: var(--site-header-height);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
@@ -949,8 +952,13 @@ select option {
 }
 
 .site-header-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
   border: none;
   font-family: inherit;
+  cursor: pointer;
 }
 
 .site-header-signout:disabled {
@@ -1044,7 +1052,18 @@ select option {
   padding: 64px 28px;
 }
 
-.marketing-page h1 {
+/* Authenticated product pages (Ledgerboard, Keeper, etc.) -- wider than
+   .marketing-page's prose-width column since these render dashboards and
+   data grids, not marketing copy, and need less top padding since there's
+   no hero moment to breathe around. */
+.app-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 28px;
+}
+
+.marketing-page h1,
+.app-page h1 {
   font-size: 2.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;

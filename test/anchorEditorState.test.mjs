@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { patchAnchorByCid, removeAnchorByCid } from "../lib/anchorEditorState.mjs";
+import { patchAnchorByCid, removeAnchorByCid, clampAnchorPosition, clampAnchorSize } from "../lib/anchorEditorState.mjs";
 
 // Regression test for C1 (final-review.md): AnchorEditor.handleUpdateSelected
 // used to build two separately-patched objects -- one folded into the
@@ -68,4 +68,34 @@ test("removeAnchorByCid removes only the targeted anchor", () => {
   const result = removeAnchorByCid(anchors, "cid_1");
   assert.equal(result.length, 1);
   assert.equal(result[0]._cid, "cid_2");
+});
+
+test("clampAnchorPosition passes through a position fully inside the page", () => {
+  const result = clampAnchorPosition(40, 30, 12, 4);
+  assert.deepEqual(result, { xPct: 40, yPct: 30 });
+});
+
+test("clampAnchorPosition stops a drag at the left/top edge", () => {
+  const result = clampAnchorPosition(-15, -8, 12, 4);
+  assert.deepEqual(result, { xPct: 0, yPct: 0 });
+});
+
+test("clampAnchorPosition stops a drag at the right/bottom edge, accounting for box size", () => {
+  const result = clampAnchorPosition(150, 150, 12, 4);
+  assert.deepEqual(result, { xPct: 88, yPct: 96 });
+});
+
+test("clampAnchorSize passes through a size fully inside the page", () => {
+  const result = clampAnchorSize(40, 30, 12, 4);
+  assert.deepEqual(result, { widthPct: 12, heightPct: 4 });
+});
+
+test("clampAnchorSize stops growth at the page's right/bottom edge", () => {
+  const result = clampAnchorSize(90, 95, 30, 30);
+  assert.deepEqual(result, { widthPct: 10, heightPct: 5 });
+});
+
+test("clampAnchorSize enforces a minimum usable size when shrunk too far", () => {
+  const result = clampAnchorSize(40, 30, 0.2, -3);
+  assert.deepEqual(result, { widthPct: 2, heightPct: 2 });
 });

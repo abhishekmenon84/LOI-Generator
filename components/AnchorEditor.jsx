@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import AnchorBox from "./AnchorBox";
-import { patchAnchorByCid, removeAnchorByCid } from "../lib/anchorEditorState.mjs";
+import {
+  patchAnchorByCid,
+  removeAnchorByCid,
+  clampAnchorPosition,
+  clampAnchorSize,
+} from "../lib/anchorEditorState.mjs";
 
 const ANCHOR_TYPES = [
   { value: "signature", label: "Signature" },
@@ -115,6 +120,20 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
     setSelectedAnchor(selected);
   }
 
+  function handleMove(anchor, xPct, yPct) {
+    const clamped = clampAnchorPosition(xPct, yPct, anchor.widthPct, anchor.heightPct);
+    const { anchors: updatedAnchors, selected } = patchAnchorByCid(anchors, anchor._cid, clamped);
+    setAnchors(updatedAnchors);
+    if (selectedAnchor?._cid === anchor._cid) setSelectedAnchor(selected);
+  }
+
+  function handleResize(anchor, widthPct, heightPct) {
+    const clamped = clampAnchorSize(anchor.xPct, anchor.yPct, widthPct, heightPct);
+    const { anchors: updatedAnchors, selected } = patchAnchorByCid(anchors, anchor._cid, clamped);
+    setAnchors(updatedAnchors);
+    if (selectedAnchor?._cid === anchor._cid) setSelectedAnchor(selected);
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -124,124 +143,142 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
     }
   }
 
+  const inputStyle = { padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "12.5px" };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div style={{ display: "flex", width: "100%", height: "100%" }}>
       {!readOnly && (
-        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-          <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} style={{ padding: "6px 10px", borderRadius: "6px" }}>
-            {ANCHOR_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
+        <div
+          style={{
+            flexShrink: 0,
+            width: 240,
+            height: "100%",
+            overflowY: "auto",
+            background: "var(--bg-panel, white)",
+            borderRight: "1px solid var(--border)",
+            padding: "16px 14px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <strong style={{ fontSize: "12px" }}>{selectedAnchor ? "Editing anchor" : "New anchor"}</strong>
+
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <select
+              value={selectedAnchor ? selectedAnchor.type : selectedType}
+              onChange={(e) =>
+                selectedAnchor ? handleUpdateSelected({ type: e.target.value }) : setSelectedType(e.target.value)
+              }
+              style={{ ...inputStyle, flex: 1 }}
+            >
+              {ANCHOR_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <label style={{ fontSize: "11.5px", display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+              <input
+                type="checkbox"
+                checked={!!selectedAnchor?.required}
+                disabled={!selectedAnchor}
+                onChange={(e) => handleUpdateSelected({ required: e.target.checked })}
+              />
+              Required
+            </label>
+          </div>
+
           <input
             type="text"
             placeholder="Label (e.g. Buyer)"
-            value={labelInput}
-            onChange={(e) => setLabelInput(e.target.value)}
-            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}
+            value={selectedAnchor ? selectedAnchor.label || "" : labelInput}
+            onChange={(e) =>
+              selectedAnchor ? handleUpdateSelected({ label: e.target.value }) : setLabelInput(e.target.value)
+            }
+            style={inputStyle}
           />
-          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Click on the page below to place an anchor.</span>
-        </div>
-      )}
 
-      {!readOnly && selectedAnchor && (
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            alignItems: "center",
-            flexWrap: "wrap",
-            padding: "10px",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
-          }}
-        >
-          <strong style={{ fontSize: "12px" }}>Edit field</strong>
-          <input
-            type="text"
-            placeholder="Label"
-            value={selectedAnchor.label || ""}
-            onChange={(e) => handleUpdateSelected({ label: e.target.value })}
-            style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}
-          />
-          <select
-            value={selectedAnchor.type}
-            onChange={(e) => handleUpdateSelected({ type: e.target.value })}
-            style={{ padding: "6px 10px", borderRadius: "6px" }}
-          >
-            {ANCHOR_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-          <label style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
-            <input
-              type="checkbox"
-              checked={!!selectedAnchor.required}
-              onChange={(e) => handleUpdateSelected({ required: e.target.checked })}
-            />
-            Required
-          </label>
-          {selectedAnchor.type === "radio" && (
+          {selectedAnchor?.type === "radio" && (
             <input
               type="text"
               placeholder="Radio group"
               value={selectedAnchor.radioGroup || ""}
               onChange={(e) => handleUpdateSelected({ radioGroup: e.target.value })}
-              style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}
+              style={inputStyle}
             />
           )}
-          {(selectedAnchor.type === "signature" || selectedAnchor.type === "initials") && (
+          {selectedAnchor && (selectedAnchor.type === "signature" || selectedAnchor.type === "initials") && (
             <input
               type="text"
               placeholder="Signer role (e.g. Buyer)"
               value={selectedAnchor.signerRole || ""}
               onChange={(e) => handleUpdateSelected({ signerRole: e.target.value })}
-              style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}
+              style={inputStyle}
             />
           )}
-          <button
-            type="button"
-            onClick={() => setSelectedAnchor(null)}
-            style={{ background: "none", border: "1px solid var(--border)", padding: "6px 10px", borderRadius: "6px", cursor: "pointer" }}
-          >
-            Done
-          </button>
-        </div>
-      )}
 
-      {pageCanvases.map((dataUrl, i) => (
-        <div
-          key={i}
-          ref={(el) => (containerRefs.current[i] = el)}
-          onClick={(e) => handlePageClick(i, e)}
-          style={{ position: "relative", cursor: readOnly ? "default" : "crosshair" }}
-        >
-          <img src={dataUrl} alt={`Page ${i + 1}`} style={{ width: "100%", display: "block" }} />
-          {anchors.filter((a) => a.page === i).map((a) => (
-            <AnchorBox
-              key={a._cid}
-              anchor={a}
-              onSelect={handleSelect}
-              onDelete={handleDelete}
-              readOnly={readOnly}
-              selected={a._cid === selectedAnchor?._cid}
-            />
-          ))}
-        </div>
-      ))}
+          {selectedAnchor ? (
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setSelectedAnchor(null)}
+                style={{ flex: 1, background: "none", border: "1px solid var(--border)", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}
+              >
+                Done
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(selectedAnchor)}
+                style={{ flex: 1, background: "oklch(50% 0.17 25)", color: "white", border: "none", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px" }}
+              >
+                Delete
+              </button>
+            </div>
+          ) : (
+            <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: 0 }}>Click on the page to place it.</p>
+          )}
 
-      {!readOnly && (
-        <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
+
           <button type="button" onClick={handleSave} disabled={saving} className="marketing-cta-button">
             {saving ? "Saving…" : "Save anchors"}
           </button>
           {onCancel && (
-            <button type="button" onClick={onCancel} style={{ background: "none", border: "1px solid var(--border)", padding: "8px 14px", borderRadius: "8px" }}>
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{ background: "none", border: "1px solid var(--border)", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "12px" }}
+            >
               Cancel
             </button>
           )}
         </div>
       )}
+
+      <div style={{ flex: 1, overflow: "auto", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", padding: "16px" }}>
+        {pageCanvases.map((dataUrl, i) => (
+          <div
+            key={i}
+            data-anchor-page="true"
+            ref={(el) => (containerRefs.current[i] = el)}
+            onClick={(e) => handlePageClick(i, e)}
+            style={{ position: "relative", cursor: readOnly ? "default" : "crosshair", maxWidth: "100%" }}
+          >
+            <img src={dataUrl} alt={`Page ${i + 1}`} style={{ width: "100%", display: "block" }} />
+            {anchors.filter((a) => a.page === i).map((a) => (
+              <AnchorBox
+                key={a._cid}
+                anchor={a}
+                onSelect={handleSelect}
+                onDelete={handleDelete}
+                onMove={readOnly ? undefined : handleMove}
+                onResize={readOnly ? undefined : handleResize}
+                readOnly={readOnly}
+                selected={a._cid === selectedAnchor?._cid}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

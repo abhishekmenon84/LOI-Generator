@@ -78,7 +78,7 @@ export default async function DashboardPage() {
     return (
       <>
         <SiteHeader isLoggedIn={true} />
-        <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 28px" }}>
+        <main className="app-page">
           <h1 style={{ marginBottom: 4 }}>Ledgerboard</h1>
           <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Signed in as {session.user.email}.</p>
           <KanbanDashboard
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
   return (
     <>
       <SiteHeader isLoggedIn={true} />
-      <main className="marketing-page">
+      <main className="app-page">
         <h1>Your Ledgers</h1>
         <p>Signed in as {session.user.email}.</p>
         <DealList

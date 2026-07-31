@@ -72,11 +72,27 @@ export default function KeeperTemplates({ orgId }) {
 
   if (editingTemplate) {
     return (
-      <div>
-        <button type="button" onClick={() => setEditingTemplate(null)} style={{ marginBottom: 16, background: "none", border: "1px solid var(--border)", padding: "8px 14px", borderRadius: 8, cursor: "pointer" }}>
-          ← Back to templates
-        </button>
-        <h3 style={{ marginBottom: 12 }}>{editingTemplate.name}</h3>
+      <div style={{ position: "fixed", top: "var(--site-header-height)", left: 0, right: 0, bottom: 0, background: "var(--bg-page, white)", zIndex: 10 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 16,
+            left: 256,
+            zIndex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: "var(--bg-panel, white)",
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+          }}
+        >
+          <button type="button" onClick={() => setEditingTemplate(null)} style={{ background: "none", border: "1px solid var(--border)", padding: "6px 10px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>
+            ← Back
+          </button>
+          <strong style={{ fontSize: 13 }}>{editingTemplate.name}</strong>
+        </div>
         <AnchorEditor
           fileUrl={editingTemplate.pdfUrl}
           pageCount={editingTemplate.pageCount}
@@ -113,16 +129,30 @@ export default function KeeperTemplates({ orgId }) {
       ) : templates.length === 0 ? (
         <p style={{ color: "var(--text-secondary)" }}>No templates yet. Add one to get started.</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {templates.map((t) => (
-            <div key={t.id} style={{ background: "var(--bg-panel)", borderRadius: 12, padding: 16, border: "1px solid var(--border)" }}>
-              <div style={{ fontWeight: 650, fontSize: 13, marginBottom: 4 }}>{t.name}</div>
-              <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginBottom: 10 }}>{t.pageCount} pages</div>
+            <div
+              key={t.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                padding: "14px 16px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 650, fontSize: 13 }}>{t.name}</div>
+                <div style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>{t.pageCount} pages</div>
+              </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button type="button" onClick={() => openEditor(t.id)} style={{ flex: 1, padding: 6, borderRadius: 7, border: "1px solid var(--border)", background: "transparent", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+                <button type="button" onClick={() => openEditor(t.id)} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
                   Edit anchors
                 </button>
-                <button type="button" onClick={() => handleDelete(t.id)} style={{ flex: 1, padding: 6, borderRadius: 7, border: "1px solid var(--border)", background: "transparent", fontSize: 11.5, fontWeight: 600, cursor: "pointer", color: "#ef4444" }}>
+                <button type="button" onClick={() => handleDelete(t.id)} style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "transparent", fontSize: 11.5, fontWeight: 600, cursor: "pointer", color: "#ef4444" }}>
                   Delete
                 </button>
               </div>
