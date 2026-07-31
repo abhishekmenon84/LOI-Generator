@@ -10,7 +10,7 @@ import SubscribeButtons from "../../components/SubscribeButtons";
 import KeeperTabs from "../../components/KeeperTabs";
 import KeeperReceipts from "../../components/KeeperReceipts";
 import KeeperTemplates from "../../components/KeeperTemplates";
-import { SEAT_TIERS } from "../../lib/orgBilling";
+import { BUSINESS_SEAT_TIERS } from "../../lib/orgBilling";
 
 export const metadata = {
   title: "Keeper — Ledgerlot",
@@ -70,7 +70,7 @@ export default async function KeeperPage() {
                 branding: <OrgLogoSettings orgId={org.id} initialLogoUrl={org.logoUrl} />,
                 billing:
                   org.planTier === "trial" || org.planTier === "expired" ? (
-                    <SubscribeButtons orgId={org.id} tiers={SEAT_TIERS} />
+                    <SubscribeButtons orgId={org.id} tiers={BUSINESS_SEAT_TIERS} />
                   ) : (
                     <p>Current plan: {org.planTier}</p>
                   ),

@@ -39,11 +39,11 @@ export default function SubscribeButtons({ orgId, tiers }) {
           </button>
         ))}
         <a
-          href="mailto:abhi@menonrealty.ca?subject=50%2B%20seat%20pricing"
+          href="mailto:abhi@menonrealty.ca?subject=100%2B%20seat%20pricing"
           className="marketing-cta-button"
           style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
         >
-          50+ seats — Contact us
+          100+ seats — Contact us
         </a>
       </div>
       {error && <div className="status-banner status-error" role="alert" style={{ marginTop: 10 }}>⚠️ {error}</div>}

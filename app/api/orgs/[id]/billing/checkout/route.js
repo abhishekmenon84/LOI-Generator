@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { getUserMembership } from "../../../../../../lib/orgAccess";
-import { createOrgSubscriptionCheckout, SEAT_TIERS } from "../../../../../../lib/orgBilling";
+import { createOrgSubscriptionCheckout, BUSINESS_SEAT_TIERS } from "../../../../../../lib/orgBilling";
 
 export async function POST(request, { params }) {
   const session = await auth();
@@ -21,9 +21,9 @@ export async function POST(request, { params }) {
 
   const body = await request.json().catch(() => ({}));
   const requestedTierKey = body.tierKey;
-  const tier = SEAT_TIERS.find((t) => t.key === requestedTierKey);
+  const tier = BUSINESS_SEAT_TIERS.find((t) => t.key === requestedTierKey);
   if (!tier) {
-    return NextResponse.json({ error: "Invalid or unsupported tier (50+ seats requires contacting support)." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid or unsupported tier (100+ seats requires contacting support)." }, { status: 400 });
   }
 
   const origin = request.headers.get("origin") || new URL(request.url).origin;
