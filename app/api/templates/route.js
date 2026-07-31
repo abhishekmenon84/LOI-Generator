@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import { getUserMembership, listUserOrgs, getPersonalOrgId } from "../../../lib/orgAccess";
-import { isOrgActive } from "../../../lib/orgBilling";
+import { isOrgActive, getOrgLimits } from "../../../lib/orgBilling";
 import { slugifyLabel, uniqueKey } from "../../../lib/formFieldKeys.mjs";
 
 const VALID_TYPES = new Set(["text", "checkbox", "radio", "date", "signature", "initials"]);
@@ -163,6 +163,14 @@ export async function POST(request) {
   const gate = await requireActiveTemplateOrgAccess(orgId, session.user.id);
   if (gate.error) {
     return NextResponse.json({ error: gate.error, ...(gate.code ? { code: gate.code } : {}) }, { status: gate.status });
+  }
+
+  const limits = getOrgLimits(gate.org);
+  if (limits.templatesMax !== Infinity) {
+    const existingCount = await prisma.formTemplate.count({ where: { orgId } });
+    if (existingCount >= limits.templatesMax) {
+      return NextResponse.json({ error: `Your plan allows up to ${limits.templatesMax} saved template${limits.templatesMax === 1 ? "" : "s"}. Delete one or upgrade to add more.`, code: "TEMPLATE_LIMIT_REACHED" }, { status: 402 });
+    }
   }
 
   const preparedFields = assignFieldKeys(fields || []);

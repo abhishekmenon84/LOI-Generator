@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { isValidRole } from "../../../../../lib/signerRoles";
 import { generateSigningToken, generateVerifyCode } from "../../../../../lib/signatureEngine";
+import { getOrgLimits, checkAndIncrementUsage } from "../../../../../lib/orgBilling";
 import { Resend } from "resend";
 
 function escapeHtml(str) {
@@ -20,7 +21,7 @@ async function loadAccessibleLedger(ledgerId, userId) {
   if (!ledger) return null;
   const folder = await loadAccessibleFolder(ledger.folderId, userId);
   if (!folder) return null;
-  return { ...ledger, _writeAccess: folder._writeAccess, _folderDeletedAt: folder.deletedAt };
+  return { ...ledger, _writeAccess: folder._writeAccess, _folderDeletedAt: folder.deletedAt, _orgId: folder.orgId };
 }
 
 export async function POST(request, { params }) {
@@ -37,6 +38,16 @@ export async function POST(request, { params }) {
   }
   if (ledger._folderDeletedAt) {
     return NextResponse.json({ error: "This document's folder is in Trash and cannot be sent for signature. Restore it first.", code: "FOLDER_TRASHED" }, { status: 409 });
+  }
+
+  const org = await prisma.organization.findUnique({ where: { id: ledger._orgId } });
+  const limits = getOrgLimits(org);
+  if (!limits.canEsign) {
+    return NextResponse.json({ error: "Sending for e-signature requires an active subscription. Upgrade to continue.", code: "UPGRADE_REQUIRED" }, { status: 402 });
+  }
+  const usage = await checkAndIncrementUsage(org.id, "esign", org);
+  if (!usage.ok) {
+    return NextResponse.json({ error: usage.error, code: "USAGE_LIMIT_REACHED" }, { status: 402 });
   }
 
   const body = await request.json().catch(() => ({}));
