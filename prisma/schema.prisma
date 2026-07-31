@@ -34,7 +34,8 @@ model Organization {
   accountType          String   @default("individual") // "individual" | "real_estate_agency" | "company" | "corporation"
   isPersonal           Boolean  @default(true)
   logoUrl              String?
-  planTier             String   @default("trial") // "trial" | "tier_1_10" | "tier_11_30" | "tier_31_50" | "enterprise" | "expired"
+  planTier             String   @default("free") // "free" | "personal_premium" | "personal_premium_plus" | "trial" | "tier_1_10" | "tier_11_30" | "tier_31_50" | "tier_51_100" | "enterprise" | "expired"
+  retentionYears       Int      @default(1)
   trialEndsAt          DateTime?
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
@@ -47,6 +48,25 @@ model Organization {
   receipts    Receipt[]
   customTemplates CustomTemplate[]
   formTemplates   FormTemplate[]
+  usageCounter    UsageCounter?
+}
+
+// Tracks a personal org's rolling usage window against its tier's
+// document/e-signature limits. One row per org (not one per historical
+// period) -- periodStart/periodEnd define the CURRENT window; when
+// `now() > periodEnd`, the checking code (lib/orgBilling.js's
+// checkAndIncrementUsage) rolls the window forward by resetting both
+// counts and dates rather than inserting a new row, since nothing in
+// this app needs historical per-period usage reporting yet.
+model UsageCounter {
+  id                String       @id @default(cuid())
+  orgId             String       @unique
+  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  periodStart       DateTime
+  periodEnd         DateTime
+  documentsCreated  Int          @default(0)
+  esignRequestsSent Int          @default(0)
+  updatedAt         DateTime     @updatedAt
 }
 
 model Membership {
