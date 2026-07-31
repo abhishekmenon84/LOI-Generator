@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { listUserOrgs } from "../../lib/orgAccess";
-import SiteHeader from "../../components/SiteHeader";
-import SiteFooter from "../../components/SiteFooter";
+import AppShell from "../../components/AppShell";
 
 export const metadata = {
   title: "Templates — Ledgerlot",
@@ -34,9 +33,8 @@ export default async function TemplatesPage() {
     : [];
 
   return (
-    <>
-      <SiteHeader isLoggedIn={true} />
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 28px" }}>
+    <AppShell org={null} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 28px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h1 style={{ margin: 0 }}>Templates</h1>
           <Link href="/templates/new" className="marketing-cta-button">
@@ -88,8 +86,7 @@ export default async function TemplatesPage() {
             ))}
           </div>
         )}
-      </main>
-      <SiteFooter />
-    </>
+      </div>
+    </AppShell>
   );
 }

@@ -53,7 +53,7 @@
   --dur:  180ms;
 
   /* layout — keep in sync with .site-header's height below */
-  --site-header-height: 60px;
+  --site-header-height: 64px;
 }
 
 [data-theme="light"] {

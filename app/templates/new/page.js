@@ -16,8 +16,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../../lib/auth";
 import { listUserOrgs } from "../../../lib/orgAccess";
-import SiteHeader from "../../../components/SiteHeader";
-import SiteFooter from "../../../components/SiteFooter";
+import AppShell from "../../../components/AppShell";
 import NewTemplateForm from "../../../components/NewTemplateForm";
 
 export const metadata = {
@@ -33,10 +32,8 @@ export default async function NewTemplatePage() {
   const userOrgs = await listUserOrgs(session.user.id);
 
   return (
-    <>
-      <SiteHeader isLoggedIn={true} />
+    <AppShell org={null} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
       <NewTemplateForm userOrgs={userOrgs} />
-      <SiteFooter />
-    </>
+    </AppShell>
   );
 }

@@ -3,8 +3,7 @@ import { auth } from "../../lib/auth";
 import { hasBusinessOrgMembership, listUserOrgs } from "../../lib/orgAccess";
 import { listAccessibleFolders } from "../../lib/folderAccess";
 import { prisma } from "../../lib/prisma";
-import SiteHeader from "../../components/SiteHeader";
-import SiteFooter from "../../components/SiteFooter";
+import AppShell from "../../components/AppShell";
 import DealList from "../../components/DealList";
 import KanbanDashboard from "../../components/KanbanDashboard";
 
@@ -75,10 +74,13 @@ export default async function DashboardPage() {
     const archivedFolders = allFolders.filter((f) => !!f.archivedAt && !f.deletedAt).map(serializeFolder);
     const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serializeFolder);
 
+    const businessOrg = userOrgs.find((o) => !o.isPersonal);
     return (
-      <>
-        <SiteHeader isLoggedIn={true} />
-        <main className="app-page">
+      <AppShell
+        org={businessOrg ? { name: businessOrg.orgName, isPersonal: false, planTier: null } : null}
+        userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
+      >
+        <div style={{ padding: "32px 28px" }}>
           <h1 style={{ marginBottom: 4 }}>Ledgerboard</h1>
           <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Signed in as {session.user.email}.</p>
           <KanbanDashboard
@@ -87,9 +89,8 @@ export default async function DashboardPage() {
             initialTrashedFolders={trashedFolders}
             userOrgs={userOrgs}
           />
-        </main>
-        <SiteFooter />
-      </>
+        </div>
+      </AppShell>
     );
   }
 
@@ -111,9 +112,8 @@ export default async function DashboardPage() {
   const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serialize);
 
   return (
-    <>
-      <SiteHeader isLoggedIn={true} />
-      <main className="app-page">
+    <AppShell org={null} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
+      <div style={{ padding: "32px 28px" }}>
         <h1>Your Ledgers</h1>
         <p>Signed in as {session.user.email}.</p>
         <DealList
@@ -122,8 +122,7 @@ export default async function DashboardPage() {
           initialTrashed={trashedFolders}
           userOrgs={userOrgs}
         />
-      </main>
-      <SiteFooter />
-    </>
+      </div>
+    </AppShell>
   );
 }

@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
-import SiteHeader from "../../components/SiteHeader";
-import SiteFooter from "../../components/SiteFooter";
+import AppShell from "../../components/AppShell";
 import TrialBanner from "../../components/TrialBanner";
 import CreateOrgForm from "../../components/CreateOrgForm";
 import OrgMembersPanel from "../../components/OrgMembersPanel";
@@ -39,9 +38,11 @@ export default async function KeeperPage() {
   const serializedReceipts = receipts.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
 
   return (
-    <>
-      <SiteHeader isLoggedIn={true} />
-      <main className="app-page">
+    <AppShell
+      org={org ? { name: org.name, isPersonal: false, planTier: org.planTier } : null}
+      userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
+    >
+      <div style={{ padding: "32px 28px" }}>
         <h1>Keeper</h1>
         {!org ? (
           <>
@@ -78,8 +79,7 @@ export default async function KeeperPage() {
             />
           </>
         )}
-      </main>
-      <SiteFooter />
-    </>
+      </div>
+    </AppShell>
   );
 }
