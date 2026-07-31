@@ -47,7 +47,8 @@ export async function POST(request) {
     const subscription = event.data.object;
     const org = await prisma.organization.findUnique({ where: { stripeSubscriptionId: subscription.id } });
     if (org) {
-      await prisma.organization.update({ where: { id: org.id }, data: { planTier: "expired", stripeSubscriptionId: null } });
+      const fallbackTier = org.isPersonal ? "free" : "expired";
+      await prisma.organization.update({ where: { id: org.id }, data: { planTier: fallbackTier, stripeSubscriptionId: null } });
     }
   }
 
