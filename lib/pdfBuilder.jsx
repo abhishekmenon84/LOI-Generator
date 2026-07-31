@@ -1,6 +1,5 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
-import { SampleWatermark } from "./watermark";
 
 // Pure JS PDF rendering (no headless browser / Chromium binary needed),
 // which makes this safe to run in Vercel's serverless functions.
@@ -68,11 +67,10 @@ function RichText({ html, style }) {
   return <Text style={style}>{parts}</Text>;
 }
 
-function LOIPdfDocument({ model, watermark }) {
+function LOIPdfDocument({ model }) {
   return (
     <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
-        {watermark && <SampleWatermark />}
         <Text style={styles.header}>LETTER OF INTENT TO PURCHASE</Text>
 
         <Text style={styles.para}>
@@ -191,16 +189,15 @@ function LOIPdfDocument({ model, watermark }) {
   );
 }
 
-export async function buildLOIPdf(model, options = {}) {
-  const buffer = await renderToBuffer(<LOIPdfDocument model={model} watermark={!!options.watermark} />);
+export async function buildLOIPdf(model) {
+  const buffer = await renderToBuffer(<LOIPdfDocument model={model} />);
   return makeDeterministic(buffer);
 }
 
-function LeasePdfDocument({ model, watermark }) {
+function LeasePdfDocument({ model }) {
   return (
     <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
-        {watermark && <SampleWatermark />}
         <Text style={styles.header}>LETTER OF INTENT TO LEASE</Text>
 
         <Text style={styles.para}>
@@ -307,16 +304,15 @@ function LeasePdfDocument({ model, watermark }) {
   );
 }
 
-export async function buildLeasePdf(model, options = {}) {
-  const buffer = await renderToBuffer(<LeasePdfDocument model={model} watermark={!!options.watermark} />);
+export async function buildLeasePdf(model) {
+  const buffer = await renderToBuffer(<LeasePdfDocument model={model} />);
   return makeDeterministic(buffer);
 }
 
-function ResidentialLeasePdfDocument({ model, watermark }) {
+function ResidentialLeasePdfDocument({ model }) {
   return (
     <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
-        {watermark && <SampleWatermark />}
         <Text style={styles.header}>RESIDENTIAL LEASE</Text>
         <Text style={{ textAlign: "center", marginBottom: 16, fontStyle: "italic" }}>
           (Standard Form of Lease — New Brunswick, Form 6)
@@ -403,7 +399,7 @@ function ResidentialLeasePdfDocument({ model, watermark }) {
   );
 }
 
-export async function buildResidentialLeasePdf(model, options = {}) {
-  const buffer = await renderToBuffer(<ResidentialLeasePdfDocument model={model} watermark={!!options.watermark} />);
+export async function buildResidentialLeasePdf(model) {
+  const buffer = await renderToBuffer(<ResidentialLeasePdfDocument model={model} />);
   return makeDeterministic(buffer);
 }

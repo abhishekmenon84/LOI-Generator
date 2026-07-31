@@ -16,7 +16,7 @@ export default function TrialBanner({ org }) {
 
   return (
     <div className="status-banner" role="status" style={{ marginBottom: 20, background: "var(--accent-subtle)", border: "1px solid var(--accent)" }}>
-      🕐 {daysLeft} day{daysLeft === 1 ? "" : "s"} left in your trial. Downloads are watermarked until you subscribe.
+      🕐 {daysLeft} day{daysLeft === 1 ? "" : "s"} left in your trial. Subscribe to keep creating, editing, and downloading documents.
     </div>
   );
 }
