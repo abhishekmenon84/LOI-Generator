@@ -14,12 +14,16 @@ export async function POST(request) {
 
   const body = await request.json().catch(() => ({}));
   const folderId = body.folderId;
-  const documentType = VALID_DOC_TYPES.includes(body.documentType) ? body.documentType : "purchase_loi";
   const name = (body.name || "").trim() || "Untitled Ledger";
 
   if (!folderId) {
     return NextResponse.json({ error: "A folderId is required." }, { status: 400 });
   }
+  if (!body.documentType || !VALID_DOC_TYPES.includes(body.documentType)) {
+    return NextResponse.json({ error: "A document type or template is required." }, { status: 400 });
+  }
+  const documentType = body.documentType;
+  const templateId = typeof body.templateId === "string" ? body.templateId : null;
 
   const folder = await loadAccessibleFolder(folderId, session.user.id);
   if (!folder) {
@@ -45,12 +49,13 @@ export async function POST(request) {
       createdByUserId: session.user.id,
       name,
       documentType,
+      templateId,
       formData: {},
     },
   });
 
   return NextResponse.json(
-    { id: ledger.id, folderId: ledger.folderId, documentType: ledger.documentType, name: ledger.name, formData: ledger.formData },
+    { id: ledger.id, folderId: ledger.folderId, documentType: ledger.documentType, templateId: ledger.templateId, name: ledger.name, formData: ledger.formData },
     { status: 201 }
   );
 }

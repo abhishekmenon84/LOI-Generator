@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import FolderReasonModal from "./FolderReasonModal";
+import { mergeDocumentTypeOptions } from "../lib/documentPicker.mjs";
 
 // Real Ledger.documentType values (see components/KanbanCard.jsx's TYPE_META
 // and app/api/ledgers/route.js's VALID_DOC_TYPES) -- this list intentionally
@@ -42,6 +43,8 @@ export default function DealList({ initialFolders, initialArchived = [], initial
   const [trashedDeals, setTrashedDeals] = useState(initialTrashed);
   const [pickingType, setPickingType] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [templates, setTemplates] = useState([]);
   const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [newDealName, setNewDealName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -54,16 +57,25 @@ export default function DealList({ initialFolders, initialArchived = [], initial
 
   const visibleDeals = view === "active" ? deals : view === "archive" ? archivedDeals : trashedDeals;
 
-  function startCreate(documentType) {
-    setSelectedType(documentType);
+  function startCreate(option) {
+    setSelectedType(option.kind === "built-in" ? option.value : "custom_template");
+    setSelectedTemplateId(option.kind === "template" ? option.value : null);
     setPickingType(false);
   }
 
   useEffect(() => {
+    fetch("/api/templates")
+      .then((res) => (res.ok ? res.json() : { templates: [] }))
+      .then((data) => setTemplates(data.templates || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const quickCreate = params.get("quickCreate");
-    if (quickCreate && DOCUMENT_TYPES.some((t) => t.value === quickCreate)) {
-      startCreate(quickCreate);
+    const builtIn = DOCUMENT_TYPES.find((t) => t.value === quickCreate);
+    if (builtIn) {
+      startCreate({ kind: "built-in", value: builtIn.value });
       router.replace("/dashboard", { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,6 +83,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
 
   function cancelCreate() {
     setSelectedType(null);
+    setSelectedTemplateId(null);
     setSelectedOrgId(null);
     setNewDealName("");
   }
@@ -124,7 +137,12 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       const ledgerRes = await fetch("/api/ledgers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folderId: folder.id, documentType: selectedType, name }),
+        body: JSON.stringify({
+          folderId: folder.id,
+          documentType: selectedType,
+          name,
+          ...(selectedTemplateId ? { templateId: selectedTemplateId } : {}),
+        }),
       });
       if (!ledgerRes.ok) {
         const body = await ledgerRes.json().catch(() => ({}));
@@ -252,14 +270,14 @@ export default function DealList({ initialFolders, initialArchived = [], initial
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
           <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>What kind of document?</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {DOCUMENT_TYPES.map((t) => (
+            {mergeDocumentTypeOptions(DOCUMENT_TYPES, templates).map((option) => (
               <button
-                key={t.value}
+                key={`${option.kind}-${option.value}`}
                 type="button"
                 className="marketing-cta-button"
-                onClick={() => startCreate(t.value)}
+                onClick={() => startCreate(option)}
               >
-                {t.label}
+                {option.label}
               </button>
             ))}
           </div>
