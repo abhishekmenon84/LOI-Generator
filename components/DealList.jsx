@@ -75,6 +75,30 @@ export default function DealList({ initialFolders, initialArchived = [], initial
     setNewDealName("");
   }
 
+  async function toggleFavorite(folderId) {
+    const folder = [...deals, ...archivedDeals, ...trashedDeals].find((d) => d.id === folderId);
+    if (!folder) return;
+    const next = !folder.favorite;
+    const updateList = (setter) => setter((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: next } : d)));
+    updateList(setDeals);
+    updateList(setArchivedDeals);
+    updateList(setTrashedDeals);
+    try {
+      const res = await fetch(`/api/folders/${folderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ favorite: next }),
+      });
+      if (!res.ok) throw new Error("Could not update favorite.");
+    } catch (err) {
+      const revert = (setter) => setter((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: !next } : d)));
+      revert(setDeals);
+      revert(setArchivedDeals);
+      revert(setTrashedDeals);
+      setError(err.message);
+    }
+  }
+
   async function handleCreate(e) {
     e.preventDefault();
     const name = newDealName.trim();
@@ -347,47 +371,83 @@ export default function DealList({ initialFolders, initialArchived = [], initial
             : "Trash is empty."}
         </p>
       ) : (
-        <ul className="deal-list">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {visibleDeals.map((deal) => {
             const meta = typeMeta(deal.documentType);
             return (
-              <li key={deal.id} className="deal-list-item">
-                <div>
-                  <div className="deal-list-item-name">
+              <div
+                key={deal.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  background: "white",
+                  border: "1px solid oklch(88% 0.008 60)",
+                  borderRadius: 16,
+                  padding: "18px 20px",
+                  flexWrap: "wrap",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 10px 24px rgba(17,17,17,0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "none";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {view === "active" && (
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(deal.id)}
+                    style={{ border: "none", background: "transparent", fontSize: 15, color: deal.favorite ? "oklch(72% 0.15 75)" : "oklch(80% 0.01 264)", cursor: "pointer", flex: "0 0 auto" }}
+                  >
+                    ★
+                  </button>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 650, marginBottom: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {deal.name}
-                    <span className="deal-list-item-type-badge">{meta.badge}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2.5px 9px", borderRadius: 20, border: "1px solid oklch(88% 0.008 60)", color: "oklch(50% 0.012 264)" }}>
+                      {meta.badge}
+                    </span>
                     {deal.isShared && (
-                      <span
-                        className="deal-list-item-type-badge"
-                        style={{ background: "var(--accent-subtle)", color: "var(--accent-light)", marginLeft: 6 }}
-                      >
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2.5px 9px", borderRadius: 20, background: "oklch(93% 0.04 300)", color: "oklch(40% 0.13 300)" }}>
                         {deal.writeAccess ? "Shared (can edit)" : "Shared (view only)"}
                       </span>
                     )}
                   </div>
-                  <div className="deal-list-item-meta">Edited {relativeTime(deal.updatedAt)}</div>
+                  <div style={{ fontSize: 12.5, color: "oklch(50% 0.012 264)" }}>Edited {relativeTime(deal.updatedAt)}</div>
                 </div>
-                <div className="deal-list-item-actions">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
                   {view === "active" ? (
                     <>
-                      <a className="marketing-cta-button" href={workspacePath(deal.id)}>Resume</a>
+                      <a
+                        href={workspacePath(deal.id)}
+                        style={{ fontSize: 13, fontWeight: 600, color: "oklch(24% 0.015 264)", textDecoration: "none" }}
+                      >
+                        Open →
+                      </a>
                       {deal.writeAccess && (
                         <>
                           <button
                             type="button"
                             onClick={() => openReasonModal(deal.id, "archive")}
                             disabled={busyId === deal.id}
-                            style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "8px 14px", borderRadius: 8, cursor: "pointer" }}
+                            title="Archive"
+                            style={{ border: "none", background: "transparent", color: "oklch(55% 0.015 264)", cursor: "pointer", fontSize: 13, padding: "3px 5px", borderRadius: 6 }}
                           >
-                            Archive
+                            ▢
                           </button>
                           <button
                             type="button"
                             onClick={() => openReasonModal(deal.id, "trash")}
                             disabled={busyId === deal.id}
-                            className="deal-list-item-delete"
+                            title="Delete"
+                            style={{ border: "none", background: "transparent", color: "oklch(55% 0.015 264)", cursor: "pointer", fontSize: 13, padding: "3px 5px", borderRadius: 6 }}
                           >
-                            Delete
+                            ✕
                           </button>
                         </>
                       )}
@@ -399,7 +459,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                           type="button"
                           onClick={() => openReasonModal(deal.id, "restore", "archive")}
                           disabled={busyId === deal.id}
-                          className="marketing-cta-button"
+                          style={{ border: "none", background: "oklch(24% 0.015 264)", color: "white", fontWeight: 600, fontSize: 12.5, padding: "7px 14px", borderRadius: 9, cursor: "pointer" }}
                         >
                           {busyId === deal.id ? "Restoring…" : "Restore"}
                         </button>
@@ -412,7 +472,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                           type="button"
                           onClick={() => openReasonModal(deal.id, "restore", "trash")}
                           disabled={busyId === deal.id}
-                          className="marketing-cta-button"
+                          style={{ border: "none", background: "oklch(24% 0.015 264)", color: "white", fontWeight: 600, fontSize: 12.5, padding: "7px 14px", borderRadius: 9, cursor: "pointer" }}
                         >
                           {busyId === deal.id ? "Restoring…" : "Restore"}
                         </button>
@@ -420,10 +480,10 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                     </>
                   )}
                 </div>
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
 
       <FolderReasonModal
