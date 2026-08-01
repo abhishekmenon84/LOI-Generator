@@ -370,6 +370,7 @@ model TemplateAnchor {
   yPct       Float
   widthPct   Float
   heightPct  Float
+  customQuestion String?    // optional admin-authored wizard question override; falls back to an auto-generated question when null (see lib/customTemplateQuestions.mjs)
 
   @@index([templateId])
 }

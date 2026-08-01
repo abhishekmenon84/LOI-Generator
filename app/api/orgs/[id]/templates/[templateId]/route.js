@@ -20,6 +20,7 @@ function clampPct(value) {
 // than silently coercing them to something wrong.
 function sanitizeAnchor(a) {
   const role = String(a?.role ?? a?.label ?? "").trim() || "Role";
+  const customQuestion = typeof a?.customQuestion === "string" && a.customQuestion.trim() ? a.customQuestion.trim() : null;
   return {
     type: a?.type,
     role,
@@ -28,6 +29,7 @@ function sanitizeAnchor(a) {
     yPct: clampPct(a?.yPct),
     widthPct: clampPct(a?.widthPct),
     heightPct: clampPct(a?.heightPct),
+    customQuestion,
   };
 }
 

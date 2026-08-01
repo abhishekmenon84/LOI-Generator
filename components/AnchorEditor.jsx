@@ -215,6 +215,15 @@ export default function AnchorEditor({ fileUrl, pageCount, anchors: initialAncho
               style={inputStyle}
             />
           )}
+          {selectedAnchor && selectedAnchor.type !== "signature" && selectedAnchor.type !== "initials" && (
+            <input
+              type="text"
+              placeholder="Custom wizard question (optional)"
+              value={selectedAnchor.customQuestion || ""}
+              onChange={(e) => handleUpdateSelected({ customQuestion: e.target.value })}
+              style={inputStyle}
+            />
+          )}
 
           {selectedAnchor ? (
             <div style={{ display: "flex", gap: "8px" }}>
