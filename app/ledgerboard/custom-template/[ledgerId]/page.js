@@ -184,6 +184,13 @@ export default function CustomTemplateSignerAssignmentPage() {
         <div style={{ fontSize: "12.5px", color: "oklch(50% 0.01 264)" }}>
           Assign signers for template &quot;{template.name}&quot;
         </div>
+        <button
+          type="button"
+          onClick={() => router.push(`/ledgerboard/custom-template/${ledgerId}/fill`)}
+          style={{ marginTop: "8px", padding: "6px 12px", borderRadius: "7px", border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+        >
+          Edit answers
+        </button>
       </div>
 
       <div style={{ display: "flex", gap: "24px", alignItems: "flex-start", flexWrap: "wrap" }}>
