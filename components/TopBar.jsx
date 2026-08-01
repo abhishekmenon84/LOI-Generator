@@ -1,25 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const QUICK_ACTIONS = [
-  { value: "purchase_loi", label: "Purchase LOI", glyph: "▤" },
-  { value: "commercial_lease", label: "Commercial Lease", glyph: "▥" },
-  { value: "residential_lease", label: "Residential Lease", glyph: "▦" },
-];
-
-// Quick-create just navigates to the dashboard with a query param the
-// existing DealList.jsx create-flow reads to pre-select a document type,
-// rather than duplicating DealList.jsx's own folder+ledger POST sequence
-// here -- keeps creation logic in exactly one place.
+// The "+" button triggers the exact same "New Ledger" flow as the dashboard's
+// own button: it just navigates to the dashboard with a query param that
+// DealList.jsx's create-flow reads to open its (name-only) create-folder
+// form immediately, rather than duplicating DealList.jsx's folder-creation
+// logic here -- keeps creation logic in exactly one place. What document to
+// add inside the new folder is decided afterwards, inside the Folder
+// workspace's own "+ Add" menu.
 export default function TopBar({ onOpenSearch, userInitial = "?" }) {
   const router = useRouter();
-  const [createOpen, setCreateOpen] = useState(false);
 
-  function startQuickCreate(documentType) {
-    setCreateOpen(false);
-    router.push(`/dashboard?quickCreate=${documentType}`);
+  function startQuickCreate() {
+    router.push("/dashboard?quickCreate=1");
   }
 
   return (
@@ -59,38 +53,12 @@ export default function TopBar({ onOpenSearch, userInitial = "?" }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
         <button
           type="button"
-          onClick={() => setCreateOpen((v) => !v)}
+          title="New Ledger"
+          onClick={startQuickCreate}
           style={{ width: 34, height: 34, borderRadius: 9, border: "none", background: "oklch(24% 0.015 264)", color: "white", fontSize: 17, cursor: "pointer", lineHeight: 1 }}
         >
           +
         </button>
-        {createOpen && (
-          <div
-            style={{
-              position: "absolute",
-              top: 42,
-              right: 88,
-              width: 220,
-              background: "white",
-              border: "1px solid oklch(88% 0.008 60)",
-              borderRadius: 14,
-              boxShadow: "0 12px 32px rgba(17,17,17,0.12)",
-              padding: 8,
-              zIndex: 40,
-            }}
-          >
-            {QUICK_ACTIONS.map((qa) => (
-              <div
-                key={qa.value}
-                onClick={() => startQuickCreate(qa.value)}
-                style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 10px", borderRadius: 9, cursor: "pointer" }}
-              >
-                <span style={{ fontSize: 14, width: 18, textAlign: "center", color: "oklch(50% 0.012 264)" }}>{qa.glyph}</span>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{qa.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
         <button
           type="button"
           style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid oklch(88% 0.008 60)", background: "white", cursor: "pointer", fontSize: 14, color: "oklch(50% 0.012 264)" }}

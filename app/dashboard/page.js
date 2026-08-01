@@ -4,6 +4,7 @@ import { hasBusinessOrgMembership, listUserOrgs } from "../../lib/orgAccess";
 import { listAccessibleFolders } from "../../lib/folderAccess";
 import { prisma } from "../../lib/prisma";
 import AppShell from "../../components/AppShell";
+import DashboardGreeting from "../../components/DashboardGreeting";
 import DealList from "../../components/DealList";
 import KanbanDashboard from "../../components/KanbanDashboard";
 
@@ -81,7 +82,7 @@ export default async function DashboardPage() {
         userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
       >
         <div style={{ padding: "32px 28px" }}>
-          <h1 style={{ marginBottom: 4 }}>Ledgerboard</h1>
+          <DashboardGreeting style={{ marginBottom: 4 }} />
           <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Signed in as {session.user.email}.</p>
           <KanbanDashboard
             initialFolders={activeFolders}
@@ -114,7 +115,7 @@ export default async function DashboardPage() {
   return (
     <AppShell org={null} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
       <div style={{ padding: "32px 28px" }}>
-        <h1>Your Ledgers</h1>
+        <DashboardGreeting />
         <p>Signed in as {session.user.email}.</p>
         <DealList
           initialFolders={activeFolders}

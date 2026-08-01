@@ -691,26 +691,60 @@ export default function FolderWorkspacePage() {
               }}
             >
               <div style={{ fontSize: "34px", marginBottom: "10px" }}>📄</div>
-              <div style={{ fontWeight: 700, fontSize: "16px", marginBottom: "6px" }}>No document open</div>
+              <div style={{ fontWeight: 700, fontSize: "16px", marginBottom: "6px" }}>What would you like to add?</div>
               <div style={{ fontSize: "13px", marginBottom: "18px", maxWidth: "260px" }}>
-                Select a document from the left panel, or start a new one.
+                Select a document from the left panel, or add a new one to this ledger.
               </div>
-              <button
-                type="button"
-                onClick={handleAddLedger}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: "9px",
-                  border: "none",
-                  background: "oklch(45% 0.15 300)",
-                  color: "white",
-                  fontWeight: 600,
-                  fontSize: "13.5px",
-                  cursor: "pointer",
-                }}
-              >
-                + New Ledger
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: "260px" }}>
+                <button
+                  type="button"
+                  onClick={handleAddLedger}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: "9px",
+                    border: "none",
+                    background: "oklch(45% 0.15 300)",
+                    color: "white",
+                    fontWeight: 600,
+                    fontSize: "13.5px",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Built-in document
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddFromTemplate}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: "9px",
+                    border: "1px solid oklch(88% 0.008 60)",
+                    background: "white",
+                    color: "oklch(30% 0.01 264)",
+                    fontWeight: 600,
+                    fontSize: "13.5px",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Document from template
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: "9px",
+                    border: "1px solid oklch(88% 0.008 60)",
+                    background: "white",
+                    color: "oklch(30% 0.01 264)",
+                    fontWeight: 600,
+                    fontSize: "13.5px",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Upload file
+                </button>
+              </div>
             </div>
           )}
         </div>

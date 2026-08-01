@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import FolderReasonModal from "./FolderReasonModal";
-import { mergeDocumentTypeOptions } from "../lib/documentPicker.mjs";
 
 // Real Ledger.documentType values (see components/KanbanCard.jsx's TYPE_META
-// and app/api/ledgers/route.js's VALID_DOC_TYPES) -- this list intentionally
-// differs from the old Deal-era DOCUMENT_TYPES (which used
-// "commercial_lease_loi" and per-type page-builder paths); those old paths
-// are moot now anyway since creation navigates to the Folder workspace route.
+// and app/api/ledgers/route.js's VALID_DOC_TYPES) -- kept only for labeling
+// existing deals' type pills in the list below. Creation no longer asks for
+// a document type up front (see handleCreate) -- that choice now happens
+// inside the Folder workspace itself, via its own "+ Add" menu
+// (components/FolderTreePanel.jsx), right after the empty folder is created.
 const DOCUMENT_TYPES = [
   { value: "purchase_loi", label: "Business + Real Estate Purchase LOI", badge: "Purchase LOI" },
   { value: "commercial_lease", label: "Commercial Lease LOI", badge: "Lease LOI" },
@@ -41,10 +41,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
   const [deals, setDeals] = useState(initialFolders);
   const [archivedDeals, setArchivedDeals] = useState(initialArchived);
   const [trashedDeals, setTrashedDeals] = useState(initialTrashed);
-  const [pickingType, setPickingType] = useState(false);
-  const [selectedType, setSelectedType] = useState(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
-  const [templates, setTemplates] = useState([]);
+  const [creatingNew, setCreatingNew] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [newDealName, setNewDealName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -57,33 +54,21 @@ export default function DealList({ initialFolders, initialArchived = [], initial
 
   const visibleDeals = view === "active" ? deals : view === "archive" ? archivedDeals : trashedDeals;
 
-  function startCreate(option) {
-    setSelectedType(option.kind === "built-in" ? option.value : "custom_template");
-    setSelectedTemplateId(option.kind === "template" ? option.value : null);
-    setPickingType(false);
-  }
-
-  useEffect(() => {
-    fetch("/api/templates")
-      .then((res) => (res.ok ? res.json() : { templates: [] }))
-      .then((data) => setTemplates(data.templates || []))
-      .catch(() => {});
-  }, []);
-
+  // "New Ledger" only ever creates a Folder now -- what to put inside it
+  // (a built-in document, a custom template, or an uploaded file) is
+  // decided afterwards, inside the Folder workspace's own "+ Add" menu
+  // (components/FolderTreePanel.jsx), which already offers all three.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const quickCreate = params.get("quickCreate");
-    const builtIn = DOCUMENT_TYPES.find((t) => t.value === quickCreate);
-    if (builtIn) {
-      startCreate({ kind: "built-in", value: builtIn.value });
+    if (params.get("quickCreate") != null) {
+      setCreatingNew(true);
       router.replace("/dashboard", { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function cancelCreate() {
-    setSelectedType(null);
-    setSelectedTemplateId(null);
+    setCreatingNew(false);
     setSelectedOrgId(null);
     setNewDealName("");
   }
@@ -119,7 +104,6 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       setNameShake(true);
       return;
     }
-    if (!selectedType) return;
     setCreating(true);
     setError(null);
     try {
@@ -133,22 +117,9 @@ export default function DealList({ initialFolders, initialArchived = [], initial
         throw new Error(body.error || "Could not create folder.");
       }
       const folder = await folderRes.json();
-
-      const ledgerRes = await fetch("/api/ledgers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          folderId: folder.id,
-          documentType: selectedType,
-          name,
-          ...(selectedTemplateId ? { templateId: selectedTemplateId } : {}),
-        }),
-      });
-      if (!ledgerRes.ok) {
-        const body = await ledgerRes.json().catch(() => ({}));
-        throw new Error(body.error || "Folder was created, but could not create its ledger.");
-      }
-
+      // The Folder workspace's own empty state / "+ Add" menu asks what
+      // document to create (built-in, custom template, or upload) -- no
+      // ledger is created here.
       router.push(workspacePath(folder.id));
     } catch (err) {
       setError(err.message);
@@ -255,43 +226,18 @@ export default function DealList({ initialFolders, initialArchived = [], initial
 
   return (
     <div>
-      {!pickingType && !selectedType && (
+      {!creatingNew && (
         <button
           type="button"
           className="marketing-cta-button"
           style={{ marginBottom: 24 }}
-          onClick={() => setPickingType(true)}
+          onClick={() => setCreatingNew(true)}
         >
-          + New Deal
+          + New Ledger
         </button>
       )}
 
-      {pickingType && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>What kind of document?</p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {mergeDocumentTypeOptions(DOCUMENT_TYPES, templates).map((option) => (
-              <button
-                key={`${option.kind}-${option.value}`}
-                type="button"
-                className="marketing-cta-button"
-                onClick={() => startCreate(option)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setPickingType(false)}
-            style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem", alignSelf: "flex-start" }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
-      {selectedType && userOrgs.length > 1 && !selectedOrgId && (
+      {creatingNew && userOrgs.length > 1 && !selectedOrgId && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
           <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Which organization?</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -311,14 +257,14 @@ export default function DealList({ initialFolders, initialArchived = [], initial
         </div>
       )}
 
-      {selectedType && (userOrgs.length <= 1 || selectedOrgId) && (
+      {creatingNew && (userOrgs.length <= 1 || selectedOrgId) && (
         <form onSubmit={handleCreate} style={{ display: "flex", gap: 8, marginBottom: 24 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <input
               key={nameShake ? "shaking" : "still"}
               type="text"
               autoFocus
-              placeholder={`New ${typeMeta(selectedType).badge} name, e.g. 123 Main St Acquisition`}
+              placeholder="New ledger name, e.g. 123 Main St Acquisition"
               value={newDealName}
               onChange={(e) => {
                 setNewDealName(e.target.value);
@@ -383,7 +329,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       {visibleDeals.length === 0 ? (
         <p>
           {view === "active"
-            ? "No deals yet — create one above to get started."
+            ? "No ledgers yet — create one above to get started."
             : view === "archive"
             ? "No archived deals."
             : "Trash is empty."}
