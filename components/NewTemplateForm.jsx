@@ -99,9 +99,13 @@ export default function NewTemplateForm({ userOrgs = [] }) {
   const [selectedOrgId, setSelectedOrgId] = useState(userOrgs.length === 1 ? userOrgs[0].orgId : null);
 
   async function handleFile(file) {
-    if (!name.trim()) {
-      setError("Enter a template name first.");
-      return;
+    // Default to the uploaded file's own name (extension stripped) when the
+    // user hasn't typed one -- most users expect the file's own name to be
+    // used automatically rather than being blocked from uploading at all.
+    let effectiveName = name.trim();
+    if (!effectiveName) {
+      effectiveName = file.name.replace(/\.pdf$/i, "");
+      setName(effectiveName);
     }
     setError(null);
     setPageProgress(null);

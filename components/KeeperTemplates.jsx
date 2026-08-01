@@ -19,7 +19,14 @@ export default function KeeperTemplates({ orgId }) {
   }, [orgId]);
 
   async function handleUpload(file) {
-    const name = (window.prompt("Template name?") || "").trim();
+    // Default to the uploaded file's own name (extension stripped) when the
+    // user leaves the prompt blank or dismisses it, rather than silently
+    // aborting the upload -- most users expect "just use the file name" as
+    // the fallback, not to be blocked entirely for skipping a rename step.
+    const fileNameFallback = file.name.replace(/\.pdf$/i, "");
+    const promptResult = window.prompt("Template name?", fileNameFallback);
+    if (promptResult === null) return; // user explicitly cancelled
+    const name = promptResult.trim() || fileNameFallback;
     if (!name) return;
     setUploading(true);
     setError(null);
