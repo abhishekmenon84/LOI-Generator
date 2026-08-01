@@ -20,6 +20,22 @@ const nextConfig = {
     // lib/pdfNormalize.js -- Task 5's own tests only exercised it via
     // `node --test`, never through `next build`).
     serverComponentsExternalPackages: ["@napi-rs/canvas", "pdfjs-dist"],
+    // pdfjs-dist/legacy/build/pdf.mjs dynamically imports its own
+    // pdf.worker.mjs by a runtime string path (not a static import Next's
+    // file tracer can see), so Vercel's deploy bundle silently omits it --
+    // "Cannot find module '.../pdf.worker.mjs'" in production even though
+    // the exact same code works locally, since the file is present in a
+    // full local node_modules but never gets traced/copied into the
+    // serverless function's bundle. Forcing it into the trace here is the
+    // standard fix (see Next.js's outputFileTracingIncludes docs) for a
+    // package whose worker/asset file is referenced dynamically deep
+    // inside a dependency rather than imported directly by app code.
+    // Must live under `experimental` (not top-level) on Next 14.2.x --
+    // collect-build-traces.js reads it from `config.experimental` only.
+    outputFileTracingIncludes: {
+      "/api/templates/normalize": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+      "/api/orgs/[id]/templates": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+    },
   },
 };
 
