@@ -4,6 +4,7 @@ import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { uploadFile } from "../../../../../lib/blobStorage";
+import { MAX_UPLOAD_BYTES, isAllowedUploadMimeType } from "../../../../../lib/uploadPolicy";
 
 // Classifies an AcroForm field by its concrete class using `instanceof`
 // rather than `field.constructor.name`. Next.js production builds minify
@@ -85,8 +86,15 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: "A file is required." }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
   const mimeType = file.type || "application/octet-stream";
+  if (!isAllowedUploadMimeType(mimeType)) {
+    return NextResponse.json({ error: "This file type isn't supported. Upload a PDF, Word document, or common image format." }, { status: 415 });
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: `File is too large. The limit is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.` }, { status: 413 });
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
 
   let uploaded;
   try {
