@@ -108,10 +108,7 @@ function ThreadRow({ child, hasGreenSibling, onOpen, onUnnest, onCyclePriority }
 export default function KanbanCard({
   folder,
   onDragStart,
-  compact = false,
   onArchive,
-  onTrash,
-  onRestore,
   childThreads = [],
   onUnnestChild,
   onCyclePriority,
@@ -126,41 +123,6 @@ export default function KanbanCard({
   function handleClick(e) {
     if (e.defaultPrevented) return;
     onOpen?.(folder.id);
-  }
-
-  if (compact) {
-    return (
-      <div
-        draggable={folder.writeAccess}
-        onDragStart={(e) => onDragStart(e, folder.id)}
-        style={{
-          background: "oklch(99% 0.003 60 / 0.9)",
-          borderRadius: 9,
-          padding: "10px 11px",
-          cursor: "grab",
-          borderLeft: `2px solid ${meta.accent}`,
-          fontSize: 12.5,
-        }}
-      >
-        <div style={{ fontWeight: 600, marginBottom: 5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-          <span>{folder.name}</span>
-          {onRestore && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                onRestore(folder.id);
-              }}
-              title="Restore"
-              style={{ border: "none", background: "transparent", color: "oklch(45% 0.13 155)", cursor: "pointer", fontSize: 11.5 }}
-            >
-              ↩
-            </button>
-          )}
-        </div>
-        <span style={{ fontSize: 10.5, color: "oklch(52% 0.012 264)" }}>{meta.label}</span>
-      </div>
-    );
   }
 
   return (
@@ -206,20 +168,6 @@ export default function KanbanCard({
               style={{ border: "none", background: "transparent", color: "oklch(55% 0.015 264)", cursor: "pointer", fontSize: 13, padding: "3px 5px", borderRadius: 6, lineHeight: 1 }}
             >
               🗄
-            </button>
-          )}
-          {onTrash && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                onTrash(folder.id);
-              }}
-              title="Trash"
-              className="kanban-card-overflow-btn"
-              style={{ border: "none", background: "transparent", color: "oklch(55% 0.015 264)", cursor: "pointer", fontSize: 13, padding: "3px 5px", borderRadius: 6, lineHeight: 1 }}
-            >
-              🗑
             </button>
           )}
         </div>

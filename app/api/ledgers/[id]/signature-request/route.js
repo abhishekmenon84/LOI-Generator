@@ -21,7 +21,7 @@ async function loadAccessibleLedger(ledgerId, userId) {
   if (!ledger) return null;
   const folder = await loadAccessibleFolder(ledger.folderId, userId);
   if (!folder) return null;
-  return { ...ledger, _writeAccess: folder._writeAccess, _folderDeletedAt: folder.deletedAt, _orgId: folder.orgId };
+  return { ...ledger, _writeAccess: folder._writeAccess, _orgId: folder.orgId };
 }
 
 export async function POST(request, { params }) {
@@ -35,9 +35,6 @@ export async function POST(request, { params }) {
   }
   if (!ledger._writeAccess) {
     return NextResponse.json({ error: "Not authorized to send this document for signature." }, { status: 403 });
-  }
-  if (ledger._folderDeletedAt) {
-    return NextResponse.json({ error: "This document's folder is in Trash and cannot be sent for signature. Restore it first.", code: "FOLDER_TRASHED" }, { status: 409 });
   }
 
   const org = await prisma.organization.findUnique({ where: { id: ledger._orgId } });

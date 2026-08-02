@@ -68,9 +68,10 @@ export default async function DashboardPage({ searchParams }) {
 
   const primaryOrg = await getPrimaryOrgForShell(session.user.id);
 
-  const allFolders = await listAccessibleFolders(session.user.id, {});
-  const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt);
-  const folderIds = allFolders.map((f) => f.id);
+  // listAccessibleFolders with no options already excludes archived
+  // folders -- everything returned here is active.
+  const activeFolders = await listAccessibleFolders(session.user.id, {});
+  const folderIds = activeFolders.map((f) => f.id);
 
   const stageCounts = new Map();
   for (const f of activeFolders) {

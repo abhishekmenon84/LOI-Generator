@@ -3,8 +3,8 @@ import { useState } from "react";
 
 const ACTION_CONFIG = {
   archive: { icon: "🗄", headline: (name) => `Archive "${name}"?`, confirmLabel: "Archive", confirmBg: "oklch(24% 0.015 264)" },
-  trash: { icon: "🗑", headline: (name) => `Move "${name}" to Trash?`, confirmLabel: "Move to Trash", confirmBg: "oklch(50% 0.17 25)" },
   restore: { icon: "↩", headline: (name) => `Restore "${name}"?`, confirmLabel: "Restore", confirmBg: "oklch(45% 0.14 155)" },
+  permanent: { icon: "🗑", headline: (name) => `Permanently delete "${name}"?`, confirmLabel: "Delete permanently", confirmBg: "oklch(50% 0.17 25)" },
 };
 
 export default function FolderReasonModal({ action, folderName, onConfirm, onCancel }) {
@@ -12,7 +12,12 @@ export default function FolderReasonModal({ action, folderName, onConfirm, onCan
 
   if (!action) return null;
   const config = ACTION_CONFIG[action];
-  const disabled = reason.trim().length < 10;
+  // Permanent deletion needs no reason: FolderAuditEvent cascades on
+  // delete (see prisma/schema.prisma), so any "why" logged right before
+  // deleting the folder would vanish along with it -- pointless to ask.
+  // A plain confirmation click is enough for this one irreversible action.
+  const requiresReason = action !== "permanent";
+  const disabled = requiresReason && reason.trim().length < 10;
 
   const handleConfirm = () => {
     if (disabled) return;
@@ -36,17 +41,23 @@ export default function FolderReasonModal({ action, folderName, onConfirm, onCan
       >
         <div style={{ fontSize: 26, marginBottom: 10 }}>{config.icon}</div>
         <div style={{ fontWeight: 750, fontSize: 17, marginBottom: 14 }}>{config.headline(folderName)}</div>
-        <label style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 18 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: "oklch(42% 0.01 264)" }}>Why? (required)</span>
-          <textarea
-            rows={3}
-            placeholder="A short note for the record..."
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            style={{ padding: "10px 12px", borderRadius: 9, border: "1px solid oklch(88% 0.008 60)", fontSize: 13.5, fontFamily: "inherit", outline: "none", resize: "vertical", color: "inherit" }}
-          />
-          <span style={{ fontSize: 11.5, color: "oklch(55% 0.01 264)" }}>At least 10 characters</span>
-        </label>
+        {requiresReason ? (
+          <label style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 18 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: "oklch(42% 0.01 264)" }}>Why? (required)</span>
+            <textarea
+              rows={3}
+              placeholder="A short note for the record..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              style={{ padding: "10px 12px", borderRadius: 9, border: "1px solid oklch(88% 0.008 60)", fontSize: 13.5, fontFamily: "inherit", outline: "none", resize: "vertical", color: "inherit" }}
+            />
+            <span style={{ fontSize: 11.5, color: "oklch(55% 0.01 264)" }}>At least 10 characters</span>
+          </label>
+        ) : (
+          <p style={{ fontSize: 13, color: "oklch(50% 0.17 25)", marginBottom: 18 }}>
+            This cannot be undone. The folder and everything inside it will be permanently deleted.
+          </p>
+        )}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button
             onClick={handleCancel}

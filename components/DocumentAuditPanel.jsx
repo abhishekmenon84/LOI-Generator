@@ -43,30 +43,32 @@ export default function DocumentAuditPanel({ ledgerId, isOpen, onClose }) {
                 Final document hash: {r.finalDocumentHash}
               </p>
             )}
+            {/* Name + role + status + timestamps only -- IP address,
+                geolocation, device/browser string, and email are collected
+                and retained in the database for legal/compliance defense
+                but are deliberately not surfaced here (see this route's
+                own comment for the PIPEDA reasoning). */}
             {r.signers.map((s, i) => (
               <div key={i} style={{ fontSize: "0.8rem", color: "var(--text-secondary)", borderTop: "1px solid var(--border)", padding: "8px 0" }}>
                 <p style={{ margin: 0 }}>
-                  <strong>{s.name}</strong> ({s.email}) — {s.role} ({s.kind === "notify_only" ? "notify only" : s.signed ? "signed" : "pending"})
+                  <strong>{s.name}</strong> — {s.role} ({s.kind === "notify_only" ? "notify only" : s.signed ? "signed" : "pending"})
                 </p>
                 {s.tokenUsedAt && (
                   <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "var(--text-muted)" }}>
                     Link opened: {new Date(s.tokenUsedAt).toLocaleString()}
                   </p>
                 )}
-                {s.signed && (
-                  <p style={{ margin: "4px 0 0", fontFamily: "monospace", fontSize: "0.72rem", wordBreak: "break-all" }}>
-                    {s.signedAt && `Signed: ${new Date(s.signedAt).toLocaleString()}`} · IP: {s.ipAddress} · {[s.geoCity, s.geoRegion, s.geoCountry].filter(Boolean).join(", ") || "location unavailable"}
-                    <br />
-                    Device: {s.userAgent} ({s.screenInfo}, tz offset {s.timezoneOffset})
-                    <br />
-                    Hash: {s.documentHash}
-                    {s.signatureImageUrl && (
-                      <>
-                        <br />
-                        Signature image: {s.signatureImageUrl}
-                      </>
-                    )}
+                {s.signed && s.signedAt && (
+                  <p style={{ margin: "4px 0 0", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                    Signed: {new Date(s.signedAt).toLocaleString()}
                   </p>
+                )}
+                {s.signatureImageUrl && (
+                  <img
+                    src={s.signatureImageUrl}
+                    alt={`${s.name}'s signature`}
+                    style={{ marginTop: 6, maxHeight: 50, background: "white", borderRadius: 4, padding: 4 }}
+                  />
                 )}
               </div>
             ))}

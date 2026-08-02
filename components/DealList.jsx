@@ -35,12 +35,14 @@ function workspacePath(folderId) {
   return `/ledgerboard/folder/${folderId}`;
 }
 
-export default function DealList({ initialFolders, initialArchived = [], initialTrashed = [], userOrgs = [] }) {
+// Shows only ACTIVE folders (plus the Favorites filter over them) --
+// archived folders and archived individual documents both moved to the
+// dedicated /archive page. Trash no longer exists as a concept anywhere
+// in the app; a folder is either Active or Archived.
+export default function DealList({ initialFolders, userOrgs = [] }) {
   const router = useRouter();
   const [view, setView] = useState("active");
   const [deals, setDeals] = useState(initialFolders);
-  const [archivedDeals, setArchivedDeals] = useState(initialArchived);
-  const [trashedDeals, setTrashedDeals] = useState(initialTrashed);
   const [creatingNew, setCreatingNew] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState(null);
   const [newDealName, setNewDealName] = useState("");
@@ -49,24 +51,20 @@ export default function DealList({ initialFolders, initialArchived = [], initial
   const [nameShake, setNameShake] = useState(false);
   const [busyId, setBusyId] = useState(null);
 
-  // { folderId, action: "archive" | "trash" | "restore", from: "archive" | "trash" | undefined }
+  // { folderId, action: "archive" }
   const [reasonModal, setReasonModal] = useState(null);
 
-// "favorites" is a filter over the active list, not a 4th lifecycle bucket
-  // like archive/trash -- a favorited folder still shows up under "active"
-  // too, it's just also reachable pre-filtered from the sidebar.
-  const visibleDeals =
-    view === "active" ? deals :
-    view === "favorites" ? deals.filter((d) => d.favorite) :
-    view === "archive" ? archivedDeals :
-    trashedDeals;
+  // "favorites" is a filter over the active list, not a separate lifecycle
+  // bucket -- a favorited folder still shows up under "active" too, it's
+  // just also reachable pre-filtered from the sidebar.
+  const visibleDeals = view === "favorites" ? deals.filter((d) => d.favorite) : deals;
 
   // "New Ledger" only ever creates a Folder now -- what to put inside it
   // (a built-in document, a custom template, or an uploaded file) is
   // decided afterwards, inside the Folder workspace's own "+ Add" menu
   // (components/FolderTreePanel.jsx), which already offers all three.
-  // The Sidebar's Favorites/Archive links land here as /dashboard?view=...
-  // to pre-select a tab, same convention as quickCreate below.
+  // The Sidebar's Favorites link lands here as /documents?view=favorites
+  // to pre-select that tab, same convention as quickCreate below.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     let handled = false;
@@ -75,7 +73,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       handled = true;
     }
     const requestedView = params.get("view");
-    if (requestedView === "favorites" || requestedView === "archive" || requestedView === "trash") {
+    if (requestedView === "favorites") {
       setView(requestedView);
       handled = true;
     }
@@ -90,13 +88,10 @@ export default function DealList({ initialFolders, initialArchived = [], initial
   }
 
   async function toggleFavorite(folderId) {
-    const folder = [...deals, ...archivedDeals, ...trashedDeals].find((d) => d.id === folderId);
+    const folder = deals.find((d) => d.id === folderId);
     if (!folder) return;
     const next = !folder.favorite;
-    const updateList = (setter) => setter((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: next } : d)));
-    updateList(setDeals);
-    updateList(setArchivedDeals);
-    updateList(setTrashedDeals);
+    setDeals((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: next } : d)));
     try {
       const res = await fetch(`/api/folders/${folderId}`, {
         method: "PATCH",
@@ -105,10 +100,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       });
       if (!res.ok) throw new Error("Could not update favorite.");
     } catch (err) {
-      const revert = (setter) => setter((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: !next } : d)));
-      revert(setDeals);
-      revert(setArchivedDeals);
-      revert(setTrashedDeals);
+      setDeals((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: !next } : d)));
       setError(err.message);
     }
   }
@@ -143,101 +135,41 @@ export default function DealList({ initialFolders, initialArchived = [], initial
     }
   }
 
-  function openReasonModal(folderId, action, from) {
-    setReasonModal({ folderId, action, from });
+  function openReasonModal(folderId, action) {
+    setReasonModal({ folderId, action });
   }
 
   async function handleReasonConfirm(reason) {
     const modal = reasonModal;
     setReasonModal(null);
     if (!modal) return;
-    const { folderId, action, from } = modal;
+    const { folderId } = modal;
 
-    if (action === "archive") {
-      const deal = deals.find((d) => d.id === folderId);
-      if (!deal) return;
-      setBusyId(folderId);
-      setDeals((cur) => cur.filter((d) => d.id !== folderId));
-      setArchivedDeals((cur) => [...cur, { ...deal }]);
-      try {
-        const res = await fetch(`/api/folders/${folderId}/archive`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Could not archive deal.");
-        }
-      } catch (err) {
-        setDeals((cur) => [...cur, deal]);
-        setArchivedDeals((cur) => cur.filter((d) => d.id !== folderId));
-        setError(err.message);
-      } finally {
-        setBusyId(null);
+    const deal = deals.find((d) => d.id === folderId);
+    if (!deal) return;
+    setBusyId(folderId);
+    setDeals((cur) => cur.filter((d) => d.id !== folderId));
+    try {
+      const res = await fetch(`/api/folders/${folderId}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Could not archive deal.");
       }
-      return;
-    }
-
-    if (action === "trash") {
-      const deal = deals.find((d) => d.id === folderId);
-      if (!deal) return;
-      setBusyId(folderId);
-      setDeals((cur) => cur.filter((d) => d.id !== folderId));
-      setTrashedDeals((cur) => [...cur, { ...deal }]);
-      try {
-        const res = await fetch(`/api/folders/${folderId}/trash`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Could not move deal to trash.");
-        }
-      } catch (err) {
-        setDeals((cur) => [...cur, deal]);
-        setTrashedDeals((cur) => cur.filter((d) => d.id !== folderId));
-        setError(err.message);
-      } finally {
-        setBusyId(null);
-      }
-      return;
-    }
-
-    if (action === "restore") {
-      const source = from === "trash" ? trashedDeals : archivedDeals;
-      const deal = source.find((d) => d.id === folderId);
-      if (!deal) return;
-      setBusyId(folderId);
-      if (from === "trash") setTrashedDeals((cur) => cur.filter((d) => d.id !== folderId));
-      else setArchivedDeals((cur) => cur.filter((d) => d.id !== folderId));
-      setDeals((cur) => [...cur, { ...deal }]);
-      try {
-        const res = await fetch(`/api/folders/${folderId}/restore`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Could not restore deal.");
-        }
-      } catch (err) {
-        setDeals((cur) => cur.filter((d) => d.id !== folderId));
-        if (from === "trash") setTrashedDeals((cur) => [...cur, deal]);
-        else setArchivedDeals((cur) => [...cur, deal]);
-        setError(err.message);
-      } finally {
-        setBusyId(null);
-      }
+    } catch (err) {
+      setDeals((cur) => [...cur, deal]);
+      setError(err.message);
+    } finally {
+      setBusyId(null);
     }
   }
 
   const reasonModalFolderName = (() => {
     if (!reasonModal) return "";
-    const all = [...deals, ...archivedDeals, ...trashedDeals];
-    return all.find((d) => d.id === reasonModal.folderId)?.name || "";
+    return deals.find((d) => d.id === reasonModal.folderId)?.name || "";
   })();
 
   return (
@@ -320,7 +252,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       {error && <div className="status-banner status-error" role="alert">⚠️ {error}</div>}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["active", "favorites", "archive", "trash"].map((v) => (
+        {["active", "favorites"].map((v) => (
           <button
             key={v}
             type="button"
@@ -346,11 +278,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
         <p>
           {view === "active"
             ? "No ledgers yet — create one above to get started."
-            : view === "favorites"
-            ? "No favorites yet — star a ledger to pin it here."
-            : view === "archive"
-            ? "No archived deals."
-            : "Trash is empty."}
+            : "No favorites yet — star a ledger to pin it here."}
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -379,15 +307,13 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {(view === "active" || view === "favorites") && (
-                  <button
-                    type="button"
-                    onClick={() => toggleFavorite(deal.id)}
-                    style={{ border: "none", background: "transparent", fontSize: 15, color: deal.favorite ? "oklch(72% 0.15 75)" : "oklch(80% 0.01 264)", cursor: "pointer", flex: "0 0 auto" }}
-                  >
-                    ★
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(deal.id)}
+                  style={{ border: "none", background: "transparent", fontSize: 15, color: deal.favorite ? "oklch(72% 0.15 75)" : "oklch(80% 0.01 264)", cursor: "pointer", flex: "0 0 auto" }}
+                >
+                  ★
+                </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 650, marginBottom: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {deal.name}
@@ -403,63 +329,22 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                   <div style={{ fontSize: 12.5, color: "oklch(50% 0.012 264)" }}>Edited {relativeTime(deal.updatedAt)}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
-                  {view === "active" || view === "favorites" ? (
-                    <>
-                      <a
-                        href={workspacePath(deal.id)}
-                        style={{ fontSize: 13, fontWeight: 600, color: "oklch(24% 0.015 264)", textDecoration: "none" }}
-                      >
-                        Open →
-                      </a>
-                      {deal.writeAccess && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openReasonModal(deal.id, "archive")}
-                            disabled={busyId === deal.id}
-                            title="Archive"
-                            style={{ border: "none", background: "transparent", color: "oklch(55% 0.015 264)", cursor: "pointer", fontSize: 13, padding: "3px 5px", borderRadius: 6 }}
-                          >
-                            ▢
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openReasonModal(deal.id, "trash")}
-                            disabled={busyId === deal.id}
-                            title="Delete"
-                            style={{ border: "none", background: "transparent", color: "oklch(55% 0.015 264)", cursor: "pointer", fontSize: 13, padding: "3px 5px", borderRadius: 6 }}
-                          >
-                            ✕
-                          </button>
-                        </>
-                      )}
-                    </>
-                  ) : view === "archive" ? (
-                    <>
-                      {deal.writeAccess && (
-                        <button
-                          type="button"
-                          onClick={() => openReasonModal(deal.id, "restore", "archive")}
-                          disabled={busyId === deal.id}
-                          style={{ border: "none", background: "oklch(24% 0.015 264)", color: "white", fontWeight: 600, fontSize: 12.5, padding: "7px 14px", borderRadius: 9, cursor: "pointer" }}
-                        >
-                          {busyId === deal.id ? "Restoring…" : "Restore"}
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {deal.writeAccess && (
-                        <button
-                          type="button"
-                          onClick={() => openReasonModal(deal.id, "restore", "trash")}
-                          disabled={busyId === deal.id}
-                          style={{ border: "none", background: "oklch(24% 0.015 264)", color: "white", fontWeight: 600, fontSize: 12.5, padding: "7px 14px", borderRadius: 9, cursor: "pointer" }}
-                        >
-                          {busyId === deal.id ? "Restoring…" : "Restore"}
-                        </button>
-                      )}
-                    </>
+                  <a
+                    href={workspacePath(deal.id)}
+                    style={{ fontSize: 13, fontWeight: 600, color: "oklch(24% 0.015 264)", textDecoration: "none" }}
+                  >
+                    Open →
+                  </a>
+                  {deal.writeAccess && (
+                    <button
+                      type="button"
+                      onClick={() => openReasonModal(deal.id, "archive")}
+                      disabled={busyId === deal.id}
+                      title="Archive"
+                      style={{ border: "none", background: "transparent", color: "oklch(55% 0.015 264)", cursor: "pointer", fontSize: 13, padding: "3px 5px", borderRadius: 6 }}
+                    >
+                      ▢
+                    </button>
                   )}
                 </div>
               </div>

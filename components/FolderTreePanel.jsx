@@ -19,7 +19,7 @@ const DOC_ICONS = { ledger: "📝", file: "📎" };
 // Shared archive/restore icon button, used by both LedgerRow and FileRow
 // below -- a single "⊙"/"↺" toggle rather than a bigger menu, since
 // document-level archive only has the one action (unlike Folder-level
-// archive/trash/restore, which needs a reason and a full modal).
+// archive/restore, which needs a reason and a full modal).
 function ArchiveToggleButton({ archived, onToggle, title }) {
   return (
     <button

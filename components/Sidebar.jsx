@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { href: "/keeper", label: "Organizations", glyph: "◈" },
   { href: "/inbox", label: "Inbox", glyph: "▧" },
   { href: "/documents?view=favorites", label: "Favorites", glyph: "★" },
-  { href: "/documents?view=archive", label: "Archive", glyph: "□" },
+  { href: "/archive", label: "Archive", glyph: "□" },
   { href: "/settings", label: "Settings", glyph: "⚙" },
 ];
 

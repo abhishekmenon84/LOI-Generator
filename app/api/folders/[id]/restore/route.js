@@ -15,8 +15,8 @@ export async function POST(request, { params }) {
   if (!folder._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this folder." }, { status: 403 });
   }
-  if (!folder.archivedAt && !folder.deletedAt) {
-    return NextResponse.json({ error: "This folder is not archived or trashed." }, { status: 409 });
+  if (!folder.archivedAt) {
+    return NextResponse.json({ error: "This folder is not archived." }, { status: 409 });
   }
 
   const body = await request.json().catch(() => ({}));
@@ -26,7 +26,7 @@ export async function POST(request, { params }) {
   }
 
   await prisma.$transaction([
-    prisma.folder.update({ where: { id: folder.id }, data: { archivedAt: null, deletedAt: null } }),
+    prisma.folder.update({ where: { id: folder.id }, data: { archivedAt: null } }),
     prisma.folderAuditEvent.create({
       data: { folderId: folder.id, actorUserId: session.user.id, action: "restored", reason },
     }),

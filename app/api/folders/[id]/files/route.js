@@ -157,10 +157,17 @@ export async function POST(request, { params }) {
     }
   }
 
+  // Strip the file extension from the stored/displayed name (".pdf",
+  // ".docx", etc) -- matches the convention NewTemplateForm.jsx and
+  // KeeperTemplates.jsx already use for their own upload flows
+  // (`file.name.replace(/\.pdf$/i, "")`), generalized here to any
+  // extension since this route accepts any file type, not just PDFs.
+  const displayName = file.name.replace(/\.[^./\\]+$/, "") || file.name;
+
   const created = await prisma.folderFile.create({
     data: {
       folderId: folder.id,
-      name: file.name,
+      name: displayName,
       fileUrl: uploaded.url,
       mimeType,
       pageCount,

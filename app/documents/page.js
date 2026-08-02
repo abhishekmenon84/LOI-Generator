@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { auth } from "../../lib/auth";
 import { getPersonalOrgId, hasBusinessOrgMembership, listUserOrgs } from "../../lib/orgAccess";
+import { auth } from "../../lib/auth";
 import { listAccessibleFolders } from "../../lib/folderAccess";
 import { prisma } from "../../lib/prisma";
 import AppShell from "../../components/AppShell";
@@ -12,11 +12,14 @@ export const metadata = {
 };
 
 // The folder/ledger pipeline itself -- a Kanban board for business orgs,
-// a flat favoritable list for personal orgs (each org type keeps its own
-// existing UI, just relocated here from the old /dashboard). /dashboard
-// is now a separate, lightweight greeting+summary page; this is where
-// "create a new ledger", "see my deals by stage", "archive/favorite a
-// folder" all actually happen.
+// a flat favoritable list for personal orgs. Shows ONLY active (non-
+// archived) folders now -- archived folders and archived individual
+// documents both moved to the dedicated /archive page (see
+// app/archive/page.js), so this view no longer needs its own
+// Archive/Trash columns or tabs. Trash itself no longer exists as a
+// concept anywhere in the app; a folder is either Active or Archived, and
+// permanent deletion (see POST /api/folders/[id]/permanent) is reachable
+// only from the Archive view.
 export default async function DocumentsPage() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -25,15 +28,10 @@ export default async function DocumentsPage() {
 
   const isBusiness = await hasBusinessOrgMembership(session.user.id);
 
-  // Both branches need the same underlying Folder data (all folders
-  // including archived/trashed, plus batched participant names and each
-  // folder's "primary" documentType derived from its first-created Ledger)
-  // -- fetched once here rather than duplicated per branch, since both use
-  // identical listAccessibleFolders options.
-  const allFolders = await listAccessibleFolders(session.user.id, { includeArchived: true, includeTrashed: true });
+  const activeFolders = await listAccessibleFolders(session.user.id, {});
   const userOrgs = await listUserOrgs(session.user.id);
 
-  const folderIds = allFolders.map((f) => f.id);
+  const folderIds = activeFolders.map((f) => f.id);
   const [participants, primaryLedgers] = folderIds.length > 0
     ? await Promise.all([
         prisma.folderParticipant.findMany({
@@ -76,10 +74,6 @@ export default async function DocumentsPage() {
       documentType: primaryDocTypeByFolder.get(f.id) || null,
     });
 
-    const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt).map(serializeFolder);
-    const archivedFolders = allFolders.filter((f) => !!f.archivedAt && !f.deletedAt).map(serializeFolder);
-    const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serializeFolder);
-
     const businessOrg = userOrgs.find((o) => !o.isPersonal);
     return (
       <AppShell
@@ -90,9 +84,7 @@ export default async function DocumentsPage() {
           <h1 style={{ marginBottom: 4 }}>Documents</h1>
           <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Drag a folder between stages.</p>
           <KanbanDashboard
-            initialFolders={activeFolders}
-            initialArchivedFolders={archivedFolders}
-            initialTrashedFolders={trashedFolders}
+            initialFolders={activeFolders.map(serializeFolder)}
             userOrgs={userOrgs}
           />
         </div>
@@ -113,10 +105,6 @@ export default async function DocumentsPage() {
     favorite: f.favorite,
   });
 
-  const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt).map(serialize);
-  const archivedFolders = allFolders.filter((f) => !!f.archivedAt && !f.deletedAt).map(serialize);
-  const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serialize);
-
   const personalOrgId = await getPersonalOrgId(session.user.id);
   const personalOrg = personalOrgId ? await prisma.organization.findUnique({ where: { id: personalOrgId } }) : null;
 
@@ -128,9 +116,7 @@ export default async function DocumentsPage() {
       <div style={{ padding: "32px 28px" }}>
         <h1>Documents</h1>
         <DealList
-          initialFolders={activeFolders}
-          initialArchived={archivedFolders}
-          initialTrashed={trashedFolders}
+          initialFolders={activeFolders.map(serialize)}
           userOrgs={userOrgs}
         />
       </div>

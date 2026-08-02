@@ -44,11 +44,19 @@ export async function PATCH(request, { params }) {
   if (!ledger._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this ledger." }, { status: 403 });
   }
-  if (ledger.locked) {
+
+  const body = await request.json().catch(() => ({}));
+  // The lock only blocks changes to the document's actual CONTENT
+  // (name, formData) -- once fully signed, the file itself must never be
+  // modified again. Archiving/restoring is purely organizational metadata,
+  // not a content change, so it stays allowed even on a locked ledger
+  // (previously this whole PATCH 409'd unconditionally on any locked
+  // ledger, which incorrectly blocked archiving a signed document too).
+  const isContentChange = "name" in body || "formData" in body;
+  if (ledger.locked && isContentChange) {
     return NextResponse.json({ error: "This document has been fully signed and can no longer be edited.", code: "LEDGER_LOCKED" }, { status: 409 });
   }
 
-  const body = await request.json().catch(() => ({}));
   const data = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
   if (body.formData && typeof body.formData === "object") data.formData = body.formData;

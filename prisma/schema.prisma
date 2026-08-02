@@ -288,7 +288,6 @@ model Folder {
   priority        String?   // "green" | "yellow" | "grey" | null
   favorite        Boolean   @default(false)
   archivedAt      DateTime?
-  deletedAt       DateTime?
   parentFolderId  String?
   parent          Folder?   @relation("FolderTree", fields: [parentFolderId], references: [id], onDelete: Cascade)
   children        Folder[]  @relation("FolderTree")

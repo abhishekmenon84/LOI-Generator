@@ -74,9 +74,6 @@ export async function PATCH(request, { params }) {
   if (!folder._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this folder." }, { status: 403 });
   }
-  if (folder.deletedAt) {
-    return NextResponse.json({ error: "This folder is in Trash and can no longer be edited. Restore it first.", code: "FOLDER_TRASHED" }, { status: 409 });
-  }
 
   const body = await request.json().catch(() => ({}));
   const data = {};

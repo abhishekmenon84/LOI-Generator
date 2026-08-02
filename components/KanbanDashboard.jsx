@@ -12,11 +12,9 @@ const STAGES = [
   { key: "closed", label: "Closed" },
 ];
 
-export default function KanbanDashboard({ initialFolders, initialArchivedFolders = [], initialTrashedFolders = [], userOrgs = [] }) {
+export default function KanbanDashboard({ initialFolders, userOrgs = [] }) {
   const router = useRouter();
   const [folders, setFolders] = useState(initialFolders);
-  const [archivedFolders, setArchivedFolders] = useState(initialArchivedFolders);
-  const [trashedFolders, setTrashedFolders] = useState(initialTrashedFolders);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState(null);
@@ -176,93 +174,43 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
     }
   }
 
-  function openReasonModal(folderId, action, from) {
-    setReasonModal({ folderId, action, from });
+  function openReasonModal(folderId, action) {
+    setReasonModal({ folderId, action });
   }
 
+  // Archiving a folder from the Kanban board just removes it from this
+  // active-only view -- archived folders now live exclusively on the
+  // dedicated /archive page (see app/archive/page.js), not in a column
+  // here. Trash no longer exists as a concept at all.
   async function handleReasonConfirm(reason) {
     const modal = reasonModal;
     setReasonModal(null);
     if (!modal) return;
-    const { folderId, action, from } = modal;
+    const { folderId } = modal;
 
-    if (action === "archive") {
-      const folder = folders.find((f) => f.id === folderId);
-      if (!folder) return;
-      setFolders((cur) => cur.filter((f) => f.id !== folderId));
-      setArchivedFolders((cur) => [...cur, { ...folder }]);
-      try {
-        const res = await fetch(`/api/folders/${folderId}/archive`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Could not archive folder.");
-        }
-      } catch (err) {
-        setFolders((cur) => [...cur, folder]);
-        setArchivedFolders((cur) => cur.filter((f) => f.id !== folderId));
-        setError(err.message);
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+    setFolders((cur) => cur.filter((f) => f.id !== folderId));
+    try {
+      const res = await fetch(`/api/folders/${folderId}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Could not archive folder.");
       }
-      return;
-    }
-
-    if (action === "trash") {
-      const folder = folders.find((f) => f.id === folderId);
-      if (!folder) return;
-      setFolders((cur) => cur.filter((f) => f.id !== folderId));
-      setTrashedFolders((cur) => [...cur, { ...folder }]);
-      try {
-        const res = await fetch(`/api/folders/${folderId}/trash`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Could not move folder to trash.");
-        }
-      } catch (err) {
-        setFolders((cur) => [...cur, folder]);
-        setTrashedFolders((cur) => cur.filter((f) => f.id !== folderId));
-        setError(err.message);
-      }
-      return;
-    }
-
-    if (action === "restore") {
-      const source = from === "trash" ? trashedFolders : archivedFolders;
-      const folder = source.find((f) => f.id === folderId);
-      if (!folder) return;
-      if (from === "trash") setTrashedFolders((cur) => cur.filter((f) => f.id !== folderId));
-      else setArchivedFolders((cur) => cur.filter((f) => f.id !== folderId));
-      setFolders((cur) => [...cur, { ...folder, stage: folder.stage || "draft" }]);
-      try {
-        const res = await fetch(`/api/folders/${folderId}/restore`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Could not restore folder.");
-        }
-      } catch (err) {
-        setFolders((cur) => cur.filter((f) => f.id !== folderId));
-        if (from === "trash") setTrashedFolders((cur) => [...cur, folder]);
-        else setArchivedFolders((cur) => [...cur, folder]);
-        setError(err.message);
-      }
+    } catch (err) {
+      setFolders((cur) => [...cur, folder]);
+      setError(err.message);
     }
   }
 
   const reasonModalFolderName = useMemo(() => {
     if (!reasonModal) return "";
-    const all = [...folders, ...archivedFolders, ...trashedFolders];
-    return all.find((f) => f.id === reasonModal.folderId)?.name || "";
-  }, [reasonModal, folders, archivedFolders, trashedFolders]);
+    return folders.find((f) => f.id === reasonModal.folderId)?.name || "";
+  }, [reasonModal, folders]);
 
   useEffect(() => {
     const q = search.trim();
@@ -436,7 +384,6 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
               onDragStart={handleDragStart}
               onDrop={handleDrop}
               onArchive={(id) => openReasonModal(id, "archive")}
-              onTrash={(id) => openReasonModal(id, "trash")}
               childrenByParent={childrenByParent}
               onUnnestChild={handleUnnestChild}
               onCyclePriority={handleCyclePriority}
@@ -444,27 +391,6 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
               onOpen={(id) => router.push(`/ledgerboard/folder/${id}`)}
             />
           ))}
-
-          <div className="kanban-board-divider" aria-hidden="true" />
-
-          <KanbanColumn
-            stage="archive"
-            label="Archive"
-            folders={archivedFolders}
-            onDragStart={handleDragStart}
-            onDrop={() => {}}
-            side
-            onRestore={(id) => openReasonModal(id, "restore", "archive")}
-          />
-          <KanbanColumn
-            stage="trash"
-            label="Trash"
-            folders={trashedFolders}
-            onDragStart={handleDragStart}
-            onDrop={() => {}}
-            side
-            onRestore={(id) => openReasonModal(id, "restore", "trash")}
-          />
         </div>
       )}
 

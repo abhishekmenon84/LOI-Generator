@@ -16,15 +16,9 @@ export async function GET(request) {
   }
   const qLower = q.toLowerCase();
 
-  // includeArchived surfaces archived folders in search; includeTrashed is
-  // deliberately omitted (trashed is a distinct, more-hidden state than
-  // archived). Note listAccessibleFolders' lifecycleFilter combines both
-  // flags into a single OR on deletedAt, so a trashed-but-not-yet-purged
-  // folder (within the retention window) can still come back even with
-  // includeTrashed false -- filter those out explicitly here rather than
-  // changing the shared helper's behavior for its other callers.
-  const accessibleFolders = (await listAccessibleFolders(session.user.id, { includeArchived: true }))
-    .filter((f) => !f.deletedAt);
+  // includeArchived surfaces archived folders in search too -- there is no
+  // more-hidden Trash state to separately exclude.
+  const accessibleFolders = await listAccessibleFolders(session.user.id, { includeArchived: true });
   if (accessibleFolders.length === 0) {
     return NextResponse.json({ results: [] });
   }

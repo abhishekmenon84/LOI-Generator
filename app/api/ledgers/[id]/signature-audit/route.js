@@ -28,6 +28,18 @@ export async function GET(request, { params }) {
     orderBy: { createdAt: "desc" },
   });
 
+  // PIPEDA principles 4/5 (limiting collection/disclosure): IP address,
+  // city/region/country, device/browser string, and email are collected
+  // and RETAINED in SignatureEvent/SignerSlot for legal/compliance defense
+  // (tamper-evidence, non-repudiation) -- that retention is unchanged. But
+  // disclosing them in this UI to whoever views the audit trail (the
+  // folder's admin/creator) isn't necessary for that purpose, so they're
+  // no longer included in this response. Name + role + signed/pending +
+  // timestamps + the signature image itself remain, since identifying WHO
+  // signed and WHEN is the actual point of an audit trail. A signer's own
+  // right to see their own full record (PIPEDA principle 9, individual
+  // access) is a separate, not-yet-built request-your-own-data flow, not
+  // this admin-facing endpoint.
   return NextResponse.json({
     requests: requests.map((r) => ({
       id: r.id,
@@ -39,20 +51,11 @@ export async function GET(request, { params }) {
       signers: r.signers.map((s) => ({
         kind: s.kind,
         name: s.name,
-        email: s.email,
         role: getRoleLabel(s.role, s.roleOtherLabel),
         tokenUsedAt: s.tokenUsedAt,
         signed: !!s.signatureEvent,
         signedAt: s.signatureEvent?.signedAt || null,
         signatureImageUrl: s.signatureEvent?.signatureImageUrl || null,
-        userAgent: s.signatureEvent?.userAgent || null,
-        screenInfo: s.signatureEvent?.screenInfo || null,
-        timezoneOffset: s.signatureEvent?.timezoneOffset ?? null,
-        ipAddress: s.signatureEvent?.ipAddress || null,
-        geoCountry: s.signatureEvent?.geoCountry || null,
-        geoRegion: s.signatureEvent?.geoRegion || null,
-        geoCity: s.signatureEvent?.geoCity || null,
-        documentHash: s.signatureEvent?.documentHash || null,
       })),
     })),
   });

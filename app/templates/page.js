@@ -4,6 +4,7 @@ import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import { listUserOrgs, getPrimaryOrgForShell } from "../../lib/orgAccess";
 import AppShell from "../../components/AppShell";
+import TemplateRow from "../../components/TemplateRow";
 
 export const metadata = {
   title: "Templates — Ledgerlot",
@@ -56,6 +57,10 @@ export default async function TemplatesPage() {
         where: { orgId: { in: orgIds } },
         orderBy: { createdAt: "desc" },
         include: { _count: { select: { anchors: true } }, createdBy: { select: { name: true, email: true } } },
+        // pdfUrl is a plain scalar field (already included by default), kept
+        // here as an explicit reminder that AddTemplateToFolderModal's PDF
+        // preview depends on it -- do not narrow this query with a `select`
+        // that would drop it.
       })
     : [];
 
@@ -91,19 +96,7 @@ export default async function TemplatesPage() {
         <h2 style={{ fontSize: 15, marginBottom: 10 }}>Default</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
           {BUILT_IN_TEMPLATES.map((t) => (
-            <div
-              key={t.value}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                padding: "14px 16px",
-                borderRadius: 10,
-                border: "1px solid var(--border)",
-                flexWrap: "wrap",
-              }}
-            >
+            <TemplateRow key={t.value} template={t} kind="built-in">
               <div style={{ fontWeight: 650 }}>{t.label}</div>
               <span
                 style={{
@@ -118,7 +111,7 @@ export default async function TemplatesPage() {
               >
                 Default
               </span>
-            </div>
+            </TemplateRow>
           ))}
         </div>
 
@@ -173,18 +166,10 @@ export default async function TemplatesPage() {
             <h2 style={{ fontSize: 15, margin: "28px 0 10px" }}>From uploaded files</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {customTemplates.map((t) => (
-                <div
+                <TemplateRow
                   key={t.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    padding: "14px 16px",
-                    borderRadius: 10,
-                    border: "1px solid var(--border)",
-                    flexWrap: "wrap",
-                  }}
+                  kind="custom_template"
+                  template={{ id: t.id, name: t.name, pdfUrl: t.pdfUrl, pageCount: t.pageCount, fieldCount: t._count.anchors }}
                 >
                   <div>
                     <div style={{ fontWeight: 650 }}>{t.name}</div>
@@ -205,7 +190,7 @@ export default async function TemplatesPage() {
                   >
                     {sourceLabelFor(t)}
                   </span>
-                </div>
+                </TemplateRow>
               ))}
             </div>
           </>

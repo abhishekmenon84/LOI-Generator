@@ -9,15 +9,16 @@ const STATUS_DOTS = {
   active: "oklch(24% 0.015 264)",
   pending: "oklch(72% 0.15 75)",
   closed: "oklch(62% 0.15 155)",
-  archive: "oklch(60% 0.01 264)",
-  trash: "oklch(58% 0.18 25)",
 };
 
 const DRAG_ACTIVE_MAIN = "oklch(89% 0.03 300 / 0.5)";
 const IDLE_MAIN = "oklch(93.5% 0.008 60 / 0.7)";
-const DRAG_ACTIVE_SIDE = "oklch(89% 0.03 300 / 0.5)";
-const IDLE_SIDE = "oklch(94% 0.006 60 / 0.5)";
 
+// The Archive/Trash side-columns this component used to render (via a
+// `side` prop) moved to the dedicated /archive page -- Trash no longer
+// exists as a concept at all, and archived folders are no longer shown
+// inline in the Kanban board. This component now only renders the 4
+// active-stage columns.
 export default function KanbanColumn({
   stage,
   label,
@@ -25,9 +26,6 @@ export default function KanbanColumn({
   onDragStart,
   onDrop,
   onArchive,
-  onTrash,
-  onRestore,
-  side = false,
   childrenByParent,
   onUnnestChild,
   onCyclePriority,
@@ -48,64 +46,52 @@ export default function KanbanColumn({
         onDrop(e, stage);
       }}
       style={{
-        flex: side ? "0 0 192px" : "0 0 272px",
-        minWidth: side ? 192 : 272,
-        background: dragOver ? (side ? DRAG_ACTIVE_SIDE : DRAG_ACTIVE_MAIN) : (side ? IDLE_SIDE : IDLE_MAIN),
+        flex: "0 0 272px",
+        minWidth: 272,
+        background: dragOver ? DRAG_ACTIVE_MAIN : IDLE_MAIN,
         borderRadius: 14,
-        padding: side ? 12 : 14,
-        minHeight: side ? 110 : 140,
-        opacity: side ? 0.88 : 1,
+        padding: 14,
+        minHeight: 140,
         transition: "background .12s",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: side ? 12 : 14, padding: side ? "0 2px" : "0 4px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: side ? 7 : 8 }}>
-          <span style={{ width: side ? 8 : 9, height: side ? 8 : 9, borderRadius: "50%", display: "inline-block", background: STATUS_DOTS[stage] }} />
-          <span style={{ fontWeight: side ? 650 : 700, fontSize: side ? 13 : 14.5, color: side ? "oklch(40% 0.012 264)" : undefined }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "0 4px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 9, height: 9, borderRadius: "50%", display: "inline-block", background: STATUS_DOTS[stage] }} />
+          <span style={{ fontWeight: 700, fontSize: 14.5 }}>{label}</span>
         </div>
         <span
           style={{
-            fontSize: side ? 11 : 12,
+            fontSize: 12,
             fontWeight: 600,
-            color: side ? "oklch(50% 0.012 264)" : "oklch(46% 0.015 264)",
+            color: "oklch(46% 0.015 264)",
             background: "oklch(99% 0.003 60)",
-            padding: side ? "1px 7px" : "2px 8px",
+            padding: "2px 8px",
             borderRadius: 20,
           }}
         >
           {folders.length}
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: side ? 8 : 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {folders.length === 0 ? (
-          <div style={{ fontSize: side ? 12 : 13, color: side ? "oklch(58% 0.01 264)" : "oklch(55% 0.01 264)", padding: side ? "6px 2px" : "10px 4px" }}>
-            {side ? "Empty" : "No folders here yet."}
+          <div style={{ fontSize: 13, color: "oklch(55% 0.01 264)", padding: "10px 4px" }}>
+            No folders here yet.
           </div>
         ) : (
-          folders.map((folder) =>
-            side ? (
-              <KanbanCard
-                key={folder.id}
-                folder={folder}
-                onDragStart={onDragStart}
-                compact
-                onRestore={onRestore ? () => onRestore(folder.id) : undefined}
-              />
-            ) : (
-              <KanbanCard
-                key={folder.id}
-                folder={folder}
-                onDragStart={onDragStart}
-                onArchive={folder.writeAccess ? onArchive : undefined}
-                onTrash={folder.writeAccess ? onTrash : undefined}
-                childThreads={childrenByParent?.get(folder.id) || []}
-                onUnnestChild={onUnnestChild}
-                onCyclePriority={onCyclePriority}
-                onNest={onNest}
-                onOpen={onOpen}
-              />
-            )
-          )
+          folders.map((folder) => (
+            <KanbanCard
+              key={folder.id}
+              folder={folder}
+              onDragStart={onDragStart}
+              onArchive={folder.writeAccess ? onArchive : undefined}
+              childThreads={childrenByParent?.get(folder.id) || []}
+              onUnnestChild={onUnnestChild}
+              onCyclePriority={onCyclePriority}
+              onNest={onNest}
+              onOpen={onOpen}
+            />
+          ))
         )}
       </div>
     </div>
