@@ -231,12 +231,21 @@ model SignatureRequest {
   id          String   @id @default(cuid())
   ledgerId    String
   ledger      Ledger   @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
-  status      String   @default("pending") // "pending" | "fully_executed" | "voided"
+  status      String   @default("pending") // "pending" | "fully_executed" | "voided" | "declined"
   verifyCode  String   @unique
   createdByUserId String
   finalDocumentHash String?
   createdAt   DateTime @default(now())
   voidedAt    DateTime?
+  // Signing links stop working after this (default 14 days from creation,
+  // see app/api/ledgers/[id]/signature-request/route.js) -- the sender must
+  // void and resend rather than a stale link staying valid indefinitely.
+  expiresAt   DateTime
+  // When any signer declines (see SignerSlot.declinedAt/declineReason), the
+  // whole request moves to "declined" -- remaining signers' links stop
+  // working, mirroring how a single decline halts the whole loop in
+  // DocuSign/dotloop rather than silently continuing without that signer.
+  lastReminderSentAt DateTime?
   // Set if the post-signing PDF burn or completion email failed after the
   // request was already marked fully_executed -- surfaces the failure to
   // admins instead of it being silently swallowed (see signatureFinalize.js).
@@ -270,6 +279,14 @@ model SignerSlot {
   signingToken   String?  @unique
   tokenUsedAt    DateTime?
   createdAt      DateTime @default(now())
+  // Signing order: signers are unlocked strictly in ascending `order`
+  // (ties -- e.g. two notify_only rows, or participants added without a
+  // distinct order -- sign concurrently). Matches the order participants
+  // were listed in when sent (see the signature-request POST route),
+  // rather than an explicit separate field the sender sets by hand.
+  order          Int      @default(0)
+  declinedAt     DateTime?
+  declineReason  String?
 
   signatureEvent SignatureEvent?
 

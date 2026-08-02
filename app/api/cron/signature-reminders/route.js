@@ -1,0 +1,63 @@
+import { NextResponse } from "next/server";
+import { prisma } from "../../../../lib/prisma";
+import { nextSlotsToNotify } from "../../../../lib/signingOrder";
+import { Resend } from "resend";
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+const REMINDER_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
+
+// Vercel Cron target (see vercel.json's crons entry) -- runs daily,
+// auto-reminding whoever's currently unlocked on a pending signature
+// request if nobody's been reminded (manually or automatically) in the
+// last 3 days. Protected by CRON_SECRET since Vercel Cron calls this with
+// no user session; requests missing/mismatching it are rejected.
+export async function GET(request) {
+  const authHeader = request.headers.get("authorization");
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Not authorized." }, { status: 401 });
+  }
+
+  const cutoff = new Date(Date.now() - REMINDER_INTERVAL_MS);
+  const candidates = await prisma.signatureRequest.findMany({
+    where: {
+      status: "pending",
+      expiresAt: { gt: new Date() },
+      OR: [{ lastReminderSentAt: null, createdAt: { lt: cutoff } }, { lastReminderSentAt: { lt: cutoff } }],
+    },
+    include: { ledger: true, signers: true },
+  });
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  let remindedRequests = 0;
+
+  for (const sigRequest of candidates) {
+    const toNotify = nextSlotsToNotify(sigRequest.signers);
+    if (toNotify.length === 0) continue;
+
+    await Promise.all(
+      toNotify.map((s) =>
+        resend.emails
+          .send({
+            from: "Ledgerlot <onboarding@resend.dev>",
+            to: s.email,
+            subject: `Reminder: please sign ${sigRequest.ledger.name}`,
+            html: `<p>This is a reminder that you've been asked to sign <strong>${escapeHtml(sigRequest.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.</p><p><a href="${appUrl}/sign/${s.signingToken}">Review and sign</a></p>`,
+          })
+          .catch((err) => console.error("[cron signature-reminders] send failed:", err))
+      )
+    );
+    await prisma.signatureRequest.update({ where: { id: sigRequest.id }, data: { lastReminderSentAt: new Date() } });
+    remindedRequests++;
+  }
+
+  return NextResponse.json({ ok: true, remindedRequests });
+}

@@ -23,6 +23,10 @@ export default function SignPage({ params }) {
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declineSubmitting, setDeclineSubmitting] = useState(false);
+  const [declined, setDeclined] = useState(false);
 
   useEffect(() => {
     fetch(`/api/sign/${params.token}`)
@@ -57,10 +61,37 @@ export default function SignPage({ params }) {
     }
   }
 
+  async function handleDecline() {
+    setDeclineSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/sign/${params.token}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ declineReason }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "Could not submit your decline.");
+      setDeclined(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeclineSubmitting(false);
+    }
+  }
+
   if (error) {
     return (
       <div style={{ padding: 24, maxWidth: 480, margin: "0 auto" }}>
         <div className="status-banner status-error" role="alert">⚠️ {error}</div>
+      </div>
+    );
+  }
+
+  if (declined) {
+    return (
+      <div style={{ padding: 24, maxWidth: 480, margin: "0 auto" }}>
+        <div className="status-banner" role="status">You've declined to sign this document. The sender has been notified.</div>
       </div>
     );
   }
@@ -117,6 +148,46 @@ export default function SignPage({ params }) {
       >
         {submitting ? "Submitting…" : "Sign Document"}
       </button>
+
+      {!declining ? (
+        <button
+          type="button"
+          onClick={() => setDeclining(true)}
+          style={{ width: "100%", marginTop: 12, padding: "10px 0", background: "none", border: "none", color: "var(--text-muted)", fontSize: "0.85rem", textDecoration: "underline", cursor: "pointer" }}
+        >
+          I don't want to sign this
+        </button>
+      ) : (
+        <div style={{ marginTop: 16, padding: 14, border: "1px solid var(--border)", borderRadius: 8 }}>
+          <p style={{ marginTop: 0, fontSize: "0.85rem" }}>
+            Declining will stop this signature request for everyone. Are you sure?
+          </p>
+          <textarea
+            value={declineReason}
+            onChange={(e) => setDeclineReason(e.target.value)}
+            placeholder="Reason (optional)"
+            rows={3}
+            style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid var(--border)", marginBottom: 10, fontFamily: "inherit" }}
+          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => setDeclining(false)}
+              style={{ flex: 1, padding: "8px 0", borderRadius: 6, border: "1px solid var(--border)", background: "none", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDecline}
+              disabled={declineSubmitting}
+              style={{ flex: 1, padding: "8px 0", borderRadius: 6, border: "none", background: "oklch(50% 0.17 25)", color: "white", cursor: declineSubmitting ? "not-allowed" : "pointer" }}
+            >
+              {declineSubmitting ? "Submitting…" : "Confirm decline"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
