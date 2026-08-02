@@ -48,6 +48,14 @@ export default function DocumentAuditPanel({ ledgerId, isOpen, onClose }) {
                 ⚠️ The document was fully signed, but the completion email failed to send: {r.deliveryError}
               </div>
             )}
+            {r.status === "fully_executed" && (
+              <a
+                href={`/api/ledgers/${ledgerId}/signature-audit/${r.id}/certificate`}
+                style={{ display: "inline-block", marginBottom: 8, fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}
+              >
+                Download Certificate of Completion
+              </a>
+            )}
             {/* Name + role + status + timestamps only -- IP address,
                 geolocation, device/browser string, and email are collected
                 and retained in the database for legal/compliance defense
