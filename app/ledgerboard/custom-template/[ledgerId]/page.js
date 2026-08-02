@@ -11,13 +11,16 @@
 // GET /api/ledgers/[ledgerId] -> folderId -> GET /api/folders/[folderId] ->
 // orgId -> GET /api/orgs/[orgId]/templates/[templateId].
 //
-// "Send for signature" is a visible button that shows "Coming soon" when
-// clicked, matching FolderFileViewer's / the folder workspace page's own
-// handleExport precedent for an out-of-scope feature (an honest disclosed
-// limitation rather than silent partial wiring or a hidden button). Real
-// e-signature integration (percentage-anchor -> PDF point-coordinate
-// conversion into the SignatureRequest/SignerSlot system) is explicitly out
-// of scope for this task.
+// "Send for signature" creates a real SignatureRequest via
+// POST /api/ledgers/[id]/signature-request, the same route the 3 built-in
+// document types use -- see handleSendForSignature below and
+// lib/signerRoles.js's isValidRole, which now accepts this document
+// type's dynamic (per-template) roles. Note: burnSignatures() (called
+// from lib/signatureFinalize.js once every signer has signed) always
+// appends signatures as a trailing page rather than positioning them at
+// each template's own signature-anchor coordinates -- a pre-existing,
+// documented simplification in pdfSignatureBurn.js, not something this
+// wiring changes.
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -40,6 +43,7 @@ export default function CustomTemplateSignerAssignmentPage() {
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [sendMessage, setSendMessage] = useState(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (!ledgerId) return;
@@ -163,11 +167,51 @@ export default function CustomTemplateSignerAssignmentPage() {
     setSaveSuccess(true);
   }
 
-  // Out-of-scope "Send for signature" -- honest disclosure rather than dead
-  // silence or partial wiring, matching the Folder workspace page's own
-  // handleExport precedent for its own out-of-scope export button.
-  function handleSendForSignature() {
-    setSendMessage("Sending for signature isn't available yet. Coming soon.");
+  // Sends the current role assignments to POST /api/ledgers/[id]/signature-request
+  // -- the same SignatureRequest/SignerSlot/SignatureEvent pipeline the 3
+  // built-in document types already use. That route validates each
+  // participant's role via lib/signerRoles.js's isValidRole, which now
+  // accepts any non-empty role string for documentType "custom_template"
+  // (there's no fixed role enum for a user-uploaded template -- its roles
+  // come from that template's own TemplateAnchor.role values instead).
+  // lib/signatureFinalize.js's buildDealPdf already fully supports
+  // "custom_template" (stamps customTemplateAnswers via
+  // stampCustomTemplate, then burns signatures) -- that part required no
+  // changes, only this UI's wiring and the role-validation gap above.
+  async function handleSendForSignature() {
+    setSendMessage(null);
+    const roles = Object.keys(assignments);
+    const incomplete = roles.filter((r) => !assignments[r]?.name?.trim() || !assignments[r]?.email?.trim());
+    if (incomplete.length > 0) {
+      setSendMessage(`Please fill in a name and email for: ${incomplete.join(", ")}.`);
+      return;
+    }
+    if (roles.length === 0) {
+      setSendMessage("This template has no signer roles to send to.");
+      return;
+    }
+
+    setSending(true);
+    const participants = roles.map((role) => ({
+      kind: "signer",
+      role,
+      name: assignments[role].name.trim(),
+      email: assignments[role].email.trim(),
+    }));
+
+    const res = await fetch(`/api/ledgers/${ledgerId}/signature-request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participants }),
+    }).catch(() => null);
+    setSending(false);
+
+    const body = await res?.json().catch(() => ({})) ?? {};
+    if (!res || !res.ok) {
+      setSendMessage(body.error || "Could not send for signature. Please try again.");
+      return;
+    }
+    setSendMessage("Sent! Each signer will receive an email with a link to sign.");
   }
 
   if (loadError) {
@@ -200,6 +244,15 @@ export default function CustomTemplateSignerAssignmentPage() {
       }}
     >
       <div style={{ marginBottom: "18px" }}>
+        {ledger?.folderId && (
+          <button
+            type="button"
+            onClick={() => router.push(`/ledgerboard/folder/${ledger.folderId}`)}
+            style={{ marginBottom: "10px", background: "none", border: "none", padding: 0, color: "oklch(45% 0.15 300)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
+          >
+            ← Back to folder
+          </button>
+        )}
         <div style={{ fontSize: "19px", fontWeight: 800, marginBottom: "4px" }}>
           {ledger?.name || "Ledger"}
         </div>
@@ -232,10 +285,8 @@ export default function CustomTemplateSignerAssignmentPage() {
                 style={{ width: "100%", display: "block", borderRadius: "8px", border: "1px solid var(--border)" }}
               />
               {(template.anchors || [])
-                .filter((a) => a.page === pageIdx && a.type !== "signature" && a.type !== "initials")
+                .filter((a) => a.page === pageIdx)
                 .map((anchor) => {
-                  const answers = ledger?.formData?.customTemplateAnswers || {};
-                  const answer = answers[anchor.id];
                   const overlayStyle = {
                     position: "absolute",
                     left: `${anchor.xPct}%`,
@@ -251,6 +302,26 @@ export default function CustomTemplateSignerAssignmentPage() {
                     fontWeight: 600,
                     whiteSpace: "nowrap",
                   };
+
+                  // signature/initials anchors have no customTemplateAnswers
+                  // entry (stampCustomTemplate never stamps them as text --
+                  // the real signature image is only burned in once every
+                  // signer has actually signed). Here, before signing, show
+                  // the assigned signer's name in italics as a placeholder
+                  // so this screen's own "Signer roles" assignments are
+                  // reflected on the PDF too, not just customTemplateAnswers.
+                  if (anchor.type === "signature" || anchor.type === "initials") {
+                    const signerName = assignments[anchor.role]?.name;
+                    if (!signerName) return null;
+                    return (
+                      <div key={anchor.id} style={{ ...overlayStyle, fontStyle: "italic", color: "oklch(50% 0.1 264)" }}>
+                        {signerName}
+                      </div>
+                    );
+                  }
+
+                  const answers = ledger?.formData?.customTemplateAnswers || {};
+                  const answer = answers[anchor.id];
                   if (anchor.type === "checkbox" || anchor.type === "radio") {
                     if (!answer) return null;
                     return (
@@ -345,6 +416,7 @@ export default function CustomTemplateSignerAssignmentPage() {
             <button
               type="button"
               onClick={handleSendForSignature}
+              disabled={sending}
               style={{
                 padding: "10px 18px",
                 borderRadius: "9px",
@@ -353,10 +425,10 @@ export default function CustomTemplateSignerAssignmentPage() {
                 color: "oklch(45% 0.15 300)",
                 fontWeight: 600,
                 fontSize: "13px",
-                cursor: "pointer",
+                cursor: sending ? "not-allowed" : "pointer",
               }}
             >
-              Send for signature
+              {sending ? "Sending…" : "Send for signature"}
             </button>
           </div>
 

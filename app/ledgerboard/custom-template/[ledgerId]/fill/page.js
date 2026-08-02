@@ -178,6 +178,15 @@ export default function CustomTemplateFillWizardPage() {
       }}
     >
       <div style={{ marginBottom: "18px" }}>
+        {ledger?.folderId && (
+          <button
+            type="button"
+            onClick={() => router.push(`/ledgerboard/folder/${ledger.folderId}`)}
+            style={{ marginBottom: "10px", background: "none", border: "none", padding: 0, color: "oklch(45% 0.15 300)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
+          >
+            ← Back to folder
+          </button>
+        )}
         <div style={{ fontSize: "19px", fontWeight: 800, marginBottom: "4px" }}>
           {ledger?.name || "Ledger"}
         </div>
