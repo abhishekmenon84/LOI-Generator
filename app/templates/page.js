@@ -46,9 +46,23 @@ export default async function TemplatesPage() {
       })
     : [];
 
-  const uploaderMemberships = templates.length > 0
+  // CustomTemplate is a second, older template system (KeeperTemplates.jsx,
+  // and the auto-promotion in PATCH /api/folders/files/[fileId] when a
+  // user places anchors on an uploaded PDF). It has no dedicated detail
+  // page of its own yet -- unlike FormTemplate rows, these render as
+  // non-clickable cards below.
+  const customTemplates = orgIds.length > 0
+    ? await prisma.customTemplate.findMany({
+        where: { orgId: { in: orgIds } },
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { anchors: true } }, createdBy: { select: { name: true, email: true } } },
+      })
+    : [];
+
+  const allCreatorUserIds = [...templates.map((t) => t.createdByUserId), ...customTemplates.map((t) => t.createdByUserId)];
+  const uploaderMemberships = allCreatorUserIds.length > 0
     ? await prisma.membership.findMany({
-        where: { userId: { in: templates.map((t) => t.createdByUserId) }, orgId: { in: orgIds } },
+        where: { userId: { in: allCreatorUserIds }, orgId: { in: orgIds } },
         select: { userId: true, orgId: true, role: true },
       })
     : [];
@@ -152,6 +166,49 @@ export default async function TemplatesPage() {
               </Link>
             ))}
           </div>
+        )}
+
+        {customTemplates.length > 0 && (
+          <>
+            <h2 style={{ fontSize: 15, margin: "28px 0 10px" }}>From uploaded files</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {customTemplates.map((t) => (
+                <div
+                  key={t.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "14px 16px",
+                    borderRadius: 10,
+                    border: "1px solid var(--border)",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 650 }}>{t.name}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>
+                      {t.pageCount} page{t.pageCount === 1 ? "" : "s"} · {t._count.anchors} field{t._count.anchors === 1 ? "" : "s"}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      background: "var(--bg-panel)",
+                      border: "1px solid var(--border)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {sourceLabelFor(t)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </AppShell>

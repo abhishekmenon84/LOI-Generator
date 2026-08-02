@@ -375,7 +375,8 @@ export default function FolderWorkspacePage() {
 
   async function handleSaveFileFields(anchors) {
     setFileFieldsError(null);
-    const res = await fetch(`/api/folders/files/${selectedFileId}`, {
+    const fileIdBeingEdited = selectedFileId;
+    const res = await fetch(`/api/folders/files/${fileIdBeingEdited}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ anchors }),
@@ -384,11 +385,21 @@ export default function FolderWorkspacePage() {
       setFileFieldsError("Could not save fields. Please try again.");
       return;
     }
-    // Re-fetch rather than reconstruct locally -- the response only echoes
-    // {id, updatedAt}, not the persisted anchors (each gets a real DB id
-    // FolderFileViewer's formValues lookup keys off of).
-    const refreshed = await fetch(`/api/folders/files/${selectedFileId}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    if (refreshed) setFileData(refreshed);
+    // Use the PATCH response directly -- it now returns the full file
+    // (including the freshly-saved anchors) from the same update() call
+    // that wrote them, per app/api/folders/files/[fileId]/route.js's
+    // comment. A separate follow-up GET was NOT guaranteed to observe
+    // this same write immediately on Neon's serverless Postgres (a
+    // different request can land on a different pooled connection),
+    // which was the actual cause of "I saved anchors and they vanished."
+    const updated = await res.json().catch(() => null);
+    // Guards against the user having since clicked to a different
+    // file/ledger in the tree while this save was in flight -- applying a
+    // stale response to whatever is now selected would show the wrong
+    // file's fields.
+    if (updated && fileIdBeingEdited === selectedFileId) {
+      setFileData(updated);
+    }
     setEditingFileFields(false);
   }
 
