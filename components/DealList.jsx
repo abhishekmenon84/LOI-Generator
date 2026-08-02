@@ -52,18 +52,34 @@ export default function DealList({ initialFolders, initialArchived = [], initial
   // { folderId, action: "archive" | "trash" | "restore", from: "archive" | "trash" | undefined }
   const [reasonModal, setReasonModal] = useState(null);
 
-  const visibleDeals = view === "active" ? deals : view === "archive" ? archivedDeals : trashedDeals;
+// "favorites" is a filter over the active list, not a 4th lifecycle bucket
+  // like archive/trash -- a favorited folder still shows up under "active"
+  // too, it's just also reachable pre-filtered from the sidebar.
+  const visibleDeals =
+    view === "active" ? deals :
+    view === "favorites" ? deals.filter((d) => d.favorite) :
+    view === "archive" ? archivedDeals :
+    trashedDeals;
 
   // "New Ledger" only ever creates a Folder now -- what to put inside it
   // (a built-in document, a custom template, or an uploaded file) is
   // decided afterwards, inside the Folder workspace's own "+ Add" menu
   // (components/FolderTreePanel.jsx), which already offers all three.
+  // The Sidebar's Favorites/Archive links land here as /dashboard?view=...
+  // to pre-select a tab, same convention as quickCreate below.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    let handled = false;
     if (params.get("quickCreate") != null) {
       setCreatingNew(true);
-      router.replace("/dashboard", { scroll: false });
+      handled = true;
     }
+    const requestedView = params.get("view");
+    if (requestedView === "favorites" || requestedView === "archive" || requestedView === "trash") {
+      setView(requestedView);
+      handled = true;
+    }
+    if (handled) router.replace("/dashboard", { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -304,7 +320,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       {error && <div className="status-banner status-error" role="alert">⚠️ {error}</div>}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["active", "archive", "trash"].map((v) => (
+        {["active", "favorites", "archive", "trash"].map((v) => (
           <button
             key={v}
             type="button"
@@ -330,6 +346,8 @@ export default function DealList({ initialFolders, initialArchived = [], initial
         <p>
           {view === "active"
             ? "No ledgers yet — create one above to get started."
+            : view === "favorites"
+            ? "No favorites yet — star a ledger to pin it here."
             : view === "archive"
             ? "No archived deals."
             : "Trash is empty."}
@@ -361,7 +379,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {view === "active" && (
+                {(view === "active" || view === "favorites") && (
                   <button
                     type="button"
                     onClick={() => toggleFavorite(deal.id)}
@@ -385,7 +403,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                   <div style={{ fontSize: 12.5, color: "oklch(50% 0.012 264)" }}>Edited {relativeTime(deal.updatedAt)}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" }}>
-                  {view === "active" ? (
+                  {view === "active" || view === "favorites" ? (
                     <>
                       <a
                         href={workspacePath(deal.id)}

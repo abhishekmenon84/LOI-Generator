@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const TABS = [
+const DEFAULT_TABS = [
   { id: "members", label: "Members" },
   { id: "templates", label: "Templates" },
   { id: "branding", label: "Branding" },
@@ -10,13 +10,13 @@ const TABS = [
   { id: "receipts", label: "Receipts" },
 ];
 
-export default function KeeperTabs({ panels }) {
-  const [activeTab, setActiveTab] = useState("members");
+export default function KeeperTabs({ panels, tabs = DEFAULT_TABS }) {
+  const [activeTab, setActiveTab] = useState(tabs[0]?.id || "members");
 
   return (
     <div>
       <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)", marginBottom: 24 }}>
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             type="button"

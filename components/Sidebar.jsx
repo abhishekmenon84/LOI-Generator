@@ -5,21 +5,21 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", glyph: "▦" },
-  { href: "/dashboard", label: "Documents", glyph: "▤" },
+  { href: "/documents", label: "Documents", glyph: "▤" },
   { href: "/templates", label: "Templates", glyph: "▥" },
-  { href: "/keeper", label: "Organization", glyph: "◈" },
-  { href: "/keeper", label: "Settings", glyph: "⚙" },
+  { href: "/contacts", label: "Contacts", glyph: "●" },
+  { href: "/keeper", label: "Organizations", glyph: "◈" },
+  { href: "/inbox", label: "Inbox", glyph: "▧" },
+  { href: "/dashboard?view=favorites", label: "Favorites", glyph: "★" },
+  { href: "/dashboard?view=archive", label: "Archive", glyph: "□" },
+  { href: "/settings", label: "Settings", glyph: "⚙" },
 ];
 
-// De-duplicates the two nav rows that share a route ("Dashboard" and
-// "Documents" both point at /dashboard, since the Kanban board is the
-// same page, not a separate one). Only one of a group of same-href rows
-// is marked active at a time, whichever appears first, so highlighting
-// stays deterministic rather than lighting up two rows for one URL.
 function isActive(href, pathname) {
-  if (href === "/dashboard") return pathname === "/dashboard";
-  if (href === "/keeper") return pathname.startsWith("/keeper");
-  return pathname.startsWith(href);
+  const path = href.split("?")[0];
+  if (path === "/dashboard") return pathname === "/dashboard" && !href.includes("?");
+  if (path === "/keeper") return pathname.startsWith("/keeper");
+  return pathname.startsWith(path);
 }
 
 export default function Sidebar({ org }) {

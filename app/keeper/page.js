@@ -13,7 +13,7 @@ import KeeperTemplates from "../../components/KeeperTemplates";
 import { getTierForSeatCount, quotaForSeatCount } from "../../lib/orgBilling";
 
 export const metadata = {
-  title: "Keeper — Ledgerlot",
+  title: "Settings — Ledgerlot",
 };
 
 export default async function KeeperPage() {
@@ -48,7 +48,7 @@ export default async function KeeperPage() {
       userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
     >
       <div style={{ padding: "32px 28px" }}>
-        <h1>Keeper</h1>
+        <h1>Settings</h1>
         {!org ? (
           <>
             <p>You don&apos;t manage an organization yet. Create one to invite teammates and get shared billing.</p>
@@ -61,6 +61,10 @@ export default async function KeeperPage() {
               <strong>{org.name}</strong> · {org.planTier === "trial" ? "Trial" : org.planTier}
             </p>
             <KeeperTabs
+              tabs={[
+                { id: "members", label: "Members" },
+                { id: "billing", label: "Billing" },
+              ]}
               panels={{
                 members: (
                   <OrgMembersPanel

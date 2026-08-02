@@ -31,6 +31,19 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
   // { folderId, action: "archive" | "trash" | "restore", from: "archive" | "trash" | undefined }
   const [reasonModal, setReasonModal] = useState(null);
 
+  // TopBar's "+" button and the dashboard's own quick-create shortcuts
+  // navigate here with ?quickCreate=1 rather than duplicating this
+  // component's own folder-creation logic -- mirrors DealList.jsx's
+  // identical convention for the personal-tier dashboard.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("quickCreate") != null) {
+      setCreating(true);
+      router.replace("/dashboard", { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function updateStage(folderId, newStage) {
     const prev = folders;
     setFolders((cur) => cur.map((f) => (f.id === folderId ? { ...f, stage: newStage } : f)));

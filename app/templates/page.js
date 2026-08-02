@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
-import { listUserOrgs } from "../../lib/orgAccess";
+import { listUserOrgs, getPrimaryOrgForShell } from "../../lib/orgAccess";
 import AppShell from "../../components/AppShell";
 
 export const metadata = {
@@ -32,17 +32,10 @@ export default async function TemplatesPage() {
       })
     : [];
 
-  // Same "business membership wins, else personal" precedence as
-  // app/dashboard/page.js's isBusiness branch, so the Sidebar's workspace
-  // panel shows the same org here as it would on the dashboard.
-  const primaryOrgSummary = userOrgs.find((o) => !o.isPersonal) || userOrgs.find((o) => o.isPersonal) || null;
-  const primaryOrg = primaryOrgSummary ? await prisma.organization.findUnique({ where: { id: primaryOrgSummary.orgId } }) : null;
+  const primaryOrg = await getPrimaryOrgForShell(session.user.id);
 
   return (
-    <AppShell
-      org={primaryOrg ? { name: primaryOrg.name, isPersonal: primaryOrg.isPersonal, planTier: primaryOrg.planTier } : null}
-      userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
-    >
+    <AppShell org={primaryOrg} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 28px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h1 style={{ margin: 0 }}>Templates</h1>
