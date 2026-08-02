@@ -112,6 +112,13 @@ export default function FolderWorkspacePage() {
   const fileInputRef = useRef(null);
   const [uploadError, setUploadError] = useState(null);
 
+  // "Built-in document" used to hardcode documentType: "purchase_loi" with
+  // no choice at all -- this state backs a small picker (same shape as the
+  // template picker below) so the other two built-in types are actually
+  // reachable instead of every "+ Built-in document" click silently
+  // creating a Purchase LOI.
+  const [builtInPickerOpen, setBuiltInPickerOpen] = useState(false);
+
   // Phase 7b Task 4: "New Ledger from template" picker state. `folder.orgId`
   // is already present in GET /api/folders/[id]'s response (confirmed at
   // app/api/folders/[id]/route.js line 56), so no new route/field is needed
@@ -407,11 +414,12 @@ export default function FolderWorkspacePage() {
     }
   }
 
-  async function handleAddLedger() {
+  async function handleAddLedger(documentType) {
+    setBuiltInPickerOpen(false);
     const res = await fetch("/api/ledgers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folderId, documentType: "purchase_loi" }),
+      body: JSON.stringify({ folderId, documentType }),
     }).catch(() => null);
     if (!res || !res.ok) return;
     const created = await res.json().catch(() => null);
@@ -612,7 +620,7 @@ export default function FolderWorkspacePage() {
           onSelectFile={handleSelectFile}
           onNavigateFolder={handleNavigateFolder}
           onRenameFolder={handleRenameFolder}
-          onAddLedger={handleAddLedger}
+          onAddLedger={() => setBuiltInPickerOpen(true)}
           onAddFromTemplate={handleAddFromTemplate}
           onUploadFile={() => fileInputRef.current?.click()}
           width={`${leftPct}%`}
@@ -698,7 +706,7 @@ export default function FolderWorkspacePage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: "260px" }}>
                 <button
                   type="button"
-                  onClick={handleAddLedger}
+                  onClick={() => setBuiltInPickerOpen(true)}
                   style={{
                     padding: "10px 18px",
                     borderRadius: "9px",
@@ -888,6 +896,56 @@ export default function FolderWorkspacePage() {
             onClose={() => setAuditPanelOpen(false)}
           />
         </>
+      ) : null}
+
+      {/* Built-in document type picker -- same plain overlay/modal
+          convention as the template picker below (fixed full-bleed
+          backdrop, click-outside to close, centered white card). */}
+      {builtInPickerOpen ? (
+        <div
+          onClick={() => setBuiltInPickerOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(30,25,20,.32)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "white", borderRadius: 16, padding: "26px 26px 22px", width: 360, boxShadow: "0 20px 60px rgba(30,25,15,.25)" }}
+          >
+            <div style={{ fontWeight: 750, fontSize: 17, marginBottom: 14 }}>New built-in document</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "18px" }}>
+              {Object.entries(DOC_TYPE_CONFIG)
+                .filter(([type]) => type !== "custom_template")
+                .map(([type, config]) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handleAddLedger(type)}
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      borderRadius: "9px",
+                      border: "1px solid oklch(88% 0.008 60)",
+                      background: "white",
+                      color: "oklch(30% 0.01 264)",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {config.label}
+                  </button>
+                ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setBuiltInPickerOpen(false)}
+                style={{ padding: "9px 16px", borderRadius: 9, border: "none", background: "oklch(94% 0.005 60)", color: "oklch(35% 0.01 264)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {/* Template picker -- same plain overlay/modal convention as
