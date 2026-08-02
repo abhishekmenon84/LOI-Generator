@@ -189,11 +189,54 @@ export default function CustomTemplateFillWizardPage() {
       <div style={{ display: "flex", gap: "24px", alignItems: "flex-start", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 420px", minWidth: "280px" }}>
           {pageImages[currentGroup.page] && (
-            <img
-              src={pageImages[currentGroup.page]}
-              alt={`Page ${currentGroup.page + 1}`}
-              style={{ width: "100%", borderRadius: "8px", border: "1px solid var(--border)" }}
-            />
+            <div style={{ position: "relative" }}>
+              <img
+                src={pageImages[currentGroup.page]}
+                alt={`Page ${currentGroup.page + 1}`}
+                style={{ width: "100%", display: "block", borderRadius: "8px", border: "1px solid var(--border)" }}
+              />
+              {/* Client-side answer overlay -- no server-side stamping round
+                  trip. Positions each answered anchor (from the SAME
+                  anchor list groupAnchorsForWizard already filtered to
+                  this page) directly over the rendered page image using
+                  its existing xPct/yPct/widthPct/heightPct, the identical
+                  percentage-geometry convention AnchorEditor.jsx uses for
+                  placement. Won't match the final PDF's exact font/kerning
+                  (that only happens via stampCustomTemplate at signing
+                  time), but gives immediate visual feedback as you type. */}
+              {currentGroup.items.flatMap((item) => (item.kind === "radioGroup" ? item.anchors : [item.anchor])).map((anchor) => {
+                const answer = answers[anchor.id];
+                const overlayStyle = {
+                  position: "absolute",
+                  left: `${anchor.xPct}%`,
+                  top: `${anchor.yPct}%`,
+                  width: `${anchor.widthPct}%`,
+                  height: `${anchor.heightPct}%`,
+                  display: "flex",
+                  alignItems: "center",
+                  pointerEvents: "none",
+                  overflow: "hidden",
+                  fontSize: "clamp(8px, 1.4vw, 13px)",
+                  color: "oklch(30% 0.15 264)",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                };
+                if (anchor.type === "checkbox" || anchor.type === "radio") {
+                  if (!answer) return null;
+                  return (
+                    <div key={anchor.id} style={{ ...overlayStyle, justifyContent: "center", fontWeight: 800 }}>
+                      ✕
+                    </div>
+                  );
+                }
+                if (typeof answer !== "string" || !answer) return null;
+                return (
+                  <div key={anchor.id} style={overlayStyle}>
+                    {answer}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 

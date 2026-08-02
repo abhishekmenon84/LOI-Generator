@@ -29,6 +29,7 @@ export default function CustomTemplateSignerAssignmentPage() {
 
   const [ledger, setLedger] = useState(null);
   const [template, setTemplate] = useState(null);
+  const [pageImages, setPageImages] = useState([]);
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -93,6 +94,27 @@ export default function CustomTemplateSignerAssignmentPage() {
         seeded[role] = { name: prior?.name || "", email: prior?.email || "" };
       }
       setAssignments(seeded);
+
+      // Client-side page rendering (same approach as the fill wizard and
+      // AnchorEditor.jsx) so the answers already saved via "Edit answers"
+      // can be overlaid directly on the PDF here too -- an <embed> gives
+      // no coordinate system to overlay onto, so this replaces it with a
+      // rendered <img> per page.
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+      const doc = await pdfjsLib.getDocument({ url: templateData.pdfUrl }).promise;
+      const images = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const viewport = page.getViewport({ scale: 1.4 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d");
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        images.push(canvas.toDataURL());
+      }
+      if (!cancelled) setPageImages(images);
     }
 
     load()
@@ -194,14 +216,58 @@ export default function CustomTemplateSignerAssignmentPage() {
       </div>
 
       <div style={{ display: "flex", gap: "24px", alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 480px", minWidth: "320px" }}>
-          {/* Template PDF for reference -- exact <embed> markup/styling
-              reused from FolderFileViewer.jsx rather than reinvented. */}
-          <embed
-            src={template.pdfUrl}
-            type="application/pdf"
-            style={{ width: "100%", height: "500px", borderRadius: "8px", border: "1px solid var(--border)" }}
-          />
+        <div style={{ flex: "1 1 480px", minWidth: "320px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Rendered per-page images (not <embed>) so answers already
+              saved via "Edit answers" can be overlaid directly on the PDF
+              -- an <embed>'s native PDF viewer gives no coordinate system
+              to position an overlay against. Client-side only, same
+              approach as the fill wizard: doesn't match the final PDF's
+              exact font/kerning (that only happens via stampCustomTemplate
+              at signing time), just immediate visual feedback. */}
+          {pageImages.map((src, pageIdx) => (
+            <div key={pageIdx} style={{ position: "relative" }}>
+              <img
+                src={src}
+                alt={`Page ${pageIdx + 1}`}
+                style={{ width: "100%", display: "block", borderRadius: "8px", border: "1px solid var(--border)" }}
+              />
+              {(template.anchors || [])
+                .filter((a) => a.page === pageIdx && a.type !== "signature" && a.type !== "initials")
+                .map((anchor) => {
+                  const answers = ledger?.formData?.customTemplateAnswers || {};
+                  const answer = answers[anchor.id];
+                  const overlayStyle = {
+                    position: "absolute",
+                    left: `${anchor.xPct}%`,
+                    top: `${anchor.yPct}%`,
+                    width: `${anchor.widthPct}%`,
+                    height: `${anchor.heightPct}%`,
+                    display: "flex",
+                    alignItems: "center",
+                    pointerEvents: "none",
+                    overflow: "hidden",
+                    fontSize: "clamp(8px, 1.4vw, 13px)",
+                    color: "oklch(30% 0.15 264)",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                  };
+                  if (anchor.type === "checkbox" || anchor.type === "radio") {
+                    if (!answer) return null;
+                    return (
+                      <div key={anchor.id} style={{ ...overlayStyle, justifyContent: "center", fontWeight: 800 }}>
+                        ✕
+                      </div>
+                    );
+                  }
+                  if (typeof answer !== "string" || !answer) return null;
+                  return (
+                    <div key={anchor.id} style={overlayStyle}>
+                      {answer}
+                    </div>
+                  );
+                })}
+            </div>
+          ))}
         </div>
 
         <form
