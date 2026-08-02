@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 const ACTION_CONFIG = {
-  archive: { icon: "🗄", headline: (name) => `Archive "${name}"?`, confirmLabel: "Archive", confirmBg: "oklch(45% 0.15 300)" },
+  archive: { icon: "🗄", headline: (name) => `Archive "${name}"?`, confirmLabel: "Archive", confirmBg: "oklch(24% 0.015 264)" },
   trash: { icon: "🗑", headline: (name) => `Move "${name}" to Trash?`, confirmLabel: "Move to Trash", confirmBg: "oklch(50% 0.17 25)" },
   restore: { icon: "↩", headline: (name) => `Restore "${name}"?`, confirmLabel: "Restore", confirmBg: "oklch(45% 0.14 155)" },
 };

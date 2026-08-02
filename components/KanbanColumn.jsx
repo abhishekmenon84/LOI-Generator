@@ -6,7 +6,7 @@ import KanbanCard from "./KanbanCard";
 // Exact dot colors from the design handoff's STATUS_META (~L419-426).
 const STATUS_DOTS = {
   draft: "oklch(58% 0.01 264)",
-  active: "oklch(45% 0.15 300)",
+  active: "oklch(24% 0.015 264)",
   pending: "oklch(72% 0.15 75)",
   closed: "oklch(62% 0.15 155)",
   archive: "oklch(60% 0.01 264)",

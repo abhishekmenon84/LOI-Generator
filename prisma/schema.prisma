@@ -341,6 +341,10 @@ model Ledger {
   documentType    String   @default("purchase_loi")
   formData        Json
   locked          Boolean  @default(false)
+  // Document-level archive, distinct from Folder.archivedAt -- archiving a
+  // single Ledger inside a folder does not touch the folder itself or its
+  // other documents.
+  archivedAt      DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -363,6 +367,10 @@ model FolderFile {
   pageCount         Int?
   fieldTier         String   @default("plain") // "plain" | "auto_detected" | "manual"
   formValues        Json?
+  // Document-level archive, distinct from Folder.archivedAt -- archiving a
+  // single uploaded file inside a folder does not touch the folder itself
+  // or its other documents.
+  archivedAt        DateTime?
   uploadedByUserId  String
   uploadedBy        User     @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
   createdAt         DateTime @default(now())

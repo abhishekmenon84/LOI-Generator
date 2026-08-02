@@ -16,11 +16,44 @@ import { useState } from "react";
 
 const DOC_ICONS = { ledger: "📝", file: "📎" };
 
+// Shared archive/restore icon button, used by both LedgerRow and FileRow
+// below -- a single "⊙"/"↺" toggle rather than a bigger menu, since
+// document-level archive only has the one action (unlike Folder-level
+// archive/trash/restore, which needs a reason and a full modal).
+function ArchiveToggleButton({ archived, onToggle, title }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      title={title}
+      style={{
+        border: "none",
+        background: "transparent",
+        color: "oklch(60% 0.01 264)",
+        cursor: "pointer",
+        fontSize: "10px",
+        padding: "2px 4px",
+        flex: "0 0 auto",
+        opacity: 0.7,
+      }}
+    >
+      {archived ? "↺" : "⊙"}
+    </button>
+  );
+}
+
 // Shared Ledger-row rendering, used both for the current folder's own
 // Ledgers and for each subfolder's nested Ledgers (Fix round 1, Important
 // #1) -- kept as one component so both call sites stay visually identical
-// rather than inventing a second treatment.
-function LedgerRow({ doc, isSelected, onSelectLedger }) {
+// rather than inventing a second treatment. Archived rows render greyed
+// out (per doc.archivedAt) and are moved into a separate "Archived"
+// section by the caller -- this component just renders whatever list it's
+// given, active or archived alike.
+function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive }) {
+  const archived = !!doc.archivedAt;
   return (
     <div
       onClick={() => onSelectLedger?.(doc.id, doc.documentType)}
@@ -31,7 +64,8 @@ function LedgerRow({ doc, isSelected, onSelectLedger }) {
         padding: "6px 8px",
         borderRadius: "7px",
         cursor: "pointer",
-        background: isSelected ? "oklch(93% 0.03 300)" : "transparent",
+        background: isSelected ? "oklch(93% 0.012 60)" : "transparent",
+        opacity: archived ? 0.55 : 1,
       }}
     >
       <span style={{ fontSize: "11px", flex: "0 0 auto" }}>{DOC_ICONS.ledger}</span>
@@ -39,23 +73,33 @@ function LedgerRow({ doc, isSelected, onSelectLedger }) {
         style={{
           fontSize: "11px",
           fontWeight: isSelected ? 700 : 500,
-          color: isSelected ? "oklch(45% 0.15 300)" : "oklch(35% 0.01 264)",
+          color: isSelected ? "oklch(24% 0.015 264)" : "oklch(35% 0.01 264)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          flex: 1,
         }}
       >
         {doc.name}
       </span>
+      {onToggleArchive && (
+        <ArchiveToggleButton
+          archived={archived}
+          onToggle={() => onToggleArchive(doc.id, !archived)}
+          title={archived ? "Restore" : "Archive"}
+        />
+      )}
     </div>
   );
 }
 
 // Shared FolderFile-row rendering, parallel to LedgerRow immediately above --
-// same treatment (icon, selection highlight, single click handler), just a
-// distinct 📎 icon and a separate onSelectFile callback/selectedFileId so a
-// FolderFile selection is tracked independently of a Ledger selection.
-function FileRow({ doc, isSelected, onSelectFile }) {
+// same treatment (icon, selection highlight, single click handler, archive
+// toggle), just a distinct 📎 icon and a separate onSelectFile callback/
+// selectedFileId so a FolderFile selection is tracked independently of a
+// Ledger selection.
+function FileRow({ doc, isSelected, onSelectFile, onToggleArchive }) {
+  const archived = !!doc.archivedAt;
   return (
     <div
       onClick={() => onSelectFile?.(doc.id)}
@@ -66,7 +110,8 @@ function FileRow({ doc, isSelected, onSelectFile }) {
         padding: "6px 8px",
         borderRadius: "7px",
         cursor: "pointer",
-        background: isSelected ? "oklch(93% 0.03 300)" : "transparent",
+        background: isSelected ? "oklch(93% 0.012 60)" : "transparent",
+        opacity: archived ? 0.55 : 1,
       }}
     >
       <span style={{ fontSize: "11px", flex: "0 0 auto" }}>{DOC_ICONS.file}</span>
@@ -74,14 +119,22 @@ function FileRow({ doc, isSelected, onSelectFile }) {
         style={{
           fontSize: "11px",
           fontWeight: isSelected ? 700 : 500,
-          color: isSelected ? "oklch(45% 0.15 300)" : "oklch(35% 0.01 264)",
+          color: isSelected ? "oklch(24% 0.015 264)" : "oklch(35% 0.01 264)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          flex: 1,
         }}
       >
         {doc.name}
       </span>
+      {onToggleArchive && (
+        <ArchiveToggleButton
+          archived={archived}
+          onToggle={() => onToggleArchive(doc.id, !archived)}
+          title={archived ? "Restore" : "Archive"}
+        />
+      )}
     </div>
   );
 }
@@ -112,7 +165,7 @@ function FolderRow({ folder, isEditing, editValue, onStartEdit, onEditChange, on
           style={{
             fontSize: fontSize,
             fontWeight,
-            border: "1px solid oklch(80% 0.02 300)",
+            border: "1px solid oklch(88% 0.008 60)",
             borderRadius: "5px",
             padding: "2px 6px",
             outline: "none",
@@ -176,6 +229,8 @@ export default function FolderTreePanel({
   onAddLedger,
   onAddFromTemplate,
   onUploadFile,
+  onToggleLedgerArchive,
+  onToggleFileArchive,
   // CSS length used as the panel's flex-basis (e.g. "10%"), so the three
   // panels stay proportional instead of pinned to pixel widths.
   width = "10%",
@@ -190,6 +245,16 @@ export default function FolderTreePanel({
   const [expandedSubfolders, setExpandedSubfolders] = useState({});
   // Whether the "+ Add" dropdown menu is open. Closed on any option click.
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  // Document-level archive (Ledger.archivedAt / FolderFile.archivedAt) is
+  // distinct from Folder-level archive -- collapsed by default so archived
+  // items don't visually dominate a folder that has several of them.
+  const [archivedSectionOpen, setArchivedSectionOpen] = useState(false);
+
+  const activeLedgers = folderLedgers.filter((d) => !d.archivedAt);
+  const archivedLedgers = folderLedgers.filter((d) => !!d.archivedAt);
+  const activeFiles = files.filter((d) => !d.archivedAt);
+  const archivedFiles = files.filter((d) => !!d.archivedAt);
+  const archivedCount = archivedLedgers.length + archivedFiles.length;
 
   function startEdit(id, currentName) {
     setEditingId(id);
@@ -336,23 +401,27 @@ export default function FolderTreePanel({
                 (documents created directly here, not in a subfolder) render
                 right under this row, reusing the same LedgerRow used for
                 subfolder Ledgers so a new Ledger is always reachable in the
-                tree, not just briefly visible via auto-selection. */}
-            {folderLedgers.length > 0 || files.length > 0 ? (
+                tree, not just briefly visible via auto-selection. Only
+                ACTIVE (non-archived) documents render here -- archived ones
+                move into the separate "Archived" section below. */}
+            {activeLedgers.length > 0 || activeFiles.length > 0 ? (
               <div style={{ paddingLeft: "28px" }}>
-                {folderLedgers.map((doc) => (
+                {activeLedgers.map((doc) => (
                   <LedgerRow
                     key={doc.id}
                     doc={doc}
                     isSelected={selectedLedgerId === doc.id}
                     onSelectLedger={onSelectLedger}
+                    onToggleArchive={onToggleLedgerArchive}
                   />
                 ))}
-                {files.map((doc) => (
+                {activeFiles.map((doc) => (
                   <FileRow
                     key={doc.id}
                     doc={doc}
                     isSelected={selectedFileId === doc.id}
                     onSelectFile={onSelectFile}
+                    onToggleArchive={onToggleFileArchive}
                   />
                 ))}
               </div>
@@ -403,7 +472,7 @@ export default function FolderTreePanel({
                     style={{
                       fontSize: "11.5px",
                       fontWeight: 650,
-                      border: "1px solid oklch(80% 0.02 300)",
+                      border: "1px solid oklch(88% 0.008 60)",
                       borderRadius: "5px",
                       padding: "2px 6px",
                       outline: "none",
@@ -455,6 +524,7 @@ export default function FolderTreePanel({
                       doc={doc}
                       isSelected={selectedLedgerId === doc.id}
                       onSelectLedger={onSelectLedger}
+                      onToggleArchive={onToggleLedgerArchive}
                     />
                   ))}
                   {sfFiles.map((doc) => (
@@ -463,6 +533,7 @@ export default function FolderTreePanel({
                       doc={doc}
                       isSelected={selectedFileId === doc.id}
                       onSelectFile={onSelectFile}
+                      onToggleArchive={onToggleFileArchive}
                     />
                   ))}
                 </div>
@@ -471,6 +542,56 @@ export default function FolderTreePanel({
           );
         })}
       </div>
+
+      {/* Document-level archive section -- current-folder-only (per the
+          product ask: "not archiving the folder, just documents inside"),
+          collapsed by default, sitting in the lower-left above "+ Add" so
+          archived items stay out of the way without needing a whole
+          separate Archive folder/route. */}
+      {archivedCount > 0 && (
+        <div style={{ padding: "0 10px 10px", borderTop: "1px solid oklch(93% 0.006 60)" }}>
+          <div
+            onClick={() => setArchivedSectionOpen((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "10px 4px 6px",
+              cursor: "pointer",
+              fontSize: "10px",
+              fontWeight: 700,
+              color: "oklch(58% 0.01 264)",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            <span>{archivedSectionOpen ? "▾" : "▸"}</span>
+            <span>Archived ({archivedCount})</span>
+          </div>
+          {archivedSectionOpen && (
+            <div>
+              {archivedLedgers.map((doc) => (
+                <LedgerRow
+                  key={doc.id}
+                  doc={doc}
+                  isSelected={selectedLedgerId === doc.id}
+                  onSelectLedger={onSelectLedger}
+                  onToggleArchive={onToggleLedgerArchive}
+                />
+              ))}
+              {archivedFiles.map((doc) => (
+                <FileRow
+                  key={doc.id}
+                  doc={doc}
+                  isSelected={selectedFileId === doc.id}
+                  onSelectFile={onSelectFile}
+                  onToggleArchive={onToggleFileArchive}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* "+ Add" affordance -- a single button that opens a small inline
           dropdown menu with the three add-options, per this component's
@@ -493,7 +614,7 @@ export default function FolderTreePanel({
             padding: "9px 10px",
             borderRadius: "8px",
             border: "none",
-            background: "oklch(45% 0.15 300)",
+            background: "oklch(24% 0.015 264)",
             color: "white",
             fontWeight: 600,
             fontSize: "11px",

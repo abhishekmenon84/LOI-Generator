@@ -115,6 +115,7 @@ export async function GET(request, { params }) {
     fieldTier: file.fieldTier,
     formValues: file.formValues,
     anchors: file.anchors,
+    archivedAt: file.archivedAt ? file.archivedAt.toISOString() : null,
     readOnly: !file._writeAccess,
   });
 }
@@ -137,6 +138,9 @@ export async function PATCH(request, { params }) {
   if (body.formValues && typeof body.formValues === "object") {
     data.formValues = body.formValues;
   }
+  // Document-level archive -- distinct from Folder.archivedAt (see
+  // prisma/schema.prisma's comment on FolderFile.archivedAt).
+  if (typeof body.archived === "boolean") data.archivedAt = body.archived ? new Date() : null;
   let sanitizedAnchors = null;
   if (Array.isArray(body.anchors)) {
     await prisma.folderFileAnchor.deleteMany({ where: { folderFileId: file.id } });
@@ -173,6 +177,7 @@ export async function PATCH(request, { params }) {
     fieldTier: updated.fieldTier,
     formValues: updated.formValues,
     anchors: updated.anchors,
+    archivedAt: updated.archivedAt ? updated.archivedAt.toISOString() : null,
     readOnly: !file._writeAccess,
   });
 }

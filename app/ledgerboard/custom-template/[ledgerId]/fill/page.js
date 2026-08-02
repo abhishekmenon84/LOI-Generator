@@ -182,7 +182,7 @@ export default function CustomTemplateFillWizardPage() {
           <button
             type="button"
             onClick={() => router.push(`/ledgerboard/folder/${ledger.folderId}`)}
-            style={{ marginBottom: "10px", background: "none", border: "none", padding: 0, color: "oklch(45% 0.15 300)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
+            style={{ marginBottom: "10px", background: "none", border: "none", padding: 0, color: "oklch(24% 0.015 264)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
           >
             ← Back to folder
           </button>
@@ -332,7 +332,7 @@ export default function CustomTemplateFillWizardPage() {
                 padding: "10px 18px",
                 borderRadius: "9px",
                 border: "none",
-                background: "oklch(45% 0.15 300)",
+                background: "oklch(24% 0.015 264)",
                 color: "white",
                 fontWeight: 600,
                 fontSize: "13px",

@@ -10,7 +10,7 @@ import Link from "next/link";
 // the current folder becomes a link too and the selected document name
 // becomes the new bold/static trailing segment.
 export default function FolderBreadcrumb({ ancestors = [], current, selectedDocName }) {
-  const activeColor = "oklch(45% 0.15 300)";
+  const activeColor = "oklch(24% 0.015 264)";
   const staticColor = "oklch(30% 0.01 264)";
   const sepColor = "oklch(75% 0.01 264)";
 

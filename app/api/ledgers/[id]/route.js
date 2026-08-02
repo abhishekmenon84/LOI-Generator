@@ -27,6 +27,7 @@ export async function GET(request, { params }) {
     documentType: ledger.documentType,
     formData: ledger.formData,
     locked: ledger.locked,
+    archivedAt: ledger.archivedAt ? ledger.archivedAt.toISOString() : null,
     readOnly: !ledger._writeAccess,
   });
 }
@@ -51,7 +52,11 @@ export async function PATCH(request, { params }) {
   const data = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
   if (body.formData && typeof body.formData === "object") data.formData = body.formData;
+  // Document-level archive -- distinct from Folder.archivedAt (see
+  // prisma/schema.prisma's comment on Ledger.archivedAt): archiving a
+  // single Ledger doesn't touch its folder or sibling documents.
+  if (typeof body.archived === "boolean") data.archivedAt = body.archived ? new Date() : null;
 
   const updated = await prisma.ledger.update({ where: { id: ledger.id }, data });
-  return NextResponse.json({ id: updated.id, name: updated.name, updatedAt: updated.updatedAt });
+  return NextResponse.json({ id: updated.id, name: updated.name, archivedAt: updated.archivedAt ? updated.archivedAt.toISOString() : null, updatedAt: updated.updatedAt });
 }

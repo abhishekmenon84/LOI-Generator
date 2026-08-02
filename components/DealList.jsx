@@ -395,7 +395,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
                       {meta.badge}
                     </span>
                     {deal.isShared && (
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2.5px 9px", borderRadius: 20, background: "oklch(93% 0.04 300)", color: "oklch(40% 0.13 300)" }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2.5px 9px", borderRadius: 20, background: "oklch(93% 0.012 60)", color: "oklch(24% 0.015 264)" }}>
                         {deal.writeAccess ? "Shared (can edit)" : "Shared (view only)"}
                       </span>
                     )}

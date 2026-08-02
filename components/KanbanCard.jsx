@@ -10,7 +10,7 @@ const TYPE_META = {
   purchase_loi: { label: "Purchase LOI", accent: "oklch(62% 0.15 75)", bg: "oklch(94% 0.06 75)", fg: "oklch(42% 0.13 75)" },
   commercial_lease: { label: "Commercial Lease", accent: "oklch(60% 0.13 235)", bg: "oklch(93% 0.04 235)", fg: "oklch(40% 0.12 235)" },
   residential_lease: { label: "Residential Lease", accent: "oklch(62% 0.14 155)", bg: "oklch(94% 0.05 155)", fg: "oklch(38% 0.12 155)" },
-  custom_template: { label: "Custom Template", accent: "oklch(58% 0.14 300)", bg: "oklch(93% 0.04 300)", fg: "oklch(40% 0.13 300)" },
+  custom_template: { label: "Custom Template", accent: "oklch(50% 0.012 264)", bg: "oklch(93% 0.012 60)", fg: "oklch(24% 0.015 264)" },
 };
 const DEFAULT_TYPE_META = TYPE_META.custom_template;
 
@@ -21,7 +21,7 @@ function typeMeta(documentType) {
 // Exact OKLCH values from the design handoff's STATUS_META (~L419-426).
 const STATUS_META = {
   draft: { label: "Draft", dot: "oklch(58% 0.01 264)", bg: "oklch(92% 0.006 264)", fg: "oklch(42% 0.01 264)" },
-  active: { label: "Active", dot: "oklch(45% 0.15 300)", bg: "oklch(93% 0.04 300)", fg: "oklch(40% 0.13 300)" },
+  active: { label: "Active", dot: "oklch(24% 0.015 264)", bg: "oklch(93% 0.012 60)", fg: "oklch(24% 0.015 264)" },
   pending: { label: "Pending", dot: "oklch(72% 0.15 75)", bg: "oklch(94% 0.06 75)", fg: "oklch(42% 0.13 75)" },
   closed: { label: "Closed", dot: "oklch(62% 0.15 155)", bg: "oklch(94% 0.05 155)", fg: "oklch(38% 0.12 155)" },
   archive: { label: "Archived", dot: "oklch(60% 0.01 264)", bg: "oklch(92% 0.006 264)", fg: "oklch(45% 0.01 264)" },
@@ -242,7 +242,7 @@ export default function KanbanCard({
               e.stopPropagation();
               setExpanded((v) => !v);
             }}
-            style={{ border: "none", background: "oklch(94% 0.02 300)", color: "oklch(42% 0.13 300)", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, cursor: "pointer" }}
+            style={{ border: "none", background: "oklch(93% 0.012 60)", color: "oklch(24% 0.015 264)", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, cursor: "pointer" }}
           >
             {childThreads.length} sub folder{childThreads.length === 1 ? "" : "s"} {expanded ? "▲" : "▼"}
           </button>

@@ -369,6 +369,36 @@ export default function FolderWorkspacePage() {
     setEditingFileFields(false);
   }
 
+  // Document-level archive/restore (Ledger.archivedAt) -- distinct from
+  // Folder-level archive, which has its own reason-modal flow elsewhere.
+  // Updates folderLedgers optimistically so the tree's Active/Archived
+  // split reflects the change immediately; reverts on failure.
+  async function handleToggleLedgerArchive(ledgerId, archived) {
+    const prev = folderLedgers;
+    setFolderLedgers((cur) => cur.map((l) => (l.id === ledgerId ? { ...l, archivedAt: archived ? new Date().toISOString() : null } : l)));
+    const res = await fetch(`/api/ledgers/${ledgerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setFolderLedgers(prev);
+    }
+  }
+
+  async function handleToggleFileArchive(fileId, archived) {
+    const prev = folderFiles;
+    setFolderFiles((cur) => cur.map((f) => (f.id === fileId ? { ...f, archivedAt: archived ? new Date().toISOString() : null } : f)));
+    const res = await fetch(`/api/folders/files/${fileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setFolderFiles(prev);
+    }
+  }
+
   function handleFieldChange(anchorId, value) {
     setFileData((prev) => (prev ? { ...prev, formValues: { ...(prev.formValues || {}), [anchorId]: value } } : prev));
   }
@@ -664,6 +694,8 @@ export default function FolderWorkspacePage() {
           onAddLedger={() => setBuiltInPickerOpen(true)}
           onAddFromTemplate={handleAddFromTemplate}
           onUploadFile={() => fileInputRef.current?.click()}
+          onToggleLedgerArchive={handleToggleLedgerArchive}
+          onToggleFileArchive={handleToggleFileArchive}
           width={`${leftPct}%`}
         />
 
@@ -763,7 +795,7 @@ export default function FolderWorkspacePage() {
                     padding: "10px 18px",
                     borderRadius: "9px",
                     border: "none",
-                    background: "oklch(45% 0.15 300)",
+                    background: "oklch(24% 0.015 264)",
                     color: "white",
                     fontWeight: 600,
                     fontSize: "13.5px",
@@ -1040,7 +1072,7 @@ export default function FolderWorkspacePage() {
                       padding: "10px 12px",
                       borderRadius: "9px",
                       border: "1px solid oklch(88% 0.008 60)",
-                      background: creatingFromTemplateId === t.id ? "oklch(93% 0.03 300)" : "white",
+                      background: creatingFromTemplateId === t.id ? "oklch(93% 0.012 60)" : "white",
                       color: "oklch(30% 0.01 264)",
                       fontSize: "13px",
                       fontWeight: 600,

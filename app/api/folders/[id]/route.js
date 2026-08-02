@@ -37,14 +37,14 @@ export async function GET(request, { params }) {
   // Mirrors the `ledgers` enrichment already added to GET /api/folders.
   const ledgers = await prisma.ledger.findMany({
     where: { folderId: folder.id },
-    select: { id: true, name: true, documentType: true },
+    select: { id: true, name: true, documentType: true, archivedAt: true },
   });
 
   // Phase 7 Task 6: this folder's own FolderFiles (uploaded directly here,
   // not in a subfolder), mirroring the `ledgers` fetch immediately above.
   const files = await prisma.folderFile.findMany({
     where: { folderId: folder.id },
-    select: { id: true, name: true, mimeType: true, fieldTier: true },
+    select: { id: true, name: true, mimeType: true, fieldTier: true, archivedAt: true },
   });
 
   return NextResponse.json({
@@ -57,8 +57,8 @@ export async function GET(request, { params }) {
     orgId: folder.orgId,
     readOnly: !folder._writeAccess,
     ancestors,
-    ledgers,
-    files,
+    ledgers: ledgers.map((l) => ({ ...l, archivedAt: l.archivedAt ? l.archivedAt.toISOString() : null })),
+    files: files.map((f) => ({ ...f, archivedAt: f.archivedAt ? f.archivedAt.toISOString() : null })),
   });
 }
 
