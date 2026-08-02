@@ -469,6 +469,18 @@ export default function FolderWorkspacePage() {
     router.push(`/ledgerboard/folder/${id}`);
   }
 
+  async function handleToggleRestricted() {
+    const next = !folder.restrictedToParticipants;
+    const res = await fetch(`/api/folders/${folder.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restrictedToParticipants: next }),
+    }).catch(() => null);
+    if (res && res.ok) {
+      setFolder((f) => (f ? { ...f, restrictedToParticipants: next } : f));
+    }
+  }
+
   async function handleRenameFolder(id, name) {
     await fetch(`/api/folders/${id}`, {
       method: "PATCH",
@@ -652,6 +664,25 @@ export default function FolderWorkspacePage() {
         current={{ name: folder.name }}
         selectedDocName={ledger ? ledger.name : undefined}
       />
+
+      {folder.isCreator ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 20px",
+            fontSize: "12px",
+            color: "oklch(45% 0.01 264)",
+            borderBottom: "1px solid oklch(90% 0.01 60)",
+          }}
+        >
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+            <input type="checkbox" checked={!!folder.restrictedToParticipants} onChange={handleToggleRestricted} />
+            Restrict to invited participants only (hides this folder from other org admins)
+          </label>
+        </div>
+      ) : null}
 
       {uploadError ? (
         <div

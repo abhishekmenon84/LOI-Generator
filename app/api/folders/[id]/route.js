@@ -56,6 +56,8 @@ export async function GET(request, { params }) {
     parentFolderId: folder.parentFolderId,
     orgId: folder.orgId,
     readOnly: !folder._writeAccess,
+    restrictedToParticipants: folder.restrictedToParticipants,
+    isCreator: folder.createdByUserId === session.user.id,
     ancestors,
     ledgers: ledgers.map((l) => ({ ...l, archivedAt: l.archivedAt ? l.archivedAt.toISOString() : null })),
     files: files.map((f) => ({ ...f, archivedAt: f.archivedAt ? f.archivedAt.toISOString() : null })),
@@ -81,7 +83,16 @@ export async function PATCH(request, { params }) {
   if (typeof body.stage === "string" && VALID_STAGES.includes(body.stage)) data.stage = body.stage;
   if (body.priority === null || ["green", "yellow", "grey"].includes(body.priority)) data.priority = body.priority;
   if (typeof body.favorite === "boolean") data.favorite = body.favorite;
+  if (typeof body.restrictedToParticipants === "boolean") {
+    // Only the folder's creator can toggle this -- it's a confidentiality
+    // decision (excluding org admins from seeing the folder), not a routine
+    // edit any writer should be able to flip.
+    if (folder.createdByUserId !== session.user.id) {
+      return NextResponse.json({ error: "Only this folder's creator can change its visibility restriction." }, { status: 403 });
+    }
+    data.restrictedToParticipants = body.restrictedToParticipants;
+  }
 
   const updated = await prisma.folder.update({ where: { id: folder.id }, data });
-  return NextResponse.json({ id: updated.id, name: updated.name, stage: updated.stage, priority: updated.priority, favorite: updated.favorite, updatedAt: updated.updatedAt });
+  return NextResponse.json({ id: updated.id, name: updated.name, stage: updated.stage, priority: updated.priority, favorite: updated.favorite, restrictedToParticipants: updated.restrictedToParticipants, updatedAt: updated.updatedAt });
 }

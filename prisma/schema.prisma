@@ -291,6 +291,14 @@ model Folder {
   stage           String    @default("draft") // "draft" | "active" | "pending" | "closed"
   priority        String?   // "green" | "yellow" | "grey" | null
   favorite        Boolean   @default(false)
+  // Opt-in, defaults false (no behavior change for existing folders). When
+  // true, org admins no longer get automatic blanket access to this one
+  // folder purely by virtue of being an admin -- only the creator and
+  // explicit FolderParticipant grants can see it. Lets a brokerage keep a
+  // specific client's deal confidential from other admins/staff in the
+  // same org, without changing the default (every admin sees everything)
+  // for every other folder.
+  restrictedToParticipants Boolean @default(false)
   archivedAt      DateTime?
   parentFolderId  String?
   parent          Folder?   @relation("FolderTree", fields: [parentFolderId], references: [id], onDelete: Cascade)
