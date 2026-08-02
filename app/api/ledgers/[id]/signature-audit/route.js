@@ -48,6 +48,7 @@ export async function GET(request, { params }) {
       createdAt: r.createdAt,
       voidedAt: r.voidedAt,
       finalDocumentHash: r.finalDocumentHash,
+      deliveryError: r.deliveryError,
       signers: r.signers.map((s) => ({
         kind: s.kind,
         name: s.name,

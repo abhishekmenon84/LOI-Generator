@@ -1,6 +1,21 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   // Next's client-side Router Cache otherwise keeps a dynamic page's RSC
   // payload for 30s on <Link>/back-forward navigation -- structural changes
   // made elsewhere (unnesting a folder, archiving, etc.) wouldn't show up
@@ -39,4 +54,12 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Fully inert (no-op wrapper) until SENTRY_AUTH_TOKEN/org/project are set --
+// safe to ship ahead of a real Sentry project existing.
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+});

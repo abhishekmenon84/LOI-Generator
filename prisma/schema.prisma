@@ -237,6 +237,10 @@ model SignatureRequest {
   finalDocumentHash String?
   createdAt   DateTime @default(now())
   voidedAt    DateTime?
+  // Set if the post-signing PDF burn or completion email failed after the
+  // request was already marked fully_executed -- surfaces the failure to
+  // admins instead of it being silently swallowed (see signatureFinalize.js).
+  deliveryError String?
 
   signers SignerSlot[]
 

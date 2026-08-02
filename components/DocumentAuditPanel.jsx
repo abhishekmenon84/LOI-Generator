@@ -43,6 +43,11 @@ export default function DocumentAuditPanel({ ledgerId, isOpen, onClose }) {
                 Final document hash: {r.finalDocumentHash}
               </p>
             )}
+            {r.deliveryError && (
+              <div className="status-banner status-error" role="alert" style={{ marginBottom: 8, fontSize: "0.8rem" }}>
+                ⚠️ The document was fully signed, but the completion email failed to send: {r.deliveryError}
+              </div>
+            )}
             {/* Name + role + status + timestamps only -- IP address,
                 geolocation, device/browser string, and email are collected
                 and retained in the database for legal/compliance defense
