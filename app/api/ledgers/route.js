@@ -4,7 +4,7 @@ import { prisma } from "../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../lib/folderAccess";
 import { getOrgLimits, checkAndIncrementUsage } from "../../../lib/orgBilling";
 
-const VALID_DOC_TYPES = ["purchase_loi", "commercial_lease", "residential_lease", "custom_template"];
+const VALID_DOC_TYPES = ["purchase_loi", "commercial_lease", "residential_lease", "custom_template", "form_template"];
 
 export async function POST(request) {
   const session = await auth();
@@ -31,6 +31,16 @@ export async function POST(request) {
   }
   if (!folder._writeAccess) {
     return NextResponse.json({ error: "You only have read access to this folder." }, { status: 403 });
+  }
+
+  if (documentType === "form_template") {
+    if (!templateId) {
+      return NextResponse.json({ error: "A templateId is required for a form_template Ledger." }, { status: 400 });
+    }
+    const template = await prisma.formTemplate.findUnique({ where: { id: templateId } });
+    if (!template || template.orgId !== folder.orgId) {
+      return NextResponse.json({ error: "Template not found." }, { status: 404 });
+    }
   }
 
   const org = await prisma.organization.findUnique({ where: { id: folder.orgId } });

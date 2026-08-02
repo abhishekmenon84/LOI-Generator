@@ -3,15 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Shared "view + add to folder" modal for both built-in document types and
-// CustomTemplate rows on /templates -- the two template systems that
-// already have a real, working path all the way to a signable Ledger
-// (FormTemplate does not; see app/templates/page.js's comment on that gap).
-// `kind` is "built-in" (documentType is one of VALID_DOC_TYPES directly) or
-// "custom_template" (documentType is always "custom_template", with the
-// actual CustomTemplate.id stashed into Ledger.formData.templateId via a
-// second PATCH, matching handlePickTemplate's existing convention in
-// app/ledgerboard/folder/[folderId]/page.js).
+// Shared "view + add to folder" modal for built-in document types,
+// CustomTemplate rows, and FormTemplate rows on /templates -- all three now
+// have a real, working path to a signable Ledger. `kind` is "built-in"
+// (documentType is one of VALID_DOC_TYPES directly), "custom_template"
+// (documentType is always "custom_template", with the actual
+// CustomTemplate.id stashed into Ledger.formData.templateId via a second
+// PATCH, matching handlePickTemplate's existing convention in
+// app/ledgerboard/folder/[folderId]/page.js), or "form_template"
+// (documentType "form_template", with the FormTemplate.id passed as the
+// real Ledger.templateId field directly at creation -- see
+// app/api/ledgers/route.js). CustomTemplate and FormTemplate both route to
+// the same signer-assignment page afterward: GET /api/orgs/[id]/templates/
+// [templateId] normalizes either template type to the same response shape
+// (lib/templateAdapter.js), so that page works unchanged for both.
 export default function AddTemplateToFolderModal({ template, kind, onClose }) {
   const router = useRouter();
   const [folders, setFolders] = useState(null);
@@ -32,12 +37,15 @@ export default function AddTemplateToFolderModal({ template, kind, onClose }) {
     setCreating(true);
     setCreateError(null);
     try {
-      const documentType = kind === "built-in" ? template.value : "custom_template";
+      const documentType = kind === "built-in" ? template.value : kind;
       const name = kind === "built-in" ? template.label : template.name;
+      const body = { folderId: selectedFolderId, documentType, name };
+      if (kind === "form_template") body.templateId = template.id;
+
       const res = await fetch("/api/ledgers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folderId: selectedFolderId, documentType, name }),
+        body: JSON.stringify(body),
       });
       const created = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(created.error || "Could not create the document.");
@@ -49,6 +57,10 @@ export default function AddTemplateToFolderModal({ template, kind, onClose }) {
           body: JSON.stringify({ formData: { templateId: template.id } }),
         });
         if (!patchRes.ok) throw new Error("Could not set up the template on this document.");
+        router.push(`/ledgerboard/custom-template/${created.id}`);
+        return;
+      }
+      if (kind === "form_template") {
         router.push(`/ledgerboard/custom-template/${created.id}`);
         return;
       }
@@ -76,7 +88,7 @@ export default function AddTemplateToFolderModal({ template, kind, onClose }) {
           {kind === "built-in" ? "Built-in document" : `${template.pageCount} page${template.pageCount === 1 ? "" : "s"} · ${template.fieldCount} field${template.fieldCount === 1 ? "" : "s"}`}
         </div>
 
-        {kind === "custom_template" && template.pdfUrl && (
+        {kind !== "built-in" && template.pdfUrl && (
           <embed
             src={template.pdfUrl}
             type="application/pdf"

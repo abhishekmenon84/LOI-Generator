@@ -5,6 +5,7 @@ import { prisma } from "../../lib/prisma";
 import { listUserOrgs, getPrimaryOrgForShell } from "../../lib/orgAccess";
 import AppShell from "../../components/AppShell";
 import TemplateRow from "../../components/TemplateRow";
+import UseFormTemplateButton from "../../components/UseFormTemplateButton";
 
 export const metadata = {
   title: "Templates — Ledgerlot",
@@ -49,12 +50,13 @@ export default async function TemplatesPage() {
 
   // CustomTemplate is a second, older template system (KeeperTemplates.jsx,
   // and the auto-promotion in PATCH /api/folders/files/[fileId] when a
-  // user places anchors on an uploaded PDF). It has no dedicated detail
-  // page of its own yet -- unlike FormTemplate rows, these render as
-  // non-clickable cards below.
+  // user places anchors on an uploaded PDF). Unlike FormTemplate (shared
+  // org-wide), a CustomTemplate is private to whoever created it -- scoped
+  // to the current user here, matching the same restriction enforced
+  // server-side by GET/PATCH/DELETE /api/orgs/[id]/templates[/...].
   const customTemplates = orgIds.length > 0
     ? await prisma.customTemplate.findMany({
-        where: { orgId: { in: orgIds } },
+        where: { orgId: { in: orgIds }, createdByUserId: session.user.id },
         orderBy: { createdAt: "desc" },
         include: { _count: { select: { anchors: true } }, createdBy: { select: { name: true, email: true } } },
         // pdfUrl is a plain scalar field (already included by default), kept
@@ -143,19 +145,22 @@ export default async function TemplatesPage() {
                     {t.pageCount} page{t.pageCount === 1 ? "" : "s"} · {t._count.fields} field{t._count.fields === 1 ? "" : "s"}
                   </div>
                 </div>
-                <span
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    background: "var(--bg-panel)",
-                    border: "1px solid var(--border)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {sourceLabelFor(t)}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      background: "var(--bg-panel)",
+                      border: "1px solid var(--border)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {sourceLabelFor(t)}
+                  </span>
+                  <UseFormTemplateButton template={{ id: t.id, name: t.name, pdfUrl: t.pdfUrl, pageCount: t.pageCount, fieldCount: t._count.fields }} />
+                </div>
               </Link>
             ))}
           </div>

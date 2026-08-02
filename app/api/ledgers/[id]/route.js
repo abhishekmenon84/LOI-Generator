@@ -25,6 +25,7 @@ export async function GET(request, { params }) {
     folderId: ledger.folderId,
     name: ledger.name,
     documentType: ledger.documentType,
+    templateId: ledger.templateId,
     formData: ledger.formData,
     locked: ledger.locked,
     archivedAt: ledger.archivedAt ? ledger.archivedAt.toISOString() : null,

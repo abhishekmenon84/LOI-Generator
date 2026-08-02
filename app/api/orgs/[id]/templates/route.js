@@ -77,8 +77,11 @@ export async function GET(request, { params }) {
   if (!membership) {
     return NextResponse.json({ error: "You are not a member of that organization." }, { status: 403 });
   }
+  // CustomTemplate is private to the user who created it (unlike
+  // FormTemplate, which is shared org-wide) -- an org admin does not get to
+  // browse every member's custom templates just by being an admin.
   const templates = await prisma.customTemplate.findMany({
-    where: { orgId: params.id },
+    where: { orgId: params.id, createdByUserId: session.user.id },
     select: { id: true, name: true, pageCount: true },
     orderBy: { createdAt: "desc" },
   });

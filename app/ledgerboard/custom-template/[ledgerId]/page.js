@@ -59,7 +59,10 @@ export default function CustomTemplateSignerAssignmentPage() {
       if (cancelled) return;
       setLedger(ledgerData);
 
-      const templateId = ledgerData.formData?.templateId;
+      // custom_template stores its template reference in formData.templateId
+      // (set via a follow-up PATCH after creation); form_template uses the
+      // real Ledger.templateId FK instead, set directly at creation time.
+      const templateId = ledgerData.documentType === "form_template" ? ledgerData.templateId : ledgerData.formData?.templateId;
       if (!templateId) throw new Error("This Ledger has no associated template.");
 
       // 2. Ledger.folderId -> Folder -> orgId
@@ -151,12 +154,20 @@ export default function CustomTemplateSignerAssignmentPage() {
       email: v.email || "",
     }));
 
+    // formData is replaced wholesale by the PATCH route (not merged), so the
+    // existing answers (customTemplateAnswers/formTemplateAnswers, saved via
+    // the fill wizard) must be carried forward here, not dropped.
+    const isFormTemplate = ledger?.documentType === "form_template";
+    const nextFormData = {
+      ...(ledger?.formData || {}),
+      ...(isFormTemplate ? {} : { templateId: template.id }),
+      signerRoleAssignments,
+    };
+
     const res = await fetch(`/api/ledgers/${ledgerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        formData: { templateId: template.id, signerRoleAssignments },
-      }),
+      body: JSON.stringify({ formData: nextFormData }),
     }).catch(() => null);
 
     setSaving(false);
@@ -320,7 +331,8 @@ export default function CustomTemplateSignerAssignmentPage() {
                     );
                   }
 
-                  const answers = ledger?.formData?.customTemplateAnswers || {};
+                  const answersKey = ledger?.documentType === "form_template" ? "formTemplateAnswers" : "customTemplateAnswers";
+                  const answers = ledger?.formData?.[answersKey] || {};
                   const answer = answers[anchor.id];
                   if (anchor.type === "checkbox" || anchor.type === "radio") {
                     if (!answer) return null;

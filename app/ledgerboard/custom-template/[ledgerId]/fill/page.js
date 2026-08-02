@@ -33,7 +33,10 @@ export default function CustomTemplateFillWizardPage() {
       if (cancelled) return;
       setLedger(ledgerData);
 
-      const templateId = ledgerData.formData?.templateId;
+      // custom_template stores its template reference in formData.templateId;
+      // form_template uses the real Ledger.templateId FK instead (see the
+      // signer-assignment page's identical comment for why).
+      const templateId = ledgerData.documentType === "form_template" ? ledgerData.templateId : ledgerData.formData?.templateId;
       if (!templateId) throw new Error("This Ledger has no associated template.");
 
       const folderRes = await fetch(`/api/folders/${ledgerData.folderId}`).catch(() => null);
@@ -49,7 +52,8 @@ export default function CustomTemplateFillWizardPage() {
       if (cancelled) return;
       setTemplate(templateData);
 
-      const existingAnswers = ledgerData.formData?.customTemplateAnswers || {};
+      const answersKey = ledgerData.documentType === "form_template" ? "formTemplateAnswers" : "customTemplateAnswers";
+      const existingAnswers = ledgerData.formData?.[answersKey] || {};
       setAnswers(existingAnswers);
 
       // Client-side page rendering, same approach as components/AnchorEditor.jsx
@@ -108,12 +112,20 @@ export default function CustomTemplateFillWizardPage() {
     setSaving(true);
     setSaveError(null);
     try {
+      const isFormTemplate = ledger?.documentType === "form_template";
+      const answersKey = isFormTemplate ? "formTemplateAnswers" : "customTemplateAnswers";
+      // formData is replaced wholesale by the PATCH route, not merged --
+      // carry forward whatever's already there (e.g. signerRoleAssignments
+      // saved from the assignment screen) instead of dropping it.
+      const nextFormData = {
+        ...(ledger?.formData || {}),
+        ...(isFormTemplate ? {} : { templateId: template.id }),
+        [answersKey]: answers,
+      };
       const res = await fetch(`/api/ledgers/${ledgerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          formData: { templateId: template.id, customTemplateAnswers: answers },
-        }),
+        body: JSON.stringify({ formData: nextFormData }),
       });
       if (!res.ok) throw new Error("Could not save your answers. Please try again.");
       return true;

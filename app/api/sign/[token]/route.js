@@ -1,30 +1,9 @@
 import { NextResponse } from "next/server";
-import path from "path";
 import { prisma } from "../../../../lib/prisma";
 import { hashDocument } from "../../../../lib/signatureEngine";
 import { lookupGeo } from "../../../../lib/geoLookup";
-import { buildLOIModel } from "../../../../lib/loiEngine";
-import { buildLeaseModel } from "../../../../lib/leaseEngine";
-import { buildResidentialLeaseModel } from "../../../../lib/residentialLeaseEngine";
-import { buildLOIPdf, buildLeasePdf, buildResidentialLeasePdf } from "../../../../lib/pdfBuilder";
-import { mergePdfBuffers } from "../../../../lib/pdfMerge";
+import { buildDealPdf } from "../../../../lib/dealPdfBuilder";
 import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
-
-const ATTACHMENT_A_PATH = path.join(process.cwd(), "public", "legal", "nb-residential-lease-attachment-a.pdf");
-
-async function buildDealPdf(ledger) {
-  if (ledger.documentType === "purchase_loi") {
-    return buildLOIPdf(buildLOIModel(ledger.formData));
-  }
-  if (ledger.documentType === "commercial_lease") {
-    return buildLeasePdf(buildLeaseModel(ledger.formData));
-  }
-  if (ledger.documentType === "residential_lease") {
-    const generated = await buildResidentialLeasePdf(buildResidentialLeaseModel(ledger.formData));
-    return mergePdfBuffers(generated, ATTACHMENT_A_PATH);
-  }
-  throw new Error("Unsupported document type.");
-}
 
 async function loadSlotByToken(token) {
   const slot = await prisma.signerSlot.findUnique({
