@@ -10,7 +10,7 @@ import SubscribeButtons from "../../components/SubscribeButtons";
 import KeeperTabs from "../../components/KeeperTabs";
 import KeeperReceipts from "../../components/KeeperReceipts";
 import KeeperTemplates from "../../components/KeeperTemplates";
-import { BUSINESS_SEAT_TIERS } from "../../lib/orgBilling";
+import { getTierForSeatCount, quotaForSeatCount } from "../../lib/orgBilling";
 
 export const metadata = {
   title: "Keeper — Ledgerlot",
@@ -36,6 +36,11 @@ export default async function KeeperPage() {
 
   const receipts = org ? await prisma.receipt.findMany({ where: { orgId: org.id }, orderBy: { createdAt: "desc" } }) : [];
   const serializedReceipts = receipts.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+
+  const seatCount = org ? org.memberships.length : 0;
+  const tier = org ? getTierForSeatCount(seatCount) : null;
+  const monthlyQuota = org ? quotaForSeatCount(seatCount) : 0;
+  const usage = org ? await prisma.usageCounter.findUnique({ where: { orgId: org.id } }) : null;
 
   return (
     <AppShell
@@ -70,9 +75,32 @@ export default async function KeeperPage() {
                 branding: <OrgLogoSettings orgId={org.id} initialLogoUrl={org.logoUrl} />,
                 billing:
                   org.planTier === "trial" || org.planTier === "expired" ? (
-                    <SubscribeButtons orgId={org.id} tiers={BUSINESS_SEAT_TIERS} />
+                    <div>
+                      {tier ? (
+                        <p style={{ color: "var(--text-secondary)", marginBottom: 12 }}>
+                          {seatCount} seat{seatCount === 1 ? "" : "s"} puts you in <strong>{tier.label}</strong> — $
+                          {(tier.priceCentsPerSeat / 100).toFixed(0)}/seat/mo, {monthlyQuota} documents/month included.
+                          Documents over quota are billed at $0.50 each.
+                        </p>
+                      ) : (
+                        <p style={{ color: "var(--text-secondary)", marginBottom: 12 }}>
+                          Business pricing starts at 2 seats. Invite a teammate to unlock a plan, or contact us for solo pricing.
+                        </p>
+                      )}
+                      <SubscribeButtons orgId={org.id} />
+                    </div>
                   ) : (
-                    <p>Current plan: {org.planTier}</p>
+                    <div>
+                      <p style={{ marginBottom: 8 }}>
+                        Current plan: <strong>{tier?.label || org.planTier}</strong> · {seatCount} seat{seatCount === 1 ? "" : "s"}
+                      </p>
+                      {usage && (
+                        <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+                          This month: {usage.monthCount}/{monthlyQuota} documents included
+                          {usage.pendingOverageCents > 0 && ` · $${(usage.pendingOverageCents / 100).toFixed(2)} overage pending`}
+                        </p>
+                      )}
+                    </div>
                   ),
                 receipts: <KeeperReceipts receipts={serializedReceipts} />,
               }}

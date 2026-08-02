@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { getUserMembership } from "../../../../../../lib/orgAccess";
-import { createOrgSubscriptionCheckout, BUSINESS_SEAT_TIERS } from "../../../../../../lib/orgBilling";
+import { createOrgSubscriptionCheckout, getTierForSeatCount } from "../../../../../../lib/orgBilling";
 
+// Tier is derived from the org's actual seat count, not chosen by the
+// admin -- pricing is now strictly per-seat-bracket (see
+// lib/orgBilling.js's BUSINESS_SEAT_TIERS), so there is no "which tier do
+// you want" choice to make; the only choice is whether to subscribe at
+// all.
 export async function POST(request, { params }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -19,11 +24,10 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const requestedTierKey = body.tierKey;
-  const tier = BUSINESS_SEAT_TIERS.find((t) => t.key === requestedTierKey);
+  const seatCount = await prisma.membership.count({ where: { orgId: org.id } });
+  const tier = getTierForSeatCount(seatCount);
   if (!tier) {
-    return NextResponse.json({ error: "Invalid or unsupported tier (100+ seats requires contacting support)." }, { status: 400 });
+    return NextResponse.json({ error: "100+ seats requires contacting support for custom pricing." }, { status: 400 });
   }
 
   const origin = request.headers.get("origin") || new URL(request.url).origin;
@@ -32,6 +36,7 @@ export async function POST(request, { params }) {
     const checkoutSession = await createOrgSubscriptionCheckout({
       org,
       tier,
+      seatCount,
       successUrl: `${origin}/keeper?billing=success`,
       cancelUrl: `${origin}/keeper?billing=cancelled`,
     });

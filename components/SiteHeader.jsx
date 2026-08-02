@@ -5,12 +5,12 @@ import Link from "next/link";
 import SignOutButton from "./SignOutButton";
 
 export default function SiteHeader({ isLoggedIn = false }) {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState("light");
   const [logoUrl, setLogoUrl] = useState(null);
   const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("app-theme") || "dark";
+    const savedTheme = localStorage.getItem("app-theme") || "light";
     setTheme(savedTheme);
     document.documentElement.setAttribute("data-theme", savedTheme);
   }, []);

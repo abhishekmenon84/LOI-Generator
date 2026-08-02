@@ -8,18 +8,13 @@ import { getOrgLimits } from "../lib/orgBilling.js";
 // session, and a real Deal/Ledger row -- out of scope for a unit test.
 // This locks the gating boolean itself; route-level behavior is verified
 // manually against the dev server.
-test("export gating: personal free tier is blocked", () => {
+test("export gating: personal org (always 'free', pay-per-document, no subscription) is allowed", () => {
   const org = { isPersonal: true, planTier: "free" };
-  assert.equal(getOrgLimits(org).canExport, false);
-});
-
-test("export gating: personal premium tier is allowed", () => {
-  const org = { isPersonal: true, planTier: "personal_premium" };
   assert.equal(getOrgLimits(org).canExport, true);
 });
 
 test("export gating: business org on active seat tier is allowed", () => {
-  const org = { isPersonal: false, planTier: "tier_1_10" };
+  const org = { isPersonal: false, planTier: "growth" };
   assert.equal(getOrgLimits(org).canExport, true);
 });
 

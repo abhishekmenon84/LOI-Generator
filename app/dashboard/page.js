@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
-import { hasBusinessOrgMembership, listUserOrgs } from "../../lib/orgAccess";
+import { getPersonalOrgId, hasBusinessOrgMembership, listUserOrgs } from "../../lib/orgAccess";
 import { listAccessibleFolders } from "../../lib/folderAccess";
 import { prisma } from "../../lib/prisma";
 import AppShell from "../../components/AppShell";
@@ -12,10 +12,31 @@ export const metadata = {
   title: "Ledgerboard — Ledgerlot",
 };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
+  }
+
+  // Completes the "Business" choice made on /login: that choice can only be
+  // threaded through as a callbackUrl query param (see app/login/page.js's
+  // comment), since the actual click-through request that lands here is a
+  // separate request from the original form submission, with no session of
+  // its own to stash a pending choice in. Idempotent -- only fires if the
+  // user doesn't already have a business org -- so refreshing this URL or
+  // an already-business user landing here again is a no-op.
+  if (searchParams?.newAccountType === "business" && !(await hasBusinessOrgMembership(session.user.id))) {
+    await prisma.organization.create({
+      data: {
+        name: "My Business",
+        accountType: "company",
+        isPersonal: false,
+        planTier: "trial",
+        trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        memberships: { create: { userId: session.user.id, role: "admin" } },
+      },
+    });
+    redirect("/dashboard");
   }
 
   const isBusiness = await hasBusinessOrgMembership(session.user.id);
@@ -112,8 +133,14 @@ export default async function DashboardPage() {
   const archivedFolders = allFolders.filter((f) => !!f.archivedAt && !f.deletedAt).map(serialize);
   const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serialize);
 
+  const personalOrgId = await getPersonalOrgId(session.user.id);
+  const personalOrg = personalOrgId ? await prisma.organization.findUnique({ where: { id: personalOrgId } }) : null;
+
   return (
-    <AppShell org={null} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
+    <AppShell
+      org={personalOrg ? { name: personalOrg.name, isPersonal: true, planTier: personalOrg.planTier } : null}
+      userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
+    >
       <div style={{ padding: "32px 28px" }}>
         <DashboardGreeting />
         <p>Signed in as {session.user.email}.</p>

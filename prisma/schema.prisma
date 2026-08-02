@@ -37,7 +37,10 @@ model Organization {
   accountType          String   @default("individual") // "individual" | "real_estate_agency" | "company" | "corporation"
   isPersonal           Boolean  @default(true)
   logoUrl              String?
-  planTier             String   @default("free") // "free" | "personal_premium" | "personal_premium_plus" | "trial" | "tier_1_10" | "tier_11_30" | "tier_31_50" | "tier_51_100" | "enterprise" | "expired"
+  // Personal orgs: always "free" (the pay-per-document tier -- no more
+  // subscription tiers for Personal). Business orgs: "trial" | "growth" |
+  // "professional" | "business" | "enterprise" | "scale" | "expired".
+  planTier             String   @default("free")
   retentionYears       Int      @default(1)
   trialEndsAt          DateTime?
   stripeCustomerId     String?  @unique
@@ -54,22 +57,30 @@ model Organization {
   usageCounter    UsageCounter?
 }
 
-// Tracks a personal org's rolling usage window against its tier's
-// document/e-signature limits. One row per org (not one per historical
-// period) -- periodStart/periodEnd define the CURRENT window; when
-// `now() > periodEnd`, the checking code (lib/orgBilling.js's
-// checkAndIncrementUsage) rolls the window forward by resetting both
-// counts and dates rather than inserting a new row, since nothing in
-// this app needs historical per-period usage reporting yet.
+// Tracks an org's usage against its tier's document/e-signature limits.
+// One row per org (not one per historical period). dayStart/dayCount back
+// the daily caps (Personal: 5/day; Business: seats x docs/seat/day);
+// periodStart/periodEnd/monthCount back the monthly caps (Personal: 30/mo
+// hard cap; Business: monthly seat quota) -- lib/orgBilling.js's
+// checkAndIncrementUsage rolls each window forward by resetting its own
+// counter/dates when now() has passed it, independently of the other
+// window. pendingOverageCents accumulates $0.50/doc (Business, over
+// quota) or $2.00/doc (Personal, every document -- there is no
+// subscription to cover it) between monthly Stripe invoice runs; a cron
+// or manual job reads and zeroes this via lib/orgBilling.js, then invoices
+// the org's Stripe customer for the amount billed.
 model UsageCounter {
-  id                String       @id @default(cuid())
-  orgId             String       @unique
-  org               Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  periodStart       DateTime
-  periodEnd         DateTime
-  documentsCreated  Int          @default(0)
-  esignRequestsSent Int          @default(0)
-  updatedAt         DateTime     @updatedAt
+  id                   String       @id @default(cuid())
+  orgId                String       @unique
+  org                  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  dayStart             DateTime
+  dayCount             Int          @default(0)
+  periodStart          DateTime
+  periodEnd            DateTime
+  monthCount           Int          @default(0)
+  esignRequestsSent    Int          @default(0)
+  pendingOverageCents  Int          @default(0)
+  updatedAt            DateTime     @updatedAt
 }
 
 model Membership {

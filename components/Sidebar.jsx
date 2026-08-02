@@ -89,10 +89,10 @@ export default function Sidebar({ org }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <div style={{ width: 26, height: 26, borderRadius: 8, background: "oklch(24% 0.015 264)", flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700 }}>
-            {(org?.name || "?").charAt(0).toUpperCase()}
+            {org?.isPersonal === false ? "B" : "P"}
           </div>
           <span style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {org?.name || "Personal"}
+            Org: {org?.isPersonal === false ? "Business" : "Personal"}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -100,10 +100,10 @@ export default function Sidebar({ org }) {
             {org?.planTier || "Free"}
           </span>
           <Link
-            href="/keeper"
+            href="/settings"
             style={{ border: "none", background: "oklch(24% 0.015 264)", color: "white", fontSize: 11.5, fontWeight: 600, padding: "5px 11px", borderRadius: 8, textDecoration: "none" }}
           >
-            Upgrade
+            Change tier
           </Link>
         </div>
       </div>

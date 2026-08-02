@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import SignOutButton from "./SignOutButton";
 
 // The "+" button triggers the exact same "New Ledger" flow as the dashboard's
 // own button: it just navigates to the dashboard with a query param that
@@ -11,6 +13,7 @@ import { useRouter } from "next/navigation";
 // workspace's own "+ Add" menu.
 export default function TopBar({ onOpenSearch, userInitial = "?" }) {
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function startQuickCreate() {
     router.push("/dashboard?quickCreate=1");
@@ -65,11 +68,15 @@ export default function TopBar({ onOpenSearch, userInitial = "?" }) {
         >
           ◔
         </button>
-        <div
+        {menuOpen && <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
           style={{
             width: 34,
             height: 34,
             borderRadius: "50%",
+            border: "none",
             background: "oklch(24% 0.015 264)",
             color: "white",
             display: "flex",
@@ -77,10 +84,45 @@ export default function TopBar({ onOpenSearch, userInitial = "?" }) {
             justifyContent: "center",
             fontSize: 12,
             fontWeight: 700,
+            cursor: "pointer",
           }}
         >
           {userInitial}
-        </div>
+        </button>
+        {menuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: 42,
+              right: 0,
+              width: 160,
+              background: "white",
+              border: "1px solid oklch(88% 0.008 60)",
+              borderRadius: 12,
+              boxShadow: "0 12px 32px rgba(17,17,17,0.12)",
+              padding: 6,
+              zIndex: 41,
+            }}
+          >
+            <SignOutButton
+              className="app-shell-signout"
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "9px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "transparent",
+                color: "oklch(30% 0.01 264)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

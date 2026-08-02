@@ -5,19 +5,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ── Tokens ─────────────────────────────────────────────── */
-:root, [data-theme="dark"] {
+/* Default theme is the same light oklch palette the authenticated app
+   (AppShell/Sidebar/TopBar/DealList) already uses hardcoded everywhere --
+   these variables exist so the marketing shell (SiteHeader, /login, /about,
+   etc.) matches it instead of rendering its own unrelated dark palette. */
+:root, [data-theme="light"] {
   /* backgrounds */
-  --bg-base:    #07080f;
-  --bg-surface: #0d1117;
-  --bg-panel:   #111827;
-  --bg-card:    rgba(255,255,255,0.04);
-  --bg-card-hover: rgba(255,255,255,0.07);
+  --bg-base:    oklch(97% 0.006 60);
+  --bg-surface: oklch(99% 0.003 60);
+  --bg-panel:   oklch(93% 0.012 60);
+  --bg-card:    white;
+  --bg-card-hover: oklch(93% 0.012 60);
 
   /* accents */
-  --accent:        #6366f1;
-  --accent-light:  #818cf8;
-  --accent-glow:   rgba(99,102,241,0.3);
-  --accent-subtle: rgba(99,102,241,0.12);
+  --accent:        oklch(24% 0.015 264);
+  --accent-light:  oklch(38% 0.05 264);
+  --accent-glow:   oklch(24% 0.015 264 / 0.3);
+  --accent-subtle: oklch(93% 0.012 60);
 
   /* section accent colours */
   --col-dates:   #6366f1;
@@ -28,19 +32,19 @@
   --col-risk:    #f87171;
 
   /* text */
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #475569;
+  --text-primary:   oklch(24% 0.015 264);
+  --text-secondary: oklch(50% 0.012 264);
+  --text-muted:     oklch(60% 0.01 264);
 
   /* borders */
-  --border:         rgba(255,255,255,0.08);
-  --border-focus:   #6366f1;
+  --border:         oklch(88% 0.008 60);
+  --border-focus:   oklch(24% 0.015 264);
 
   /* shadows */
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
-  --shadow-xl:  0 16px 48px rgba(0,0,0,0.7);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.1);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.12);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.16);
 
   /* radii */
   --radius-sm: 6px;
@@ -56,24 +60,24 @@
   --site-header-height: 64px;
 }
 
-[data-theme="light"] {
-  --bg-base:    #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-panel:   #f1f5f9;
-  --bg-card:    rgba(0,0,0,0.03);
-  --bg-card-hover: rgba(0,0,0,0.06);
+[data-theme="dark"] {
+  --bg-base:    #07080f;
+  --bg-surface: #0d1117;
+  --bg-panel:   #111827;
+  --bg-card:    rgba(255,255,255,0.04);
+  --bg-card-hover: rgba(255,255,255,0.07);
 
-  --accent:        #4f46e5;
-  --accent-light:  #6366f1;
-  --accent-glow:   rgba(79,70,229,0.2);
-  --accent-subtle: rgba(79,70,229,0.1);
+  --accent:        #6366f1;
+  --accent-light:  #818cf8;
+  --accent-glow:   rgba(99,102,241,0.3);
+  --accent-subtle: rgba(99,102,241,0.12);
 
-  --text-primary:   #0f172a;
-  --text-secondary: #334155;
-  --text-muted:     #64748b;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #475569;
 
-  --border:         rgba(0,0,0,0.1);
-  --border-focus:   #4f46e5;
+  --border:         rgba(255,255,255,0.08);
+  --border-focus:   #6366f1;
 }
 
 [data-theme="dusk"] {
@@ -944,6 +948,7 @@ select option {
   font-size: 0.82rem;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   transition: background var(--dur) var(--ease);
 }
 

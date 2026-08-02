@@ -15,7 +15,7 @@ function LogOutIcon() {
 // Mirrors the CSRF-token-then-POST pattern already used for sign-in
 // (app/login/page.js) since this project calls NextAuth's REST endpoints
 // directly rather than importing the client-only signOut() helper.
-export default function SignOutButton({ className = "btn-sign-out" }) {
+export default function SignOutButton({ className = "btn-sign-out", style }) {
   const [loading, setLoading] = useState(false);
 
   async function handleSignOut() {
@@ -35,7 +35,7 @@ export default function SignOutButton({ className = "btn-sign-out" }) {
   }
 
   return (
-    <button type="button" className={className} onClick={handleSignOut} disabled={loading} title="Sign out">
+    <button type="button" className={className} style={style} onClick={handleSignOut} disabled={loading} title="Sign out">
       <LogOutIcon />
       {loading ? "Signing out…" : "Sign out"}
     </button>

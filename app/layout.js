@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#07080f" />
+        <meta name="theme-color" content="#f8fafc" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -31,7 +31,7 @@ export default function RootLayout({ children }) {
               (function() {
                 try {
                   var theme = localStorage.getItem('app-theme');
-                  if (!theme) { theme = 'dark'; }
+                  if (!theme) { theme = 'light'; }
                   document.documentElement.setAttribute('data-theme', theme);
                 } catch (e) {}
               })();

@@ -32,8 +32,17 @@ export default async function TemplatesPage() {
       })
     : [];
 
+  // Same "business membership wins, else personal" precedence as
+  // app/dashboard/page.js's isBusiness branch, so the Sidebar's workspace
+  // panel shows the same org here as it would on the dashboard.
+  const primaryOrgSummary = userOrgs.find((o) => !o.isPersonal) || userOrgs.find((o) => o.isPersonal) || null;
+  const primaryOrg = primaryOrgSummary ? await prisma.organization.findUnique({ where: { id: primaryOrgSummary.orgId } }) : null;
+
   return (
-    <AppShell org={null} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
+    <AppShell
+      org={primaryOrg ? { name: primaryOrg.name, isPersonal: primaryOrg.isPersonal, planTier: primaryOrg.planTier } : null}
+      userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
+    >
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 28px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h1 style={{ margin: 0 }}>Templates</h1>
