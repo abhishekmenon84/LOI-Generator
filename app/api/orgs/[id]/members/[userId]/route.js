@@ -31,6 +31,35 @@ export async function PATCH(request, { params }) {
   }
 
   const body = await request.json().catch(() => ({}));
+
+  if ("role" in body) {
+    // Only the org's founding admin (Organization.ownerUserId) may
+    // promote or demote -- being "an admin" isn't enough, since the spec
+    // is "only the first person who signed up can appoint the one other
+    // admin slot," not "any admin can nominate any other admin."
+    const org = await prisma.organization.findUnique({ where: { id: params.id }, select: { ownerUserId: true } });
+    if (!org || org.ownerUserId !== session.user.id) {
+      return NextResponse.json({ error: "Only the organization's owner can change admin roles." }, { status: 403 });
+    }
+    if (body.role !== "admin" && body.role !== "member") {
+      return NextResponse.json({ error: "role must be \"admin\" or \"member\"." }, { status: 400 });
+    }
+    if (params.userId === session.user.id) {
+      return NextResponse.json({ error: "You cannot change your own role." }, { status: 400 });
+    }
+    if (body.role === "admin") {
+      const adminCount = await prisma.membership.count({ where: { orgId: params.id, role: "admin", active: true } });
+      if (adminCount >= 2) {
+        return NextResponse.json({ error: "An organization can have at most 2 admins. Demote the other admin first." }, { status: 400 });
+      }
+    }
+    const updated = await prisma.membership.updateMany({ where: { userId: params.userId, orgId: params.id }, data: { role: body.role } });
+    if (updated.count === 0) {
+      return NextResponse.json({ error: "Member not found." }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   if (typeof body.active !== "boolean") {
     return NextResponse.json({ error: "active (boolean) is required." }, { status: 400 });
   }

@@ -544,7 +544,7 @@ export default function FolderWorkspacePage() {
     return (
       <div style={{ padding: "40px", fontFamily: "'Inter',-apple-system,system-ui,sans-serif" }}>
         <div style={{ color: "oklch(45% 0.18 25)", marginBottom: "12px" }}>⚠️ {loadError}</div>
-        <a href="/dashboard">Back to Ledgerboard</a>
+        <a href="/documents">Back to Ledgerboard</a>
       </div>
     );
   }

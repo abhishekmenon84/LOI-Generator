@@ -1,17 +1,43 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
-import { getPersonalOrgId, hasBusinessOrgMembership, listUserOrgs } from "../../lib/orgAccess";
+import { getPrimaryOrgForShell, hasBusinessOrgMembership } from "../../lib/orgAccess";
 import { listAccessibleFolders } from "../../lib/folderAccess";
 import { prisma } from "../../lib/prisma";
 import AppShell from "../../components/AppShell";
 import DashboardGreeting from "../../components/DashboardGreeting";
-import DealList from "../../components/DealList";
-import KanbanDashboard from "../../components/KanbanDashboard";
 
 export const metadata = {
-  title: "Ledgerboard — Ledgerlot",
+  title: "Dashboard — Ledgerlot",
 };
 
+function relativeTime(date) {
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+const AUDIT_ACTION_LABELS = {
+  created: "was created",
+  archived: "was archived",
+  trashed: "was moved to trash",
+  restored: "was restored",
+  moved: "was moved",
+  linked_child: "had a linked document added",
+  unlinked_child: "had a linked document removed",
+};
+
+// A lightweight greeting + at-a-glance summary -- NOT the folder/ledger
+// pipeline itself (that lives at /documents, see app/documents/page.js).
+// "Recent activity" only surfaces what's genuinely tracked today
+// (FolderAuditEvent lifecycle events + Ledger.updatedAt) rather than
+// fabricating per-field edit history or view-tracking, neither of which
+// exist in this codebase.
 export default async function DashboardPage({ searchParams }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -33,123 +59,101 @@ export default async function DashboardPage({ searchParams }) {
         isPersonal: false,
         planTier: "trial",
         trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        ownerUserId: session.user.id,
         memberships: { create: { userId: session.user.id, role: "admin" } },
       },
     });
     redirect("/dashboard");
   }
 
-  const isBusiness = await hasBusinessOrgMembership(session.user.id);
+  const primaryOrg = await getPrimaryOrgForShell(session.user.id);
 
-  // Both branches need the same underlying Folder data (all folders
-  // including archived/trashed, plus batched participant names and each
-  // folder's "primary" documentType derived from its first-created Ledger)
-  // -- fetched once here rather than duplicated per branch, since both use
-  // identical listAccessibleFolders options.
-  const allFolders = await listAccessibleFolders(session.user.id, { includeArchived: true, includeTrashed: true });
-  const userOrgs = await listUserOrgs(session.user.id);
-
+  const allFolders = await listAccessibleFolders(session.user.id, {});
+  const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt);
   const folderIds = allFolders.map((f) => f.id);
-  const [participants, primaryLedgers] = folderIds.length > 0
+
+  const stageCounts = new Map();
+  for (const f of activeFolders) {
+    stageCounts.set(f.stage, (stageCounts.get(f.stage) || 0) + 1);
+  }
+
+  const [recentAuditEvents, recentLedgers] = folderIds.length > 0
     ? await Promise.all([
-        prisma.folderParticipant.findMany({
+        prisma.folderAuditEvent.findMany({
           where: { folderId: { in: folderIds } },
-          include: { user: { select: { name: true, email: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { folder: { select: { name: true } } },
         }),
         prisma.ledger.findMany({
           where: { folderId: { in: folderIds } },
-          select: { folderId: true, documentType: true, createdAt: true },
-          orderBy: { createdAt: "asc" },
+          orderBy: { updatedAt: "desc" },
+          take: 5,
+          select: { id: true, name: true, folderId: true, updatedAt: true },
         }),
       ])
     : [[], []];
-  const participantNamesByFolder = new Map();
-  for (const p of participants) {
-    const list = participantNamesByFolder.get(p.folderId) || [];
-    list.push(p.user.name || p.user.email);
-    participantNamesByFolder.set(p.folderId, list);
-  }
-  // First-created Ledger per Folder stands in as the folder's "primary"
-  // document type for the card/list's type pill -- a bare Folder has no
-  // documentType of its own, only its child Ledgers do.
-  const primaryDocTypeByFolder = new Map();
-  for (const l of primaryLedgers) {
-    if (!primaryDocTypeByFolder.has(l.folderId)) primaryDocTypeByFolder.set(l.folderId, l.documentType);
-  }
 
-  if (isBusiness) {
-    const serializeFolder = (f) => ({
-      id: f.id,
-      name: f.name,
-      stage: f.stage,
-      priority: f.priority,
-      updatedAt: f.updatedAt.toISOString(),
-      isShared: f._accessReason === "participant",
-      writeAccess: f._writeAccess,
-      parentFolderId: f.parentFolderId,
-      orgId: f.orgId,
-      participantNames: participantNamesByFolder.get(f.id) || [],
-      documentType: primaryDocTypeByFolder.get(f.id) || null,
-    });
+  const actorIds = [...new Set(recentAuditEvents.map((e) => e.actorUserId))];
+  const actors = actorIds.length > 0
+    ? await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, email: true } })
+    : [];
+  const actorById = new Map(actors.map((u) => [u.id, u]));
 
-    const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt).map(serializeFolder);
-    const archivedFolders = allFolders.filter((f) => !!f.archivedAt && !f.deletedAt).map(serializeFolder);
-    const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serializeFolder);
-
-    const businessOrg = userOrgs.find((o) => !o.isPersonal);
-    return (
-      <AppShell
-        org={businessOrg ? { name: businessOrg.orgName, isPersonal: false, planTier: null } : null}
-        userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
-      >
-        <div style={{ padding: "32px 28px" }}>
-          <DashboardGreeting style={{ marginBottom: 4 }} />
-          <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Signed in as {session.user.email}.</p>
-          <KanbanDashboard
-            initialFolders={activeFolders}
-            initialArchivedFolders={archivedFolders}
-            initialTrashedFolders={trashedFolders}
-            userOrgs={userOrgs}
-          />
-        </div>
-      </AppShell>
-    );
-  }
-
-  const serialize = (f) => ({
-    id: f.id,
-    name: f.name,
-    documentType: primaryDocTypeByFolder.get(f.id) || null,
-    stage: f.stage,
-    updatedAt: f.updatedAt.toISOString(),
-    isShared: f._accessReason === "participant",
-    writeAccess: f._writeAccess,
-    parentFolderId: f.parentFolderId,
-    priority: f.priority,
-    favorite: f.favorite,
-  });
-
-  const activeFolders = allFolders.filter((f) => !f.archivedAt && !f.deletedAt).map(serialize);
-  const archivedFolders = allFolders.filter((f) => !!f.archivedAt && !f.deletedAt).map(serialize);
-  const trashedFolders = allFolders.filter((f) => !!f.deletedAt).map(serialize);
-
-  const personalOrgId = await getPersonalOrgId(session.user.id);
-  const personalOrg = personalOrgId ? await prisma.organization.findUnique({ where: { id: personalOrgId } }) : null;
+  const activityItems = [
+    ...recentAuditEvents.map((e) => {
+      const actor = actorById.get(e.actorUserId);
+      return {
+        at: e.createdAt,
+        text: `${actor?.name || actor?.email || "Someone"} — ${e.folder?.name || "A folder"} ${AUDIT_ACTION_LABELS[e.action] || e.action}`,
+      };
+    }),
+    ...recentLedgers.map((l) => ({
+      at: l.updatedAt,
+      text: `${l.name} was last updated`,
+    })),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 8);
 
   return (
-    <AppShell
-      org={personalOrg ? { name: personalOrg.name, isPersonal: true, planTier: personalOrg.planTier } : null}
-      userInitial={(session.user.email || "?").charAt(0).toUpperCase()}
-    >
-      <div style={{ padding: "32px 28px" }}>
-        <DashboardGreeting />
-        <p>Signed in as {session.user.email}.</p>
-        <DealList
-          initialFolders={activeFolders}
-          initialArchived={archivedFolders}
-          initialTrashed={trashedFolders}
-          userOrgs={userOrgs}
-        />
+    <AppShell org={primaryOrg} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 28px" }}>
+        <DashboardGreeting style={{ marginBottom: 4 }} />
+        <p style={{ color: "var(--text-secondary)", marginBottom: 28 }}>Signed in as {session.user.email}.</p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 32 }}>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 26, fontWeight: 800 }}>{activeFolders.length}</div>
+            <div style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>Active ledgers</div>
+          </div>
+          {["draft", "active", "pending", "closed"].map((stage) => (
+            <div key={stage} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 26, fontWeight: 800 }}>{stageCounts.get(stage) || 0}</div>
+              <div style={{ fontSize: 12.5, color: "var(--text-secondary)", textTransform: "capitalize" }}>{stage}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <h2 style={{ fontSize: 17, margin: 0 }}>Recent activity</h2>
+          <Link href="/documents" style={{ fontSize: 13, fontWeight: 600, color: "var(--accent-light)", textDecoration: "none" }}>
+            Go to Documents →
+          </Link>
+        </div>
+
+        {activityItems.length === 0 ? (
+          <p style={{ color: "var(--text-secondary)" }}>No activity yet — create a ledger from Documents to get started.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {activityItems.map((item, i) => (
+              <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", fontSize: 13.5 }}>
+                {item.text}
+                <span style={{ color: "var(--text-muted)", marginLeft: 8, fontSize: 12 }}>{relativeTime(item.at)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </AppShell>
   );

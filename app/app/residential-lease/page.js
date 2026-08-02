@@ -48,7 +48,7 @@ function ResidentialLeasePageInner() {
 
   useEffect(() => {
     if (!dealId) {
-      router.replace("/dashboard");
+      router.replace("/documents");
       return;
     }
     let cancelled = false;
@@ -143,7 +143,7 @@ function ResidentialLeasePageInner() {
         <div className="dashboard-layout">
           <div className="form-panel">
             <div className="status-banner status-error" role="alert">⚠️ {loadError}</div>
-            <a className="marketing-cta-button" href="/dashboard">Back to Dashboard</a>
+            <a className="marketing-cta-button" href="/documents">Back to Dashboard</a>
           </div>
         </div>
       </>

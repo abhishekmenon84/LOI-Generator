@@ -79,7 +79,7 @@ export default function DealList({ initialFolders, initialArchived = [], initial
       setView(requestedView);
       handled = true;
     }
-    if (handled) router.replace("/dashboard", { scroll: false });
+    if (handled) router.replace("/documents", { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

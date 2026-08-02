@@ -39,7 +39,7 @@ export default function KanbanDashboard({ initialFolders, initialArchivedFolders
     const params = new URLSearchParams(window.location.search);
     if (params.get("quickCreate") != null) {
       setCreating(true);
-      router.replace("/dashboard", { scroll: false });
+      router.replace("/documents", { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

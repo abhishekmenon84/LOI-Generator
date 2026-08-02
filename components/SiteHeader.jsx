@@ -55,7 +55,7 @@ export default function SiteHeader({ isLoggedIn = false }) {
       </Link>
 
       <div className="site-header-links">
-        {isLoggedIn && <Link href="/dashboard">Ledgerboard</Link>}
+        {isLoggedIn && <Link href="/documents">Ledgerboard</Link>}
         {isLoggedIn && <Link href="/keeper">Organization</Link>}
         <Link href="/about">About</Link>
         <Link href="/v1">What&apos;s in v1</Link>

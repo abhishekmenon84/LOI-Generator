@@ -10,14 +10,14 @@ const NAV_ITEMS = [
   { href: "/contacts", label: "Contacts", glyph: "●" },
   { href: "/keeper", label: "Organizations", glyph: "◈" },
   { href: "/inbox", label: "Inbox", glyph: "▧" },
-  { href: "/dashboard?view=favorites", label: "Favorites", glyph: "★" },
-  { href: "/dashboard?view=archive", label: "Archive", glyph: "□" },
+  { href: "/documents?view=favorites", label: "Favorites", glyph: "★" },
+  { href: "/documents?view=archive", label: "Archive", glyph: "□" },
   { href: "/settings", label: "Settings", glyph: "⚙" },
 ];
 
 function isActive(href, pathname) {
   const path = href.split("?")[0];
-  if (path === "/dashboard") return pathname === "/dashboard" && !href.includes("?");
+  if (path === "/dashboard" || path === "/documents") return pathname === path && !href.includes("?");
   if (path === "/keeper") return pathname.startsWith("/keeper");
   return pathname.startsWith(path);
 }

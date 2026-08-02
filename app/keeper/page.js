@@ -73,6 +73,7 @@ export default async function KeeperPage() {
                       members: org.memberships.map((m) => ({ userId: m.userId, email: m.user.email, name: m.user.name, role: m.role, active: m.active })),
                     }}
                     currentUserId={session.user.id}
+                    isOwner={org.ownerUserId === session.user.id}
                   />
                 ),
                 templates: <KeeperTemplates orgId={org.id} />,

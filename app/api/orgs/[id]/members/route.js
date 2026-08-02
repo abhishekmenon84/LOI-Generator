@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
-import { getUserMembership } from "../../../../../lib/orgAccess";
+import { getUserMembership, hasBusinessOrgMembership } from "../../../../../lib/orgAccess";
 import { isOrgActive, maybeAutoUpgradeTier } from "../../../../../lib/orgBilling";
 import { Resend } from "resend";
 
@@ -41,12 +41,34 @@ export async function POST(request, { params }) {
 
   let invitedUser = await prisma.user.findUnique({ where: { email } });
   if (!invitedUser) {
+    // Mirrors lib/auth.js's events.createUser: that hook only fires when
+    // NextAuth's own PrismaAdapter inserts a new User row (i.e. on that
+    // person's first real sign-in), which this manual invite-time
+    // creation bypasses entirely -- without this, an invited person who
+    // has never signed in yet would have no personal org and hit "No
+    // organization found for this account" the first time they tried to
+    // create a folder there.
     invitedUser = await prisma.user.create({ data: { email } });
+    await prisma.organization.create({
+      data: {
+        name: "Personal",
+        accountType: "individual",
+        isPersonal: true,
+        planTier: "free",
+        memberships: { create: { userId: invitedUser.id, role: "admin" } },
+      },
+    });
   }
 
   const existing = await getUserMembership(invitedUser.id, org.id);
   if (existing) {
     return NextResponse.json({ error: "This person is already a member." }, { status: 400 });
+  }
+
+  // Enforce the same "1 business org per user" cap as POST /api/orgs --
+  // an invite can't smuggle someone into a second business org either.
+  if (await hasBusinessOrgMembership(invitedUser.id)) {
+    return NextResponse.json({ error: "This person already belongs to a different business organization." }, { status: 400 });
   }
 
   // getUserMembership only returns active rows, so a previously-deactivated

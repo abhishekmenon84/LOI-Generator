@@ -123,8 +123,8 @@ test("getTierForSeatCount picks the correct bracket at range boundaries", () => 
   assert.equal(getTierForSeatCount(500).key, "scale");
 });
 
-test("getTierForSeatCount returns null below the smallest bracket", () => {
-  assert.equal(getTierForSeatCount(1), null);
+test("getTierForSeatCount bills a solo admin (1 seat) at the Growth rate, and returns null only for 0 seats", () => {
+  assert.equal(getTierForSeatCount(1).key, "growth");
   assert.equal(getTierForSeatCount(0), null);
 });
 
@@ -135,8 +135,8 @@ test("quotaForSeatCount matches the spec's worked examples (5 and 150 seats)", (
   assert.equal(quotaForSeatCount(150), Math.round(150 * 0.26 * 30)); // 1170
 });
 
-test("quotaForSeatCount is 0 for a seat count with no matching bracket", () => {
-  assert.equal(quotaForSeatCount(1), 0);
+test("quotaForSeatCount is 0 only for 0 seats", () => {
+  assert.equal(quotaForSeatCount(1), Math.round(1 * 0.3 * 30)); // 9, solo admin billed at Growth rate
   assert.equal(quotaForSeatCount(0), 0);
 });
 

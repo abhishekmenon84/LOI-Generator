@@ -1,22 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SignOutButton from "./SignOutButton";
 
-// The "+" button triggers the exact same "New Ledger" flow as the dashboard's
-// own button: it just navigates to the dashboard with a query param that
-// DealList.jsx's create-flow reads to open its (name-only) create-folder
-// form immediately, rather than duplicating DealList.jsx's folder-creation
-// logic here -- keeps creation logic in exactly one place. What document to
-// add inside the new folder is decided afterwards, inside the Folder
-// workspace's own "+ Add" menu.
+// The "+" button triggers the exact same "New Ledger" flow as the
+// Documents page's own button: it just navigates there with a query
+// param that DealList.jsx's create-flow reads to open its (name-only)
+// create-folder form immediately, rather than duplicating DealList.jsx's
+// folder-creation logic here -- keeps creation logic in exactly one
+// place. What document to add inside the new folder is decided
+// afterwards, inside the Folder workspace's own "+ Add" menu.
 export default function TopBar({ onOpenSearch, userInitial = "?" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
   function startQuickCreate() {
-    router.push("/dashboard?quickCreate=1");
+    router.push("/documents?quickCreate=1");
   }
 
   return (
@@ -62,12 +63,13 @@ export default function TopBar({ onOpenSearch, userInitial = "?" }) {
         >
           +
         </button>
-        <button
-          type="button"
-          style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid oklch(88% 0.008 60)", background: "white", cursor: "pointer", fontSize: 14, color: "oklch(50% 0.012 264)" }}
+        <Link
+          href="/inbox"
+          title="Inbox"
+          style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid oklch(88% 0.008 60)", background: "white", cursor: "pointer", fontSize: 14, color: "oklch(50% 0.012 264)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
         >
           ◔
-        </button>
+        </Link>
         {menuOpen && <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />}
         <button
           type="button"

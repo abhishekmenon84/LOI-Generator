@@ -30,7 +30,7 @@ export default function FolderBreadcrumb({ ancestors = [], current, selectedDocN
     >
       <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <Link
-          href="/dashboard"
+          href="/documents"
           style={{ cursor: "pointer", fontWeight: 600, color: activeColor, textDecoration: "none" }}
         >
           Ledgerboard

@@ -29,6 +29,7 @@ model User {
   uploadedFiles       FolderFile[]
   templatesCreated    CustomTemplate[]
   formTemplatesCreated FormTemplate[]
+  contactsCreated     Contact[]
 }
 
 model Organization {
@@ -37,6 +38,12 @@ model Organization {
   accountType          String   @default("individual") // "individual" | "real_estate_agency" | "company" | "corporation"
   isPersonal           Boolean  @default(true)
   logoUrl              String?
+  // The user who created this org (its "founding admin" / owner) --
+  // recorded explicitly rather than inferred from Membership.createdAt,
+  // since only this user (not just "any admin") is allowed to promote or
+  // demote the org's one other admin slot (business orgs: max 2 admins
+  // total). Null for orgs created before this field existed.
+  ownerUserId          String?
   // Personal orgs: always "free" (the pay-per-document tier -- no more
   // subscription tiers for Personal). Business orgs: "trial" | "growth" |
   // "professional" | "business" | "enterprise" | "scale" | "expired".
@@ -55,6 +62,31 @@ model Organization {
   customTemplates CustomTemplate[]
   formTemplates   FormTemplate[]
   usageCounter    UsageCounter?
+  contacts        Contact[]
+}
+
+// A person or company the org deals with (buyer, seller, landlord,
+// tenant, loan officer, mortgage broker, org admin, etc -- role is
+// free-text, matching SignerSlot.role's existing convention rather than
+// a fixed enum, since real-estate deal roles vary by deal type). Manually
+// created/edited, org-scoped like CustomTemplate/FormTemplate. Document
+// count and last-activity shown in the UI are computed by matching this
+// Contact's email against SignerSlot rows at query time, not stored here
+// -- they're derived facts about existing signature requests, not
+// properties of the Contact itself.
+model Contact {
+  id              String   @id @default(cuid())
+  orgId           String
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name            String
+  role            String
+  email           String?
+  createdByUserId String
+  createdBy       User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orgId])
 }
 
 // Tracks an org's usage against its tier's document/e-signature limits.
