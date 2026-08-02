@@ -241,6 +241,17 @@ model SignatureRequest {
   // request was already marked fully_executed -- surfaces the failure to
   // admins instead of it being silently swallowed (see signatureFinalize.js).
   deliveryError String?
+  // Snapshot of the Ledger's content (formData/documentType/templateId) at
+  // the moment this SignatureRequest was created -- NOT a live reference to
+  // Ledger.formData. Every signer sees and signs this frozen snapshot, and
+  // finalization renders from it too, so editing the Ledger after voiding a
+  // request (to send a corrected version) can never retroactively change
+  // what an earlier signer actually agreed to. This is the minimal fix for
+  // "what did each signer actually see" -- a full version-history table
+  // across every edit is a separate, larger feature not built here.
+  snapshotFormData     Json
+  snapshotDocumentType String
+  snapshotTemplateId   String?
 
   signers SignerSlot[]
 

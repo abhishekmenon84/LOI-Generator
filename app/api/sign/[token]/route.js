@@ -32,10 +32,13 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: "This signing link has already been used." }, { status: 410 });
   }
 
+  // The signer reviews the frozen snapshot taken when this SignatureRequest
+  // was created, not the Ledger's current (possibly since-edited) content --
+  // see prisma/schema.prisma's comment on SignatureRequest.snapshotFormData.
   return NextResponse.json({
     dealName: slot.request.ledger.name,
-    documentType: slot.request.ledger.documentType,
-    formData: slot.request.ledger.formData,
+    documentType: slot.request.snapshotDocumentType,
+    formData: slot.request.snapshotFormData,
     signerName: slot.name,
     signerRole: slot.roleOtherLabel || slot.role,
   });
@@ -70,8 +73,14 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: "A signature and consent confirmation are required." }, { status: 400 });
   }
 
-  const ledger = slot.request.ledger;
-  const pdfBuffer = await buildDealPdf(ledger);
+  // Hash the frozen snapshot, not the live Ledger -- see the GET handler's
+  // identical note above.
+  const snapshot = {
+    documentType: slot.request.snapshotDocumentType,
+    formData: slot.request.snapshotFormData,
+    templateId: slot.request.snapshotTemplateId,
+  };
+  const pdfBuffer = await buildDealPdf(snapshot);
   const documentHash = hashDocument(pdfBuffer);
 
   const forwardedFor = request.headers.get("x-forwarded-for");

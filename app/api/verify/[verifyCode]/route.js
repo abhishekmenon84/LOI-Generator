@@ -33,7 +33,16 @@ export async function GET(request, { params }) {
 
   let integrityValid = false;
   try {
-    const pdfBuffer = await buildDealPdf(sigRequest.ledger);
+    // Regenerate from this request's own frozen snapshot, matching exactly
+    // what signatureFinalize.js hashed at signing time -- not the live
+    // Ledger (which, while normally locked by this point, shouldn't be the
+    // source of truth for a historical integrity check regardless).
+    const snapshot = {
+      documentType: sigRequest.snapshotDocumentType,
+      formData: sigRequest.snapshotFormData,
+      templateId: sigRequest.snapshotTemplateId,
+    };
+    const pdfBuffer = await buildDealPdf(snapshot);
     const signedSlots = signerSlots.map((s) => ({
       name: s.name,
       roleLabel: getRoleLabel(s.role, s.roleOtherLabel),

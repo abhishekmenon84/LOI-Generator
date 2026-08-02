@@ -89,6 +89,12 @@ export async function POST(request, { params }) {
       ledgerId: ledger.id,
       createdByUserId: session.user.id,
       verifyCode,
+      // Freeze the Ledger's current content -- every signer signs THIS
+      // snapshot, not whatever the Ledger's formData happens to be later.
+      // See prisma/schema.prisma's comment on these fields for why.
+      snapshotFormData: ledger.formData,
+      snapshotDocumentType: ledger.documentType,
+      snapshotTemplateId: ledger.templateId,
       signers: {
         create: validated.map((p) => ({
           kind: p.kind,
