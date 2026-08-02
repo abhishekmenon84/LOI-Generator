@@ -8,6 +8,7 @@ import { buildLeaseModel } from "../../../../lib/leaseEngine";
 import { buildResidentialLeaseModel } from "../../../../lib/residentialLeaseEngine";
 import { buildLOIPdf, buildLeasePdf, buildResidentialLeasePdf } from "../../../../lib/pdfBuilder";
 import { mergePdfBuffers } from "../../../../lib/pdfMerge";
+import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
 
 const ATTACHMENT_A_PATH = path.join(process.cwd(), "public", "legal", "nb-residential-lease-attachment-a.pdf");
 
@@ -35,6 +36,12 @@ async function loadSlotByToken(token) {
 }
 
 export async function GET(request, { params }) {
+  const ip = getClientIp(request);
+  const ipLimit = await checkRateLimit(`sign-get-ip:${ip}`, { max: 60, windowMs: 60_000 });
+  if (ipLimit.limited) {
+    return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
+  }
+
   const slot = await loadSlotByToken(params.token);
   if (!slot) {
     return NextResponse.json({ error: "Invalid or expired signing link." }, { status: 404 });
@@ -56,6 +63,16 @@ export async function GET(request, { params }) {
 }
 
 export async function POST(request, { params }) {
+  const ip = getClientIp(request);
+  const ipLimit = await checkRateLimit(`sign-post-ip:${ip}`, { max: 20, windowMs: 60_000 });
+  if (ipLimit.limited) {
+    return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
+  }
+  const tokenLimit = await checkRateLimit(`sign-post-token:${params.token}`, { max: 10, windowMs: 60_000 });
+  if (tokenLimit.limited) {
+    return NextResponse.json({ error: "Too many attempts for this signing link. Please try again shortly." }, { status: 429 });
+  }
+
   const slot = await loadSlotByToken(params.token);
   if (!slot) {
     return NextResponse.json({ error: "Invalid or expired signing link." }, { status: 404 });

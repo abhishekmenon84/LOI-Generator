@@ -447,6 +447,17 @@ model FormTemplate {
   @@index([orgId])
 }
 
+// Sliding-window request counter for rate-limiting public, unauthenticated
+// endpoints (sign/[token], verify/[verifyCode]) that are reachable by
+// anyone with a link and would otherwise have no throttling at all.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  bucketKey String
+  createdAt DateTime @default(now())
+
+  @@index([bucketKey, createdAt])
+}
+
 model FormField {
   id         String       @id @default(cuid())
   templateId String

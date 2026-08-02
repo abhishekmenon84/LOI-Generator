@@ -8,6 +8,7 @@ import { buildLeaseModel } from "../../../../lib/leaseEngine";
 import { buildResidentialLeaseModel } from "../../../../lib/residentialLeaseEngine";
 import { buildLOIPdf, buildLeasePdf, buildResidentialLeasePdf } from "../../../../lib/pdfBuilder";
 import { mergePdfBuffers } from "../../../../lib/pdfMerge";
+import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
 import path from "path";
 
 const ATTACHMENT_A_PATH = path.join(process.cwd(), "public", "legal", "nb-residential-lease-attachment-a.pdf");
@@ -23,6 +24,15 @@ async function buildDealPdf(ledger) {
 }
 
 export async function GET(request, { params }) {
+  const ip = getClientIp(request);
+  // The verify code is only 8 characters by design (meant to be printed on
+  // a document footer and typed/read aloud), so it is guessable at scale
+  // without a strict per-IP limit here.
+  const ipLimit = await checkRateLimit(`verify-ip:${ip}`, { max: 20, windowMs: 60_000 });
+  if (ipLimit.limited) {
+    return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
+  }
+
   const sigRequest = await prisma.signatureRequest.findUnique({
     where: { verifyCode: params.verifyCode },
     include: { ledger: true, signers: { include: { signatureEvent: true } } },
