@@ -15,16 +15,27 @@
 // `date` / `initials` / `text` anchors all get a plain text acknowledgment
 // input here.
 
-export default function FolderFileViewer({ file, onFieldChange, readOnly }) {
+export default function FolderFileViewer({ file, onFieldChange, readOnly, onEditFields }) {
   const isPdf = file.mimeType === "application/pdf";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-      <div>
-        <div style={{ fontSize: "19px", fontWeight: 800, marginBottom: "4px" }}>{file.name}</div>
-        <div style={{ fontSize: "12.5px", color: "oklch(50% 0.01 264)" }}>
-          {file.fieldTier === "plain" ? "Plain attachment" : file.fieldTier === "auto_detected" ? "Auto-detected form fields" : "Manually placed anchors"}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: "19px", fontWeight: 800, marginBottom: "4px" }}>{file.name}</div>
+          <div style={{ fontSize: "12.5px", color: "oklch(50% 0.01 264)" }}>
+            {file.fieldTier === "plain" ? "Plain attachment" : file.fieldTier === "auto_detected" ? "Auto-detected form fields" : "Manually placed anchors"}
+          </div>
         </div>
+        {isPdf && !readOnly && onEditFields && (
+          <button
+            type="button"
+            onClick={onEditFields}
+            style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid oklch(88% 0.008 60)", background: "white", color: "oklch(30% 0.01 264)", fontWeight: 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            {file.anchors && file.anchors.length > 0 ? "Edit fields" : "+ Add fields"}
+          </button>
+        )}
       </div>
 
       {isPdf ? (

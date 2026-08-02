@@ -6,6 +6,7 @@ import FolderBreadcrumb from "../../../../components/FolderBreadcrumb";
 import FolderTreePanel from "../../../../components/FolderTreePanel";
 import ResizeHandle from "../../../../components/ResizeHandle";
 import FolderFileViewer from "../../../../components/FolderFileViewer";
+import AnchorEditor from "../../../../components/AnchorEditor";
 import LOIForm from "../../../../components/LOIForm";
 import LOIPreview from "../../../../components/LOIPreview";
 import DocumentActionBar from "../../../../components/DocumentActionBar";
@@ -111,6 +112,15 @@ export default function FolderWorkspacePage() {
   const fileSaveTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
   const [uploadError, setUploadError] = useState(null);
+
+  // Reuses AnchorEditor (built for CustomTemplate/FormTemplate anchor
+  // placement) for a plain FolderFile upload too -- the editor's props are
+  // already generic ({fileUrl, pageCount, anchors, onSave, onCancel}) and
+  // PATCH /api/folders/files/[fileId] already accepts and persists an
+  // `anchors` array, setting fieldTier: "manual"; only the UI entry point
+  // was missing.
+  const [editingFileFields, setEditingFileFields] = useState(false);
+  const [fileFieldsError, setFileFieldsError] = useState(null);
 
   // "Built-in document" used to hardcode documentType: "purchase_loi" with
   // no choice at all -- this state backs a small picker (same shape as the
@@ -356,10 +366,30 @@ export default function FolderWorkspacePage() {
     closeSignatureModals();
     setSelectedLedgerId(null);
     setSelectedFileId(id);
+    setEditingFileFields(false);
   }
 
   function handleFieldChange(anchorId, value) {
     setFileData((prev) => (prev ? { ...prev, formValues: { ...(prev.formValues || {}), [anchorId]: value } } : prev));
+  }
+
+  async function handleSaveFileFields(anchors) {
+    setFileFieldsError(null);
+    const res = await fetch(`/api/folders/files/${selectedFileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anchors }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setFileFieldsError("Could not save fields. Please try again.");
+      return;
+    }
+    // Re-fetch rather than reconstruct locally -- the response only echoes
+    // {id, updatedAt}, not the persisted anchors (each gets a real DB id
+    // FolderFileViewer's formValues lookup keys off of).
+    const refreshed = await fetch(`/api/folders/files/${selectedFileId}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (refreshed) setFileData(refreshed);
+    setEditingFileFields(false);
   }
 
   async function handleUploadFile(fileList) {
@@ -648,8 +678,19 @@ export default function FolderWorkspacePage() {
               <div style={{ color: "oklch(45% 0.18 25)" }}>⚠️ {fileLoadError}</div>
             ) : !fileData ? (
               <div style={{ padding: "40px", color: "oklch(45% 0.01 264)" }}>Loading…</div>
+            ) : editingFileFields ? (
+              <div>
+                {fileFieldsError && <div style={{ color: "oklch(45% 0.18 25)", marginBottom: 12 }}>⚠️ {fileFieldsError}</div>}
+                <AnchorEditor
+                  fileUrl={fileData.fileUrl}
+                  pageCount={fileData.pageCount || 1}
+                  anchors={(fileData.anchors || []).map((a) => ({ ...a }))}
+                  onSave={handleSaveFileFields}
+                  onCancel={() => setEditingFileFields(false)}
+                />
+              </div>
             ) : (
-              <FolderFileViewer file={fileData} onFieldChange={handleFieldChange} readOnly={fileReadOnly} />
+              <FolderFileViewer file={fileData} onFieldChange={handleFieldChange} readOnly={fileReadOnly} onEditFields={() => setEditingFileFields(true)} />
             )
           ) : hasActiveLedger ? (
             ledgerLoadError ? (
