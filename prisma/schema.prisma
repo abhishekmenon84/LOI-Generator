@@ -390,6 +390,12 @@ model SignatureRequest {
   snapshotFormData     Json
   snapshotDocumentType String
   snapshotTemplateId   String?
+  // The Ledger's name at snapshot time. Ledger.name isn't itself
+  // snapshotted content (webhooks/emails read the live value), but before
+  // a request is locked, a sender can still rename the Ledger mid-flight --
+  // this exists so those notifications can report the name signers
+  // actually saw instead of a later rename.
+  snapshotName         String?
   // Periodic proactive integrity re-check (app/api/cron/verify-integrity),
   // distinct from the on-demand check GET /api/verify/[verifyCode] already
   // does on request -- catches silent corruption (a Blob file overwritten,

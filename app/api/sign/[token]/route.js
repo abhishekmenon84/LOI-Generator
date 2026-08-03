@@ -62,7 +62,7 @@ export async function GET(request, { params }) {
   // see prisma/schema.prisma's comment on SignatureRequest.snapshotFormData.
   const branding = await getEmailBranding(slot.request.ledger.folder?.orgId);
   return NextResponse.json({
-    dealName: slot.request.ledger.name,
+    dealName: slot.request.snapshotName || slot.request.ledger.name,
     documentType: slot.request.snapshotDocumentType,
     formData: slot.request.snapshotFormData,
     signerName: slot.name,
@@ -99,6 +99,11 @@ export async function PATCH(request, { params }) {
     prisma.signatureRequest.update({ where: { id: slot.requestId }, data: { status: "declined" } }),
   ]);
 
+  // See prisma/schema.prisma's comment on snapshotName -- prefer the frozen
+  // name over the live Ledger.name so a post-signing (pre-lock) rename can't
+  // retroactively change what this notification reports.
+  const snapshotLedgerName = slot.request.snapshotName || slot.request.ledger.name;
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
   const creator = await prisma.user.findUnique({ where: { id: slot.request.createdByUserId }, select: { email: true } });
@@ -108,10 +113,10 @@ export async function PATCH(request, { params }) {
       .send({
         from: "Ledgerlot <onboarding@resend.dev>",
         to: creator.email,
-        subject: `Signature declined: ${slot.request.ledger.name}`,
+        subject: `Signature declined: ${snapshotLedgerName}`,
         html: renderEmail({
           title: "Signature declined",
-          body: `<strong>${escapeHtml(slot.name)}</strong> (${escapeHtml(slot.roleOtherLabel || slot.role)}) declined to sign <strong>${escapeHtml(slot.request.ledger.name)}</strong>.${declineReason ? `<br/><br/>Reason: ${escapeHtml(declineReason)}` : ""}`,
+          body: `<strong>${escapeHtml(slot.name)}</strong> (${escapeHtml(slot.roleOtherLabel || slot.role)}) declined to sign <strong>${escapeHtml(snapshotLedgerName)}</strong>.${declineReason ? `<br/><br/>Reason: ${escapeHtml(declineReason)}` : ""}`,
           ctaLabel: "View the document",
           ctaUrl: `${appUrl}/ledgerboard/folder/${slot.request.ledger.folderId}`,
           brandName: branding.brandName,
@@ -124,7 +129,7 @@ export async function PATCH(request, { params }) {
   if (slot.request.ledger.folder?.orgId) {
     dispatchWebhookEvent(slot.request.ledger.folder.orgId, "document.declined", {
       ledgerId: slot.request.ledgerId,
-      ledgerName: slot.request.ledger.name,
+      ledgerName: snapshotLedgerName,
       signerName: slot.name,
       signerRole: slot.roleOtherLabel || slot.role,
       declineReason,
@@ -193,10 +198,13 @@ export async function POST(request, { params }) {
     prisma.signerSlot.update({ where: { id: slot.id }, data: { tokenUsedAt: new Date() } }),
   ]);
 
+  // See prisma/schema.prisma's comment on snapshotName.
+  const snapshotLedgerName = slot.request.snapshotName || slot.request.ledger.name;
+
   if (slot.request.ledger.folder?.orgId) {
     dispatchWebhookEvent(slot.request.ledger.folder.orgId, "document.signed", {
       ledgerId: slot.request.ledgerId,
-      ledgerName: slot.request.ledger.name,
+      ledgerName: snapshotLedgerName,
       signerName: slot.name,
       signerRole: slot.roleOtherLabel || slot.role,
     }).catch((err) => console.error("[sign] webhook dispatch failed:", err));
@@ -225,10 +233,10 @@ export async function POST(request, { params }) {
             .send({
               from: "Ledgerlot <onboarding@resend.dev>",
               to: s.email,
-              subject: `Please sign: ${slot.request.ledger.name}`,
+              subject: `Please sign: ${snapshotLedgerName}`,
               html: renderEmail({
                 title: "Your signature is requested",
-                body: `You've been asked to sign <strong>${escapeHtml(slot.request.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+                body: `You've been asked to sign <strong>${escapeHtml(snapshotLedgerName)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
                 ctaLabel: "Review and sign",
                 ctaUrl: `${appUrl}/sign/${s.signingToken}`,
                 footerNote: "Didn't expect this? You can safely ignore this email.",

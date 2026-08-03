@@ -19,8 +19,14 @@ export async function GET(request) {
     return NextResponse.json({ error: "Invalid or missing API key." }, { status: 401 });
   }
 
+  // An API key represents the whole org, not any one user, so it has no
+  // identity to check against Folder.restrictedToParticipants (a
+  // confidentiality restriction meant to hide a folder from other org
+  // admins/members) or LedgerParticipant (a single-user document grant).
+  // Rather than bypass those restrictions, restricted folders are simply
+  // excluded from the public API entirely.
   const folders = await prisma.folder.findMany({
-    where: { orgId: auth.orgId, archivedAt: null },
+    where: { orgId: auth.orgId, archivedAt: null, restrictedToParticipants: false },
     select: { id: true, name: true, stage: true, createdAt: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
     take: 100,

@@ -31,6 +31,22 @@ export default async function DocumentsPage() {
   const activeFolders = await listAccessibleFolders(session.user.id, {});
   const userOrgs = await listUserOrgs(session.user.id);
 
+  // Document-level shares (LedgerParticipant) grant access to one Ledger
+  // without any FolderParticipant/org access to its containing folder --
+  // such a folder never appears in activeFolders above, so its shared
+  // Ledger would otherwise be completely unreachable in the UI. Surfaced
+  // here as its own list, linking to the dedicated single-document view
+  // at /ledgerboard/document/[id] (see that page's own comment for why
+  // the folder workspace can't be used for this).
+  const sharedLedgerGrants = await prisma.ledgerParticipant.findMany({
+    where: { userId: session.user.id },
+    include: { ledger: { select: { id: true, name: true, documentType: true, archivedAt: true, folderId: true } } },
+  });
+  const sharedFolderIds = new Set(activeFolders.map((f) => f.id));
+  const sharedLedgers = sharedLedgerGrants
+    .filter((g) => !g.ledger.archivedAt && !sharedFolderIds.has(g.ledger.folderId))
+    .map((g) => ({ id: g.ledger.id, name: g.ledger.name, documentType: g.ledger.documentType, permission: g.permission }));
+
   const folderIds = activeFolders.map((f) => f.id);
   const [participants, primaryLedgers] = folderIds.length > 0
     ? await Promise.all([
@@ -83,6 +99,7 @@ export default async function DocumentsPage() {
         <div style={{ padding: "32px 28px" }}>
           <h1 style={{ marginBottom: 4 }}>Documents</h1>
           <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Drag a folder between stages.</p>
+          <SharedLedgersSection sharedLedgers={sharedLedgers} />
           <KanbanDashboard
             initialFolders={activeFolders.map(serializeFolder)}
             userOrgs={userOrgs}
@@ -115,11 +132,36 @@ export default async function DocumentsPage() {
     >
       <div style={{ padding: "32px 28px" }}>
         <h1>Documents</h1>
+        <SharedLedgersSection sharedLedgers={sharedLedgers} />
         <DealList
           initialFolders={activeFolders.map(serialize)}
           userOrgs={userOrgs}
         />
       </div>
     </AppShell>
+  );
+}
+
+// Renders nothing when the user has no pure document-level shares --
+// most users never will, so this stays invisible for the common case.
+function SharedLedgersSection({ sharedLedgers }) {
+  if (sharedLedgers.length === 0) return null;
+  return (
+    <div style={{ marginBottom: 24, padding: "14px 18px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-panel)" }}>
+      <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--text-secondary)", marginBottom: 10 }}>
+        Shared with you
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {sharedLedgers.map((l) => (
+          <a
+            key={l.id}
+            href={`/ledgerboard/document/${l.id}`}
+            style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}
+          >
+            {l.name} <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>({l.permission === "write" ? "can edit" : "view only"})</span>
+          </a>
+        ))}
+      </div>
+    </div>
   );
 }

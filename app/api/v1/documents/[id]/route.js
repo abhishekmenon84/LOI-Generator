@@ -17,7 +17,7 @@ export async function GET(request, { params }) {
   const ledger = await prisma.ledger.findUnique({
     where: { id: params.id },
     include: {
-      folder: { select: { orgId: true } },
+      folder: { select: { orgId: true, restrictedToParticipants: true } },
       signatureRequests: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -25,7 +25,13 @@ export async function GET(request, { params }) {
       },
     },
   });
-  if (!ledger || ledger.folder.orgId !== auth.orgId) {
+  // See app/api/v1/folders/route.js's comment: an API key has no per-user
+  // identity, so a restricted folder's documents are excluded entirely
+  // rather than exposed via a credential that can't evaluate participant
+  // membership. This also means a LedgerParticipant-only document share
+  // (no restrictedToParticipants involved) is correctly still reachable
+  // here via org-membership, matching this API's existing scope.
+  if (!ledger || ledger.folder.orgId !== auth.orgId || ledger.folder.restrictedToParticipants) {
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 

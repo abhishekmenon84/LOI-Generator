@@ -37,13 +37,13 @@ function AuditIcon() {
 export default function DocumentActionBar({ readOnly, onShare, onSendForSignature, onAudit }) {
   return (
     <div className="document-action-bar" role="group" aria-label="Document actions">
-      {!readOnly && (
+      {!readOnly && onShare && (
         <button type="button" className="btn-doc-action" onClick={onShare} title="Share this deal">
           <ShareIcon />
           Share
         </button>
       )}
-      {!readOnly && (
+      {!readOnly && onSendForSignature && (
         <button type="button" className="btn-doc-action" onClick={onSendForSignature} title="Send for signature">
           <SignatureIcon />
           Send for Signature

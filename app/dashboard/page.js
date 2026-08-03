@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
 import { getPrimaryOrgForShell, hasBusinessOrgMembership } from "../../lib/orgAccess";
 import { listAccessibleFolders } from "../../lib/folderAccess";
+import { retentionYearsToDays } from "../../lib/pricingTiers";
 import { prisma } from "../../lib/prisma";
 import AppShell from "../../components/AppShell";
 import DashboardGreeting from "../../components/DashboardGreeting";
@@ -66,7 +67,7 @@ export default async function DashboardPage({ searchParams }) {
         businessPhone: searchParams?.businessPhone?.trim() || null,
         businessAddress: searchParams?.businessAddress?.trim() || null,
         retentionYears,
-        retentionDays: retentionYears * 365,
+        retentionDays: retentionYearsToDays(retentionYears),
         memberships: { create: { userId: session.user.id, role: "admin" } },
       },
     });

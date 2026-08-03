@@ -107,6 +107,7 @@ export async function POST(request, { params }) {
       snapshotFormData: ledger.formData,
       snapshotDocumentType: ledger.documentType,
       snapshotTemplateId: ledger.templateId,
+      snapshotName: ledger.name,
       signers: {
         create: withOrder.map((p) => ({
           kind: p.kind,

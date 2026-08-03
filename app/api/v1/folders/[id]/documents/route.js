@@ -6,9 +6,14 @@ import { checkRateLimit, getClientIp } from "../../../../../../lib/rateLimit";
 
 const VALID_DOC_TYPES = ["purchase_loi", "commercial_lease", "residential_lease"];
 
+// An API key has no per-user identity (see app/api/v1/folders/route.js's
+// comment), so a folder marked restrictedToParticipants -- deliberately
+// hidden from other org admins/members -- is excluded from the public API
+// entirely rather than exposed via a credential that can't evaluate
+// per-user participant membership.
 async function loadOwnedFolder(folderId, orgId) {
   const folder = await prisma.folder.findUnique({ where: { id: folderId } });
-  if (!folder || folder.orgId !== orgId) return null;
+  if (!folder || folder.orgId !== orgId || folder.restrictedToParticipants) return null;
   return folder;
 }
 
