@@ -52,7 +52,7 @@ function ArchiveToggleButton({ archived, onToggle, title }) {
 // out (per doc.archivedAt) and are moved into a separate "Archived"
 // section by the caller -- this component just renders whatever list it's
 // given, active or archived alike.
-function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive }) {
+function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive, onDuplicate }) {
   const archived = !!doc.archivedAt;
   return (
     <div
@@ -82,6 +82,19 @@ function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive }) {
       >
         {doc.name}
       </span>
+      {onDuplicate && !archived && (
+        <button
+          type="button"
+          title="Duplicate"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDuplicate(doc.id);
+          }}
+          style={{ flex: "0 0 auto", background: "none", border: "none", cursor: "pointer", fontSize: "11px", color: "oklch(55% 0.01 264)", padding: "2px 4px" }}
+        >
+          ⧉
+        </button>
+      )}
       {onToggleArchive && (
         <ArchiveToggleButton
           archived={archived}
@@ -231,6 +244,7 @@ export default function FolderTreePanel({
   onUploadFile,
   onToggleLedgerArchive,
   onToggleFileArchive,
+  onDuplicateLedger,
   // CSS length used as the panel's flex-basis (e.g. "10%"), so the three
   // panels stay proportional instead of pinned to pixel widths.
   width = "10%",
@@ -413,6 +427,7 @@ export default function FolderTreePanel({
                     isSelected={selectedLedgerId === doc.id}
                     onSelectLedger={onSelectLedger}
                     onToggleArchive={onToggleLedgerArchive}
+                    onDuplicate={onDuplicateLedger}
                   />
                 ))}
                 {activeFiles.map((doc) => (
@@ -525,6 +540,7 @@ export default function FolderTreePanel({
                       isSelected={selectedLedgerId === doc.id}
                       onSelectLedger={onSelectLedger}
                       onToggleArchive={onToggleLedgerArchive}
+                      onDuplicate={onDuplicateLedger}
                     />
                   ))}
                   {sfFiles.map((doc) => (

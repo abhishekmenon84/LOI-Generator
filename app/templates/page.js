@@ -6,6 +6,7 @@ import { listUserOrgs, getPrimaryOrgForShell } from "../../lib/orgAccess";
 import AppShell from "../../components/AppShell";
 import TemplateRow from "../../components/TemplateRow";
 import UseFormTemplateButton from "../../components/UseFormTemplateButton";
+import DuplicateTemplateButton from "../../components/DuplicateTemplateButton";
 
 export const metadata = {
   title: "Templates — Ledgerlot",
@@ -159,6 +160,7 @@ export default async function TemplatesPage() {
                   >
                     {sourceLabelFor(t)}
                   </span>
+                  <DuplicateTemplateButton orgId={t.orgId} templateId={t.id} />
                   <UseFormTemplateButton template={{ id: t.id, name: t.name, pdfUrl: t.pdfUrl, pageCount: t.pageCount, fieldCount: t._count.fields }} />
                 </div>
               </Link>
@@ -182,19 +184,22 @@ export default async function TemplatesPage() {
                       {t.pageCount} page{t.pageCount === 1 ? "" : "s"} · {t._count.anchors} field{t._count.anchors === 1 ? "" : "s"}
                     </div>
                   </div>
-                  <span
-                    style={{
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      background: "var(--bg-panel)",
-                      border: "1px solid var(--border)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {sourceLabelFor(t)}
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        padding: "4px 10px",
+                        borderRadius: 999,
+                        background: "var(--bg-panel)",
+                        border: "1px solid var(--border)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {sourceLabelFor(t)}
+                    </span>
+                    <DuplicateTemplateButton orgId={t.orgId} templateId={t.id} />
+                  </div>
                 </TemplateRow>
               ))}
             </div>

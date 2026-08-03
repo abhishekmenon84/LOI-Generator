@@ -386,6 +386,16 @@ export default function FolderWorkspacePage() {
     }
   }
 
+  async function handleDuplicateLedger(ledgerId) {
+    const res = await fetch(`/api/ledgers/${ledgerId}/duplicate`, { method: "POST" }).catch(() => null);
+    const body = await res?.json().catch(() => ({})) ?? {};
+    if (!res || !res.ok) {
+      setUploadError(body.error || "Could not duplicate this document.");
+      return;
+    }
+    setFolderLedgers((cur) => [...cur, { id: body.id, name: body.name, documentType: body.documentType, archivedAt: null }]);
+  }
+
   async function handleToggleFileArchive(fileId, archived) {
     const prev = folderFiles;
     setFolderFiles((cur) => cur.map((f) => (f.id === fileId ? { ...f, archivedAt: archived ? new Date().toISOString() : null } : f)));
@@ -726,6 +736,7 @@ export default function FolderWorkspacePage() {
           onAddFromTemplate={handleAddFromTemplate}
           onUploadFile={() => fileInputRef.current?.click()}
           onToggleLedgerArchive={handleToggleLedgerArchive}
+          onDuplicateLedger={handleDuplicateLedger}
           onToggleFileArchive={handleToggleFileArchive}
           width={`${leftPct}%`}
         />
