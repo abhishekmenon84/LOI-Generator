@@ -93,6 +93,11 @@ export default function DocumentAuditPanel({ ledgerId, isOpen, onClose }) {
                 ⚠️ The document was fully signed, but the completion email failed to send: {r.deliveryError}
               </div>
             )}
+            {r.integrityCheckFailedAt && (
+              <div className="status-banner status-error" role="alert" style={{ marginBottom: 8, fontSize: "0.8rem" }}>
+                ⚠️ A routine integrity re-check on {new Date(r.integrityCheckFailedAt).toLocaleString()} found this document's stored hash no longer matches -- contact support.
+              </div>
+            )}
             {r.status === "fully_executed" && (
               <a
                 href={`/api/ledgers/${ledgerId}/signature-audit/${r.id}/certificate`}

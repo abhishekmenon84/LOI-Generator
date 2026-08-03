@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { getRoleLabel } from "../../../../lib/signerRoles";
-import { hashDocument } from "../../../../lib/signatureEngine";
-import { burnSignatures } from "../../../../lib/pdfSignatureBurn";
-import { buildDealPdf } from "../../../../lib/dealPdfBuilder";
+import { checkSignatureRequestIntegrity } from "../../../../lib/verifyIntegrity";
 import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
 
 export async function GET(request, { params }) {
@@ -33,25 +31,7 @@ export async function GET(request, { params }) {
 
   let integrityValid = false;
   try {
-    // Regenerate from this request's own frozen snapshot, matching exactly
-    // what signatureFinalize.js hashed at signing time -- not the live
-    // Ledger (which, while normally locked by this point, shouldn't be the
-    // source of truth for a historical integrity check regardless).
-    const snapshot = {
-      documentType: sigRequest.snapshotDocumentType,
-      formData: sigRequest.snapshotFormData,
-      templateId: sigRequest.snapshotTemplateId,
-    };
-    const pdfBuffer = await buildDealPdf(snapshot);
-    const signedSlots = signerSlots.map((s) => ({
-      name: s.name,
-      roleLabel: getRoleLabel(s.role, s.roleOtherLabel),
-      signatureImageDataUrl: s.signatureEvent.signatureImageUrl,
-      signedAt: s.signatureEvent.signedAt.toISOString(),
-    }));
-    const regenerated = await burnSignatures(pdfBuffer, signedSlots);
-    const regeneratedHash = hashDocument(regenerated);
-    integrityValid = regeneratedHash === sigRequest.finalDocumentHash;
+    integrityValid = await checkSignatureRequestIntegrity(sigRequest);
   } catch (err) {
     console.error("verify integrity check error:", err.message);
     integrityValid = false;

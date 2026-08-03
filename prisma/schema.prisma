@@ -261,6 +261,12 @@ model SignatureRequest {
   snapshotFormData     Json
   snapshotDocumentType String
   snapshotTemplateId   String?
+  // Periodic proactive integrity re-check (app/api/cron/verify-integrity),
+  // distinct from the on-demand check GET /api/verify/[verifyCode] already
+  // does on request -- catches silent corruption (a Blob file overwritten,
+  // a DB row altered) even if nobody ever happens to hit the verify page.
+  lastIntegrityCheckAt   DateTime?
+  integrityCheckFailedAt DateTime?
 
   signers SignerSlot[]
 

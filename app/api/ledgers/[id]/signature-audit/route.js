@@ -51,6 +51,7 @@ export async function GET(request, { params }) {
       lastReminderSentAt: r.lastReminderSentAt,
       finalDocumentHash: r.finalDocumentHash,
       deliveryError: r.deliveryError,
+      integrityCheckFailedAt: r.integrityCheckFailedAt,
       signers: r.signers.map((s) => ({
         kind: s.kind,
         name: s.name,
