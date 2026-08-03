@@ -1,5 +1,10 @@
 import "./globals.css";
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata = {
   title: "Ledgerlot — Letter of Intent Generator for Business & Real Estate Deals",
   description:

@@ -1684,3 +1684,38 @@ select option {
   border-color: var(--accent);
   color: var(--accent-light);
 }
+
+/* ── App shell responsive sidebar ────────────────────────────
+   Below 860px, the always-visible 240px Sidebar column would eat most of
+   a phone's viewport width -- collapse it into a slide-in overlay
+   (toggled via TopBar's hamburger button, state owned by AppShell.jsx)
+   instead. Above the breakpoint this has no effect; Sidebar renders as
+   the normal permanent column regardless of mobileOpen. */
+@media (max-width: 860px) {
+  .app-shell-sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    z-index: 91;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 12px 0 32px rgba(20, 18, 15, 0.18);
+  }
+
+  .app-shell-sidebar-open {
+    transform: translateX(0);
+  }
+
+  .app-shell-hamburger {
+    display: inline-flex !important;
+  }
+
+  .app-shell-kbd-hint {
+    display: none;
+  }
+
+  .app-shell-topbar {
+    padding: 0 14px !important;
+  }
+}
+

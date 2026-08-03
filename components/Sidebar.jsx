@@ -22,26 +22,36 @@ function isActive(href, pathname) {
   return pathname.startsWith(path);
 }
 
-export default function Sidebar({ org }) {
+export default function Sidebar({ org, mobileOpen, onClose }) {
   const pathname = usePathname();
 
   return (
-    <div
-      style={{
-        width: 240,
-        flex: "0 0 auto",
-        background: "oklch(99% 0.003 60)",
-        borderRight: "1px solid oklch(88% 0.008 60)",
-        display: "flex",
-        flexDirection: "column",
-        padding: "20px 14px",
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-      }}
-    >
+    <>
+      {mobileOpen && (
+        <div
+          className="app-shell-sidebar-scrim"
+          onClick={onClose}
+          style={{ position: "fixed", inset: 0, background: "rgba(20,18,15,0.4)", zIndex: 90 }}
+        />
+      )}
+      <div
+        className={`app-shell-sidebar${mobileOpen ? " app-shell-sidebar-open" : ""}`}
+        style={{
+          width: 240,
+          flex: "0 0 auto",
+          background: "oklch(99% 0.003 60)",
+          borderRight: "1px solid oklch(88% 0.008 60)",
+          display: "flex",
+          flexDirection: "column",
+          padding: "20px 14px",
+          height: "100vh",
+          position: "sticky",
+          top: 0,
+        }}
+      >
       <Link
         href="/dashboard"
+        onClick={onClose}
         style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px 22px", textDecoration: "none", color: "inherit" }}
       >
         <div style={{ width: 30, height: 30, position: "relative", flex: "0 0 auto" }}>
@@ -60,6 +70,7 @@ export default function Sidebar({ org }) {
             <Link
               key={`${item.href}-${item.label}`}
               href={item.href}
+              onClick={onClose}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -101,12 +112,14 @@ export default function Sidebar({ org }) {
           </span>
           <Link
             href="/settings"
+            onClick={onClose}
             style={{ border: "none", background: "oklch(24% 0.015 264)", color: "white", fontSize: 11.5, fontWeight: 600, padding: "5px 11px", borderRadius: 8, textDecoration: "none" }}
           >
             Change tier
           </Link>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

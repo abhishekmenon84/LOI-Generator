@@ -12,7 +12,7 @@ import SignOutButton from "./SignOutButton";
 // folder-creation logic here -- keeps creation logic in exactly one
 // place. What document to add inside the new folder is decided
 // afterwards, inside the Folder workspace's own "+ Add" menu.
-export default function TopBar({ onOpenSearch, userInitial = "?" }) {
+export default function TopBar({ onOpenSearch, userInitial = "?", onOpenMobileSidebar }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -22,6 +22,7 @@ export default function TopBar({ onOpenSearch, userInitial = "?" }) {
 
   return (
     <div
+      className="app-shell-topbar"
       style={{
         height: 64,
         flex: "0 0 auto",
@@ -31,15 +32,27 @@ export default function TopBar({ onOpenSearch, userInitial = "?" }) {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "0 28px",
+        gap: 12,
       }}
     >
+      <button
+        type="button"
+        className="app-shell-hamburger"
+        onClick={onOpenMobileSidebar}
+        aria-label="Open navigation menu"
+        style={{ display: "none", width: 34, height: 34, flex: "0 0 auto", borderRadius: 9, border: "1px solid oklch(88% 0.008 60)", background: "white", fontSize: 16, cursor: "pointer", alignItems: "center", justifyContent: "center" }}
+      >
+        ☰
+      </button>
       <div
         onClick={onOpenSearch}
         style={{
           display: "flex",
           alignItems: "center",
           gap: 9,
-          width: 340,
+          width: "100%",
+          maxWidth: 340,
+          minWidth: 0,
           padding: "9px 13px",
           borderRadius: 10,
           border: "1px solid oklch(88% 0.008 60)",
@@ -47,9 +60,9 @@ export default function TopBar({ onOpenSearch, userInitial = "?" }) {
           cursor: "pointer",
         }}
       >
-        <span style={{ fontSize: 13, color: "oklch(60% 0.01 264)" }}>⌕</span>
-        <span style={{ fontSize: 13.5, color: "oklch(60% 0.01 264)", flex: 1 }}>Search documents...</span>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "oklch(50% 0.012 264)", background: "white", border: "1px solid oklch(88% 0.008 60)", padding: "2px 6px", borderRadius: 6 }}>
+        <span style={{ fontSize: 13, color: "oklch(60% 0.01 264)", flex: "0 0 auto" }}>⌕</span>
+        <span style={{ fontSize: 13.5, color: "oklch(60% 0.01 264)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Search documents...</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "oklch(50% 0.012 264)", background: "white", border: "1px solid oklch(88% 0.008 60)", padding: "2px 6px", borderRadius: 6, flex: "0 0 auto" }} className="app-shell-kbd-hint">
           ⌘K
         </span>
       </div>
