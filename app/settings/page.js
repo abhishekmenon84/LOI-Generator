@@ -69,6 +69,14 @@ export default async function SettingsPage() {
             </Link>
           </p>
         )}
+
+        <h2 style={{ margin: "28px 0 8px" }}>Your data</h2>
+        <p style={{ color: "var(--text-secondary)", marginBottom: 12 }}>
+          Download a copy of your account profile, folders, documents, and signature history.
+        </p>
+        <a href="/api/users/me/export" className="marketing-cta-button" style={{ display: "inline-block" }}>
+          Export my data
+        </a>
       </div>
     </AppShell>
   );
