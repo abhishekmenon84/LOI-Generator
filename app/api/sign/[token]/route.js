@@ -5,16 +5,8 @@ import { lookupGeo } from "../../../../lib/geoLookup";
 import { buildDealPdf } from "../../../../lib/dealPdfBuilder";
 import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
 import { isSlotUnlocked, nextSlotsToNotify } from "../../../../lib/signingOrder";
+import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
 import { Resend } from "resend";
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 async function loadSlotByToken(token) {
   const slot = await prisma.signerSlot.findUnique({
@@ -111,7 +103,12 @@ export async function PATCH(request, { params }) {
         from: "Ledgerlot <onboarding@resend.dev>",
         to: creator.email,
         subject: `Signature declined: ${slot.request.ledger.name}`,
-        html: `<p><strong>${escapeHtml(slot.name)}</strong> (${escapeHtml(slot.roleOtherLabel || slot.role)}) declined to sign <strong>${escapeHtml(slot.request.ledger.name)}</strong>.</p>${declineReason ? `<p>Reason: ${escapeHtml(declineReason)}</p>` : ""}<p><a href="${appUrl}/ledgerboard/folder/${slot.request.ledger.folderId}">View the document</a></p>`,
+        html: renderEmail({
+          title: "Signature declined",
+          body: `<strong>${escapeHtml(slot.name)}</strong> (${escapeHtml(slot.roleOtherLabel || slot.role)}) declined to sign <strong>${escapeHtml(slot.request.ledger.name)}</strong>.${declineReason ? `<br/><br/>Reason: ${escapeHtml(declineReason)}` : ""}`,
+          ctaLabel: "View the document",
+          ctaUrl: `${appUrl}/ledgerboard/folder/${slot.request.ledger.folderId}`,
+        }),
       })
       .catch((err) => console.error("[sign decline] notification email failed:", err));
   }
@@ -201,7 +198,13 @@ export async function POST(request, { params }) {
               from: "Ledgerlot <onboarding@resend.dev>",
               to: s.email,
               subject: `Please sign: ${slot.request.ledger.name}`,
-              html: `<p>You've been asked to sign <strong>${escapeHtml(slot.request.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.</p><p><a href="${appUrl}/sign/${s.signingToken}">Review and sign</a></p>`,
+              html: renderEmail({
+                title: "Your signature is requested",
+                body: `You've been asked to sign <strong>${escapeHtml(slot.request.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+                ctaLabel: "Review and sign",
+                ctaUrl: `${appUrl}/sign/${s.signingToken}`,
+                footerNote: "Didn't expect this? You can safely ignore this email.",
+              }),
             })
             .catch((err) => console.error("[sign] next-signer notification failed:", err))
         )

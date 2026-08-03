@@ -6,18 +6,10 @@ import { isValidRole } from "../../../../../lib/signerRoles";
 import { generateSigningToken, generateVerifyCode } from "../../../../../lib/signatureEngine";
 import { getOrgLimits, checkAndIncrementUsage } from "../../../../../lib/orgBilling";
 import { nextSlotsToNotify } from "../../../../../lib/signingOrder";
+import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
 import { Resend } from "resend";
 
 const SIGNING_LINK_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 async function loadAccessibleLedger(ledgerId, userId) {
   const ledger = await prisma.ledger.findUnique({ where: { id: ledgerId } });
@@ -139,13 +131,22 @@ export async function POST(request, { params }) {
             from: "Ledgerlot <onboarding@resend.dev>",
             to: s.email,
             subject: `Please sign: ${ledger.name}`,
-            html: `<p>You've been asked to sign <strong>${escapeHtml(ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.</p><p><a href="${appUrl}/sign/${s.signingToken}">Review and sign</a></p>`,
+            html: renderEmail({
+              title: "Your signature is requested",
+              body: `You've been asked to sign <strong>${escapeHtml(ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+              ctaLabel: "Review and sign",
+              ctaUrl: `${appUrl}/sign/${s.signingToken}`,
+              footerNote: "Didn't expect this? You can safely ignore this email.",
+            }),
           })
         : resend.emails.send({
             from: "Ledgerlot <onboarding@resend.dev>",
             to: s.email,
             subject: `FYI: ${ledger.name} sent for signature`,
-            html: `<p><strong>${escapeHtml(ledger.name)}</strong> has been sent out for signature. You're being kept informed as ${escapeHtml(s.roleOtherLabel || s.role)}.</p>`,
+            html: renderEmail({
+              title: "Sent for signature",
+              body: `<strong>${escapeHtml(ledger.name)}</strong> has been sent out for signature. You're being kept informed as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+            }),
           })
     )
   );

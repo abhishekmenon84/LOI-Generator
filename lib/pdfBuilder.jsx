@@ -385,7 +385,7 @@ function ResidentialLeasePdfDocument({ model }) {
 
         <Text style={styles.sectionTitle}>SECTION 7 — SIGNATURES</Text>
         <View style={styles.sigBlock}>
-          <Text>Signature of Landlord: ___________________________  Date: ___________</Text>
+          <Text>Signature of Landlord ({model.landlordName}): ___________________________  Date: ___________</Text>
         </View>
         {model.signatureBlocks.map((s, i) => (
           <View style={styles.sigBlock} key={i}>

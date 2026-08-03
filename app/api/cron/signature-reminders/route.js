@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { nextSlotsToNotify } from "../../../../lib/signingOrder";
+import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
 import { Resend } from "resend";
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 const REMINDER_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -50,7 +42,13 @@ export async function GET(request) {
             from: "Ledgerlot <onboarding@resend.dev>",
             to: s.email,
             subject: `Reminder: please sign ${sigRequest.ledger.name}`,
-            html: `<p>This is a reminder that you've been asked to sign <strong>${escapeHtml(sigRequest.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.</p><p><a href="${appUrl}/sign/${s.signingToken}">Review and sign</a></p>`,
+            html: renderEmail({
+              title: "Reminder: your signature is requested",
+              body: `This is a reminder that you've been asked to sign <strong>${escapeHtml(sigRequest.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+              ctaLabel: "Review and sign",
+              ctaUrl: `${appUrl}/sign/${s.signingToken}`,
+              footerNote: "Didn't expect this? You can safely ignore this email.",
+            }),
           })
           .catch((err) => console.error("[cron signature-reminders] send failed:", err))
       )
