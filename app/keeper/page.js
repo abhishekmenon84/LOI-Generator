@@ -10,6 +10,7 @@ import SubscribeButtons from "../../components/SubscribeButtons";
 import KeeperTabs from "../../components/KeeperTabs";
 import KeeperReceipts from "../../components/KeeperReceipts";
 import KeeperTemplates from "../../components/KeeperTemplates";
+import KeeperApiSettings from "../../components/KeeperApiSettings";
 import { getTierForSeatCount, quotaForSeatCount } from "../../lib/orgBilling";
 
 export const metadata = {
@@ -64,6 +65,10 @@ export default async function KeeperPage() {
               tabs={[
                 { id: "members", label: "Members" },
                 { id: "billing", label: "Billing" },
+                { id: "templates", label: "Templates" },
+                { id: "branding", label: "Branding" },
+                { id: "api", label: "API & Webhooks" },
+                { id: "receipts", label: "Receipts" },
               ]}
               panels={{
                 members: (
@@ -108,6 +113,7 @@ export default async function KeeperPage() {
                     </div>
                   ),
                 receipts: <KeeperReceipts receipts={serializedReceipts} />,
+                api: <KeeperApiSettings orgId={org.id} />,
               }}
             />
           </>

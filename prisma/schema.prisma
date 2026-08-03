@@ -104,6 +104,67 @@ model Organization {
   usageCounter    UsageCounter?
   contacts        Contact[]
   verificationDocument BusinessVerificationDocument?
+  apiKeys         ApiKey[]
+  webhooks        Webhook[]
+}
+
+// A programmatic-access credential for the public API (app/api/v1/*).
+// The raw key is shown to the user exactly once at creation time and
+// never stored -- only its SHA-256 hash, matching how a signing token
+// would be verified (compare hash of the presented key, not a stored
+// plaintext secret). Business-org-only (no personal-org API access,
+// matching how e-sign/branding/etc are already business-tier features
+// per lib/orgBilling.js's getOrgLimits).
+model ApiKey {
+  id          String    @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String    // user-chosen label, e.g. "CRM integration"
+  keyHash     String    @unique
+  keyPrefix   String    // first 8 chars of the raw key, shown in the UI so a user can tell keys apart without re-exposing the full secret
+  createdByUserId String
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([orgId])
+}
+
+// An org's subscription to push notifications for key lifecycle events
+// (document signed, declined, folder archived, etc) -- delivered as an
+// HMAC-SHA256-signed POST so the receiving endpoint can verify authenticity
+// without needing mutual TLS or IP allowlisting.
+model Webhook {
+  id          String    @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  url         String
+  secret      String    // used to HMAC-sign each delivery's payload; shown once at creation like ApiKey's raw key
+  eventTypes  String[]  // subset of WEBHOOK_EVENT_TYPES (lib/webhooks.js) this subscription wants
+  active      Boolean   @default(true)
+  createdByUserId String
+  createdAt   DateTime  @default(now())
+  deliveries  WebhookDelivery[]
+
+  @@index([orgId])
+}
+
+// Delivery log for a Webhook -- gives an admin basic visibility (did this
+// fire, did it succeed) without building a full retry-queue/dead-letter
+// system. One row per attempt; a failure is NOT automatically retried
+// (out of scope for this pass) but is visible so an admin can tell their
+// integration is broken.
+model WebhookDelivery {
+  id          String   @id @default(cuid())
+  webhookId   String
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  eventType   String
+  payload     Json
+  statusCode  Int?
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@index([webhookId])
 }
 
 // A single business-registration proof document (incorporation

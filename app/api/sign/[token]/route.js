@@ -7,6 +7,7 @@ import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
 import { isSlotUnlocked, nextSlotsToNotify } from "../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
 import { getEmailBranding } from "../../../../lib/orgBranding";
+import { dispatchWebhookEvent } from "../../../../lib/webhooks";
 import { Resend } from "resend";
 
 async function loadSlotByToken(token) {
@@ -120,6 +121,16 @@ export async function PATCH(request, { params }) {
       .catch((err) => console.error("[sign decline] notification email failed:", err));
   }
 
+  if (slot.request.ledger.folder?.orgId) {
+    dispatchWebhookEvent(slot.request.ledger.folder.orgId, "document.declined", {
+      ledgerId: slot.request.ledgerId,
+      ledgerName: slot.request.ledger.name,
+      signerName: slot.name,
+      signerRole: slot.roleOtherLabel || slot.role,
+      declineReason,
+    }).catch((err) => console.error("[sign decline] webhook dispatch failed:", err));
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -181,6 +192,15 @@ export async function POST(request, { params }) {
     }),
     prisma.signerSlot.update({ where: { id: slot.id }, data: { tokenUsedAt: new Date() } }),
   ]);
+
+  if (slot.request.ledger.folder?.orgId) {
+    dispatchWebhookEvent(slot.request.ledger.folder.orgId, "document.signed", {
+      ledgerId: slot.request.ledgerId,
+      ledgerName: slot.request.ledger.name,
+      signerName: slot.name,
+      signerRole: slot.roleOtherLabel || slot.role,
+    }).catch((err) => console.error("[sign] webhook dispatch failed:", err));
+  }
 
   const remainingSlots = await prisma.signerSlot.findMany({ where: { requestId: slot.requestId } });
   const remainingSigners = remainingSlots.filter((s) => s.kind === "signer" && !s.tokenUsedAt).length;

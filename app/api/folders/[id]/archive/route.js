@@ -3,6 +3,7 @@ import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
+import { dispatchWebhookEvent } from "../../../../../lib/webhooks";
 import { Resend } from "resend";
 
 export async function POST(request, { params }) {
@@ -60,6 +61,12 @@ export async function POST(request, { params }) {
       )
     );
   }
+
+  dispatchWebhookEvent(folder.orgId, "folder.archived", {
+    folderId: folder.id,
+    folderName: folder.name,
+    reason,
+  }).catch((err) => console.error("[folder archive] webhook dispatch failed:", err));
 
   return NextResponse.json({ ok: true });
 }
