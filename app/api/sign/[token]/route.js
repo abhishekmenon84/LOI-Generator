@@ -6,12 +6,13 @@ import { buildDealPdf } from "../../../../lib/dealPdfBuilder";
 import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
 import { isSlotUnlocked, nextSlotsToNotify } from "../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
+import { getEmailBranding } from "../../../../lib/orgBranding";
 import { Resend } from "resend";
 
 async function loadSlotByToken(token) {
   const slot = await prisma.signerSlot.findUnique({
     where: { signingToken: token },
-    include: { request: { include: { ledger: true, signers: true } } },
+    include: { request: { include: { ledger: { include: { folder: { select: { orgId: true } } } }, signers: true } } },
   });
   if (!slot || slot.kind !== "signer") return null;
   return slot;
@@ -58,12 +59,15 @@ export async function GET(request, { params }) {
   // The signer reviews the frozen snapshot taken when this SignatureRequest
   // was created, not the Ledger's current (possibly since-edited) content --
   // see prisma/schema.prisma's comment on SignatureRequest.snapshotFormData.
+  const branding = await getEmailBranding(slot.request.ledger.folder?.orgId);
   return NextResponse.json({
     dealName: slot.request.ledger.name,
     documentType: slot.request.snapshotDocumentType,
     formData: slot.request.snapshotFormData,
     signerName: slot.name,
     signerRole: slot.roleOtherLabel || slot.role,
+    brandName: branding.brandName,
+    brandLogoUrl: branding.brandLogoUrl,
   });
 }
 
@@ -98,6 +102,7 @@ export async function PATCH(request, { params }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const creator = await prisma.user.findUnique({ where: { id: slot.request.createdByUserId }, select: { email: true } });
   if (creator?.email) {
+    const branding = await getEmailBranding(slot.request.ledger.folder?.orgId);
     await resend.emails
       .send({
         from: "Ledgerlot <onboarding@resend.dev>",
@@ -108,6 +113,8 @@ export async function PATCH(request, { params }) {
           body: `<strong>${escapeHtml(slot.name)}</strong> (${escapeHtml(slot.roleOtherLabel || slot.role)}) declined to sign <strong>${escapeHtml(slot.request.ledger.name)}</strong>.${declineReason ? `<br/><br/>Reason: ${escapeHtml(declineReason)}` : ""}`,
           ctaLabel: "View the document",
           ctaUrl: `${appUrl}/ledgerboard/folder/${slot.request.ledger.folderId}`,
+          brandName: branding.brandName,
+          brandLogoUrl: branding.brandLogoUrl,
         }),
       })
       .catch((err) => console.error("[sign decline] notification email failed:", err));
@@ -191,6 +198,7 @@ export async function POST(request, { params }) {
     if (toNotify.length > 0) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
       const resend = new Resend(process.env.RESEND_API_KEY);
+      const branding = await getEmailBranding(slot.request.ledger.folder?.orgId);
       await Promise.all(
         toNotify.map((s) =>
           resend.emails
@@ -204,6 +212,8 @@ export async function POST(request, { params }) {
                 ctaLabel: "Review and sign",
                 ctaUrl: `${appUrl}/sign/${s.signingToken}`,
                 footerNote: "Didn't expect this? You can safely ignore this email.",
+                brandName: branding.brandName,
+                brandLogoUrl: branding.brandLogoUrl,
               }),
             })
             .catch((err) => console.error("[sign] next-signer notification failed:", err))

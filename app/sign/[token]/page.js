@@ -112,6 +112,14 @@ export default function SignPage({ params }) {
 
   return (
     <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto", minHeight: "100dvh" }}>
+      {info.brandName && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          {info.brandLogoUrl && (
+            <img src={info.brandLogoUrl} alt={info.brandName} style={{ width: 28, height: 28, borderRadius: 7, objectFit: "cover" }} />
+          )}
+          <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{info.brandName}</span>
+        </div>
+      )}
       <h1 style={{ fontSize: "1.2rem", marginBottom: 4 }}>{info.dealName}</h1>
       <p style={{ color: "var(--text-secondary)", marginBottom: 20 }}>
         Signing as {info.signerName} ({info.signerRole})

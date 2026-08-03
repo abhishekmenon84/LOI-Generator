@@ -7,6 +7,7 @@ import { generateSigningToken, generateVerifyCode } from "../../../../../lib/sig
 import { getOrgLimits, checkAndIncrementUsage } from "../../../../../lib/orgBilling";
 import { nextSlotsToNotify } from "../../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
+import { getEmailBranding } from "../../../../../lib/orgBranding";
 import { Resend } from "resend";
 
 const SIGNING_LINK_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
@@ -123,6 +124,7 @@ export async function POST(request, { params }) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
+  const branding = await getEmailBranding(ledger._orgId);
   // Only the first-in-order signer(s) get emailed now -- later signers are
   // notified once it's actually their turn (see finalizeSignatureRequest's
   // sibling logic in app/api/sign/[token]/route.js after each signature).
@@ -142,6 +144,8 @@ export async function POST(request, { params }) {
               ctaLabel: "Review and sign",
               ctaUrl: `${appUrl}/sign/${s.signingToken}`,
               footerNote: "Didn't expect this? You can safely ignore this email.",
+              brandName: branding.brandName,
+              brandLogoUrl: branding.brandLogoUrl,
             }),
           })
         : resend.emails.send({
@@ -151,6 +155,8 @@ export async function POST(request, { params }) {
             html: renderEmail({
               title: "Sent for signature",
               body: `<strong>${escapeHtml(ledger.name)}</strong> has been sent out for signature. You're being kept informed as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+              brandName: branding.brandName,
+              brandLogoUrl: branding.brandLogoUrl,
             }),
           })
     )
