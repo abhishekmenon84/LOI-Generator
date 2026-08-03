@@ -5,6 +5,7 @@ import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { uploadFile } from "../../../../../lib/blobStorage";
 import { MAX_UPLOAD_BYTES, isAllowedUploadMimeType } from "../../../../../lib/uploadPolicy";
+import { normalizePdf } from "../../../../../lib/pdfNormalize";
 
 // Classifies an AcroForm field by its concrete class using `instanceof`
 // rather than `field.constructor.name`. Next.js production builds minify
@@ -94,7 +95,27 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: `File is too large. The limit is ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB.` }, { status: 413 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  let buffer = Buffer.from(await file.arrayBuffer());
+
+  // A PDF that pdf-lib can't load (e.g. RC4-encrypted, common in the real
+  // form corpus -- see lib/pdfNormalize.js's own comment) would otherwise
+  // be stored as-is and silently break later: field-detection below just
+  // falls back to "plain" via its catch, but the raw encrypted bytes stay
+  // in blob storage, and this route is also the source file for
+  // auto-promoted CustomTemplates (see promoteToTemplateIfEligible below),
+  // so an un-normalized upload here previously made every future stamp/
+  // export of that promoted template throw EncryptedPDFError. Route uploads
+  // through the same normalizePdf pass POST /api/orgs/[id]/templates
+  // already uses, so both stored copies are pdf-lib-loadable.
+  if (mimeType === "application/pdf") {
+    try {
+      const normalized = await normalizePdf(buffer, file.name);
+      buffer = Buffer.from(normalized.bytes);
+    } catch {
+      // Not a valid/parseable PDF at all -- fall through and let the
+      // AcroForm-detection try/catch below handle it as a plain attachment.
+    }
+  }
 
   let uploaded;
   try {
