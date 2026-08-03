@@ -48,6 +48,16 @@ model Organization {
   // subscription tiers for Personal). Business orgs: "trial" | "growth" |
   // "professional" | "business" | "enterprise" | "scale" | "expired".
   planTier             String   @default("free")
+  // Compliance record-keeping minimum (years) -- provincial real estate
+  // regulators (e.g. NB's FCNB) require brokerages to be able to produce
+  // trade records for a set period if audited; there is no rule requiring
+  // deletion after any period. NOT currently enforced anywhere in code
+  // (no permanent-delete route checks this) -- a real gap, but one
+  // superseded by the pending Canada-wide signup/verification rework,
+  // which redefines retention as a days-based, per-account-type auto-purge
+  // policy (Organization.retentionDays) rather than this years-based
+  // floor. Do not build minimum-retention enforcement against this field;
+  // wait for that rework to land first.
   retentionYears       Int      @default(1)
   trialEndsAt          DateTime?
   stripeCustomerId     String?  @unique
