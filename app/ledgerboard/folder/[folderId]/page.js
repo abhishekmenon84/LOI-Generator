@@ -15,6 +15,7 @@ import DocumentAuditPanel from "../../../../components/DocumentAuditPanel";
 import ShareLedgerModal from "../../../../components/ShareLedgerModal";
 import FolderTasksPanel from "../../../../components/FolderTasksPanel";
 import FolderCommentsPanel from "../../../../components/FolderCommentsPanel";
+import FolderActivityPanel from "../../../../components/FolderActivityPanel";
 import LeaseForm from "../../../../components/LeaseForm";
 import LeasePreview from "../../../../components/LeasePreview";
 import ResidentialLeaseForm from "../../../../components/ResidentialLeaseForm";
@@ -151,6 +152,7 @@ export default function FolderWorkspacePage() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [tasksPanelOpen, setTasksPanelOpen] = useState(false);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
+  const [activityPanelOpen, setActivityPanelOpen] = useState(false);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
@@ -696,10 +698,18 @@ export default function FolderWorkspacePage() {
           >
             💬 Comments
           </button>
+          <button
+            type="button"
+            onClick={() => setActivityPanelOpen(true)}
+            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+          >
+            ⏱ Activity
+          </button>
         </div>
       </div>
       <FolderTasksPanel folderId={folder.id} isOpen={tasksPanelOpen} onClose={() => setTasksPanelOpen(false)} />
       <FolderCommentsPanel folderId={folder.id} isOpen={commentsPanelOpen} onClose={() => setCommentsPanelOpen(false)} />
+      <FolderActivityPanel folderId={folder.id} isOpen={activityPanelOpen} onClose={() => setActivityPanelOpen(false)} />
 
       {folder.isCreator ? (
         <div
