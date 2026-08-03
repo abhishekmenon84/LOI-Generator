@@ -91,7 +91,12 @@ export default function CommandPalette() {
                 style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, cursor: "pointer" }}
               >
                 <span style={{ fontSize: 13, color: "oklch(60% 0.01 264)" }}>{r.type === "ledger" ? "📝" : "📁"}</span>
-                <span style={{ fontSize: 13.5, fontWeight: 600, flex: 1 }}>{r.name}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 600, flex: 1 }}>
+                  {r.name}
+                  {r.matchedContentOnly && (
+                    <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 500, color: "oklch(60% 0.01 264)" }}>matched in document content</span>
+                  )}
+                </span>
                 <span style={{ fontSize: 11.5, color: "oklch(60% 0.01 264)" }}>{r.type}</span>
               </div>
             ))}

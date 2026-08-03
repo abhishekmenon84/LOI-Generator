@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import { listAccessibleFolders } from "../../../lib/folderAccess";
+import { formDataMatchesQuery } from "../../../lib/formDataSearch";
 
 export async function GET(request) {
   const session = await auth();
@@ -70,15 +71,26 @@ export async function GET(request) {
     });
   }
 
-  const matchingLedgers = await prisma.ledger.findMany({
-    where: {
-      folderId: { in: accessibleFolderIds },
-      name: { contains: q, mode: "insensitive" },
-    },
-    select: { id: true, name: true, folderId: true },
-  });
+  // Matches on the Ledger's own title (name) OR its actual document content
+  // (formData -- buyer/seller names, property address, custom-template
+  // answers, etc). Content search happens in application code rather than
+  // a raw JSONB SQL query: formData's shape varies per documentType, and
+  // custom_template/form_template answers are keyed by anchor id/field key
+  // rather than a fixed schema, so a generic recursive flatten (see
+  // lib/formDataSearch.js) is far simpler and more robust than trying to
+  // express "search every string value at any depth" in SQL.
+  const allLedgers = accessibleFolderIds.length > 0
+    ? await prisma.ledger.findMany({
+        where: { folderId: { in: accessibleFolderIds } },
+        select: { id: true, name: true, folderId: true, formData: true },
+      })
+    : [];
+  const matchingLedgers = allLedgers.filter(
+    (l) => l.name.toLowerCase().includes(qLower) || formDataMatchesQuery(l.formData, qLower)
+  );
   const ledgerResults = matchingLedgers.map((l) => {
     const parent = folderById.get(l.folderId);
+    const matchedContentOnly = !l.name.toLowerCase().includes(qLower);
     return {
       type: "ledger",
       id: l.id,
@@ -87,6 +99,7 @@ export async function GET(request) {
       folderName: parent?.name || "",
       orgName: parent ? orgNameById.get(parent.orgId) || "" : "",
       archived: !!parent?.archivedAt,
+      matchedContentOnly,
     };
   });
 
