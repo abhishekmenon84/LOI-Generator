@@ -11,6 +11,11 @@ import { Resend } from "resend";
 
 const SIGNING_LINK_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
 
+// Sending for signature triggers real org billing/usage (checkAndIncrementUsage
+// below), so it deliberately requires actual FOLDER-level write access --
+// not a document-level LedgerParticipant "write" grant, which is meant for
+// narrower collaboration (e.g. editing one document's terms) and has no
+// associated org to bill against on its own.
 async function loadAccessibleLedger(ledgerId, userId) {
   const ledger = await prisma.ledger.findUnique({ where: { id: ledgerId } });
   if (!ledger) return null;

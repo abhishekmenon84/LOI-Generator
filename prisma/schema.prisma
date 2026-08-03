@@ -31,6 +31,7 @@ model User {
   formTemplatesCreated FormTemplate[]
   contactsCreated     Contact[]
   businessVerificationDocumentsUploaded BusinessVerificationDocument[]
+  ledgerParticipations LedgerParticipant[]
 }
 
 model Organization {
@@ -461,9 +462,36 @@ model Ledger {
   template   FormTemplate? @relation(fields: [templateId], references: [id])
 
   signatureRequests SignatureRequest[]
+  participants      LedgerParticipant[]
 
   @@index([folderId])
   @@index([createdByUserId])
+}
+
+// Document-level access grant, scoped to exactly one Ledger -- distinct
+// from FolderParticipant (which grants access to every document in a
+// folder). Lets a folder's creator/admin give someone narrower access
+// than the whole folder -- e.g. a lender who should see one financing
+// document but not the rest of a deal's negotiation history. "view" is
+// read-only (no export/download, no audit trail); "write" can edit
+// formData/name like a normal folder participant would. A user's actual
+// access to a given Ledger is the WIDER of their folder-level access (if
+// any) and any LedgerParticipant grant -- this only ever ADDS access
+// beyond what the folder grants, it never narrows folder-level write
+// access down for someone who already has it.
+model LedgerParticipant {
+  id            String   @id @default(cuid())
+  ledgerId      String
+  ledger        Ledger   @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission    String   @default("view") // "view" | "write"
+  addedByUserId String
+  createdAt     DateTime @default(now())
+
+  @@unique([ledgerId, userId])
+  @@index([ledgerId])
+  @@index([userId])
 }
 
 model FolderFile {

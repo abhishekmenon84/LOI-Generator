@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
-import { loadAccessibleFolder } from "../../../../lib/folderAccess";
-
-async function loadAccessibleLedger(ledgerId, userId) {
-  const ledger = await prisma.ledger.findUnique({ where: { id: ledgerId } });
-  if (!ledger) return null;
-  const folder = await loadAccessibleFolder(ledger.folderId, userId);
-  if (!folder) return null;
-  return { ...ledger, _writeAccess: folder._writeAccess };
-}
+import { loadAccessibleLedger } from "../../../../lib/ledgerAccess";
 
 export async function GET(request, { params }) {
   const session = await auth();
@@ -30,6 +22,7 @@ export async function GET(request, { params }) {
     locked: ledger.locked,
     archivedAt: ledger.archivedAt ? ledger.archivedAt.toISOString() : null,
     readOnly: !ledger._writeAccess,
+    viewOnly: !!ledger._viewOnly,
   });
 }
 

@@ -12,6 +12,7 @@ import LOIPreview from "../../../../components/LOIPreview";
 import DocumentActionBar from "../../../../components/DocumentActionBar";
 import SendForSignatureModal from "../../../../components/SendForSignatureModal";
 import DocumentAuditPanel from "../../../../components/DocumentAuditPanel";
+import ShareLedgerModal from "../../../../components/ShareLedgerModal";
 import LeaseForm from "../../../../components/LeaseForm";
 import LeasePreview from "../../../../components/LeasePreview";
 import ResidentialLeaseForm from "../../../../components/ResidentialLeaseForm";
@@ -145,6 +146,7 @@ export default function FolderWorkspacePage() {
   // for this workspace (Folder-level FolderParticipant sharing covers it).
   const [sendForSignatureOpen, setSendForSignatureOpen] = useState(false);
   const [auditPanelOpen, setAuditPanelOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
@@ -801,7 +803,7 @@ export default function FolderWorkspacePage() {
                 actionBar={
                   <DocumentActionBar
                     readOnly={ledgerReadOnly}
-                    hideShare
+                    onShare={() => setShareModalOpen(true)}
                     onSendForSignature={() => setSendForSignatureOpen(true)}
                     onAudit={() => setAuditPanelOpen(true)}
                   />
@@ -1020,6 +1022,12 @@ export default function FolderWorkspacePage() {
             ledgerId={ledger?.id}
             isOpen={auditPanelOpen}
             onClose={() => setAuditPanelOpen(false)}
+          />
+          <ShareLedgerModal
+            key={ledger?.id}
+            ledgerId={ledger?.id}
+            isOpen={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
           />
         </>
       ) : null}
