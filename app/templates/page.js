@@ -7,6 +7,7 @@ import AppShell from "../../components/AppShell";
 import TemplateRow from "../../components/TemplateRow";
 import UseFormTemplateButton from "../../components/UseFormTemplateButton";
 import DuplicateTemplateButton from "../../components/DuplicateTemplateButton";
+import { RESIDENTIAL_LEASE_SUPPORTED_PROVINCES, provinceName } from "../../lib/provinces";
 
 export const metadata = {
   title: "Templates — Ledgerlot",
@@ -98,24 +99,41 @@ export default async function TemplatesPage() {
 
         <h2 style={{ fontSize: 15, marginBottom: 10 }}>Default</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
-          {BUILT_IN_TEMPLATES.map((t) => (
-            <TemplateRow key={t.value} template={t} kind="built-in">
-              <div style={{ fontWeight: 650 }}>{t.label}</div>
-              <span
-                style={{
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  padding: "4px 10px",
-                  borderRadius: 999,
-                  background: "var(--bg-panel)",
-                  border: "1px solid var(--border)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Default
-              </span>
-            </TemplateRow>
-          ))}
+          {BUILT_IN_TEMPLATES.map((t) => {
+            // Residential Lease is New Brunswick's real statutory Form 6 --
+            // only NB has a verified, real per-province lease implemented
+            // (see lib/provinces.js). This is purely informational (never
+            // blocks selecting it -- any user can still use the NB form),
+            // shown only when the org's own province is known and differs.
+            const provinceMismatch = t.value === "residential_lease"
+              && primaryOrg?.province
+              && !RESIDENTIAL_LEASE_SUPPORTED_PROVINCES.has(primaryOrg.province);
+            return (
+              <TemplateRow key={t.value} template={t} kind="built-in">
+                <div>
+                  <div style={{ fontWeight: 650 }}>{t.label}</div>
+                  {provinceMismatch && (
+                    <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+                      Not yet available as a statutory form for {provinceName(primaryOrg.province)} -- this generates New Brunswick&apos;s form regardless of your org&apos;s province.
+                    </div>
+                  )}
+                </div>
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background: "var(--bg-panel)",
+                    border: "1px solid var(--border)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Default
+                </span>
+              </TemplateRow>
+            );
+          })}
         </div>
 
         <h2 style={{ fontSize: 15, marginBottom: 10 }}>Uploaded</h2>

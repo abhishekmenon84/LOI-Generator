@@ -52,18 +52,25 @@ export default async function DashboardPage({ searchParams }) {
   // user doesn't already have a business org -- so refreshing this URL or
   // an already-business user landing here again is a no-op.
   if (searchParams?.newAccountType === "business" && !(await hasBusinessOrgMembership(session.user.id))) {
-    await prisma.organization.create({
+    const retentionYears = Number(searchParams?.retentionYears) || 1;
+    const businessOrg = await prisma.organization.create({
       data: {
-        name: "My Business",
+        name: searchParams?.businessName?.trim() || "My Business",
         accountType: "company",
         isPersonal: false,
         planTier: "trial",
         trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         ownerUserId: session.user.id,
+        province: searchParams?.province || null,
+        businessName: searchParams?.businessName?.trim() || null,
+        businessPhone: searchParams?.businessPhone?.trim() || null,
+        businessAddress: searchParams?.businessAddress?.trim() || null,
+        retentionYears,
+        retentionDays: retentionYears * 365,
         memberships: { create: { userId: session.user.id, role: "admin" } },
       },
     });
-    redirect("/dashboard");
+    redirect(`/dashboard/verify-business?orgId=${businessOrg.id}`);
   }
 
   const primaryOrg = await getPrimaryOrgForShell(session.user.id);

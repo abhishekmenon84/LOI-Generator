@@ -30,6 +30,7 @@ model User {
   templatesCreated    CustomTemplate[]
   formTemplatesCreated FormTemplate[]
   contactsCreated     Contact[]
+  businessVerificationDocumentsUploaded BusinessVerificationDocument[]
 }
 
 model Organization {
@@ -59,6 +60,31 @@ model Organization {
   // floor. Do not build minimum-retention enforcement against this field;
   // wait for that rework to land first.
   retentionYears       Int      @default(1)
+  // Days-based auto-purge retention (the Canada-wide signup rework this
+  // comment on retentionYears anticipated). Personal orgs: fixed 30 days.
+  // Business orgs: user-configurable at signup (1-7 years, stored as
+  // days), enforced by app/api/cron/retention-purge. Distinct from
+  // retentionYears above, which is an unenforced compliance-minimum floor
+  // concept -- this field is the actual enforced auto-purge window.
+  retentionDays        Int      @default(30)
+  // Two-letter Canadian province/territory code (ON, BC, QC, AB, MB, SK,
+  // NS, NB, PE, NL, YT, NT, NU) -- see lib/provinces.js for the full list.
+  // Nullable only for orgs created before this field existed.
+  province             String?
+  // Business-only fields collected during the business signup flow.
+  // Null for personal orgs.
+  businessName         String?
+  businessPhone        String?
+  businessAddress      String?
+  // "unverified" (personal orgs, and business orgs that haven't uploaded
+  // anything yet) | "pending" (document uploaded, awaiting admin review)
+  // | "verified" | "rejected". Purely informational -- per product
+  // decision, verification status never blocks any action, it only
+  // surfaces a persistent banner. See lib/orgBilling.js's getOrgLimits,
+  // which deliberately does NOT read this field.
+  verificationStatus      String    @default("unverified")
+  verificationSubmittedAt DateTime?
+  verificationApprovedAt  DateTime?
   trialEndsAt          DateTime?
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
@@ -73,6 +99,34 @@ model Organization {
   formTemplates   FormTemplate[]
   usageCounter    UsageCounter?
   contacts        Contact[]
+  verificationDocument BusinessVerificationDocument?
+}
+
+// A single business-registration proof document (incorporation
+// certificate, business registration, etc) uploaded during business
+// signup or re-submitted after a rejection. One row per Organization at a
+// time is enough for this feature's scope (a re-submission overwrites the
+// prior row's fields rather than keeping full history) -- verification
+// status itself lives on Organization since it's the thing every other
+// part of the app actually reads.
+model BusinessVerificationDocument {
+  id               String   @id @default(cuid())
+  orgId            String   @unique
+  org              Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  documentType     String   // "incorporation_certificate" | "business_registration" | "partnership_agreement" | "sole_proprietor_id" | "other"
+  fileName         String
+  fileUrl          String
+  fileHash         String?
+  fileSizeBytes     Int?
+  uploadedByUserId String
+  uploadedBy       User     @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+  uploadedAt       DateTime @default(now())
+  reviewedByUserId String?
+  reviewNotes      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([orgId])
 }
 
 // A person or company the org deals with (buyer, seller, landlord,

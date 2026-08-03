@@ -4,6 +4,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import CommandPalette from "./CommandPalette";
+import VerificationBanner from "./VerificationBanner";
 
 // Below the CSS breakpoint in globals.css (.app-shell-sidebar's @media
 // max-width: 860px rule), Sidebar becomes a slide-in overlay instead of a
@@ -19,7 +20,10 @@ export default function AppShell({ org, userInitial, children }) {
       <Sidebar org={org} mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
         <TopBar userInitial={userInitial} onOpenMobileSidebar={() => setMobileSidebarOpen(true)} />
-        <div style={{ flex: 1, overflowY: "auto" }}>{children}</div>
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <VerificationBanner org={org} />
+          {children}
+        </div>
       </div>
       <CommandPalette />
     </div>
