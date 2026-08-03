@@ -13,6 +13,7 @@ import DocumentActionBar from "../../../../components/DocumentActionBar";
 import SendForSignatureModal from "../../../../components/SendForSignatureModal";
 import DocumentAuditPanel from "../../../../components/DocumentAuditPanel";
 import ShareLedgerModal from "../../../../components/ShareLedgerModal";
+import FolderTasksPanel from "../../../../components/FolderTasksPanel";
 import LeaseForm from "../../../../components/LeaseForm";
 import LeasePreview from "../../../../components/LeasePreview";
 import ResidentialLeaseForm from "../../../../components/ResidentialLeaseForm";
@@ -147,6 +148,7 @@ export default function FolderWorkspacePage() {
   const [sendForSignatureOpen, setSendForSignatureOpen] = useState(false);
   const [auditPanelOpen, setAuditPanelOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [tasksPanelOpen, setTasksPanelOpen] = useState(false);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
@@ -671,11 +673,21 @@ export default function FolderWorkspacePage() {
         background: "oklch(97% 0.006 60)",
       }}
     >
-      <FolderBreadcrumb
-        ancestors={ancestors}
-        current={{ name: folder.name }}
-        selectedDocName={ledger ? ledger.name : undefined}
-      />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <FolderBreadcrumb
+          ancestors={ancestors}
+          current={{ name: folder.name }}
+          selectedDocName={ledger ? ledger.name : undefined}
+        />
+        <button
+          type="button"
+          onClick={() => setTasksPanelOpen(true)}
+          style={{ margin: "0 16px", padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer", flex: "0 0 auto" }}
+        >
+          ✓ Tasks
+        </button>
+      </div>
+      <FolderTasksPanel folderId={folder.id} isOpen={tasksPanelOpen} onClose={() => setTasksPanelOpen(false)} />
 
       {folder.isCreator ? (
         <div

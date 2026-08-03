@@ -32,6 +32,8 @@ model User {
   contactsCreated     Contact[]
   businessVerificationDocumentsUploaded BusinessVerificationDocument[]
   ledgerParticipations LedgerParticipant[]
+  tasksAssigned   Task[]
+  tasksCreated    Task[] @relation("TaskCreator")
 }
 
 model Organization {
@@ -406,12 +408,47 @@ model Folder {
   participants    FolderParticipant[]
   auditEvents     FolderAuditEvent[]
   files           FolderFile[]
+  tasks           Task[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@index([orgId])
   @@index([createdByUserId])
   @@index([parentFolderId])
+}
+
+// A deal-level checklist/deadline item -- dotloop's most emphasized
+// transaction-management feature (financing contingency dates, inspection
+// deadlines, closing date countdowns) and, before this, entirely absent:
+// the app was purely a document/e-signature tool. Belongs to a Folder
+// (the deal), not a Ledger -- a closing-date task isn't tied to any one
+// document. assignedToUserId is optional and only meaningful for a real
+// FolderParticipant/creator/admin of the folder (not enforced by a
+// relation constraint, since a task can be created before its assignee
+// has ever been added as a participant -- validated at the API layer
+// instead).
+model Task {
+  id              String    @id @default(cuid())
+  folderId        String
+  folder          Folder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  title           String
+  dueDate         DateTime?
+  completed       Boolean   @default(false)
+  completedAt     DateTime?
+  assignedToUserId String?
+  assignedTo      User?     @relation(fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdByUserId String
+  createdBy       User      @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  // Set once a deadline-approaching reminder email has been sent for this
+  // task, so app/api/cron/task-deadline-reminders doesn't re-send one
+  // every run while the deadline is still within the reminder window.
+  reminderSentAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([folderId])
+  @@index([assignedToUserId])
+  @@index([dueDate])
 }
 
 model FolderParticipant {

@@ -85,6 +85,15 @@ export default async function DashboardPage({ searchParams }) {
     stageCounts.set(f.stage, (stageCounts.get(f.stage) || 0) + 1);
   }
 
+  const upcomingTasks = folderIds.length > 0
+    ? await prisma.task.findMany({
+        where: { folderId: { in: folderIds }, completed: false },
+        orderBy: { dueDate: "asc" },
+        take: 5,
+        include: { folder: { select: { name: true, id: true } } },
+      })
+    : [];
+
   const [recentAuditEvents, recentLedgers] = folderIds.length > 0
     ? await Promise.all([
         prisma.folderAuditEvent.findMany({
@@ -142,6 +151,31 @@ export default async function DashboardPage({ searchParams }) {
             </div>
           ))}
         </div>
+
+        {upcomingTasks.length > 0 && (
+          <>
+            <h2 style={{ fontSize: 17, margin: "0 0 12px" }}>Upcoming deadlines</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
+              {upcomingTasks.map((t) => {
+                const overdue = t.dueDate && new Date(t.dueDate) < new Date();
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/ledgerboard/folder/${t.folder.id}`}
+                    style={{ display: "block", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", fontSize: 13.5, textDecoration: "none", color: "inherit" }}
+                  >
+                    <strong>{t.title}</strong> — {t.folder.name}
+                    {t.dueDate && (
+                      <span style={{ color: overdue ? "oklch(50% 0.17 25)" : "var(--text-muted)", marginLeft: 8, fontSize: 12 }}>
+                        Due {new Date(t.dueDate).toLocaleDateString()}{overdue ? " (overdue)" : ""}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <h2 style={{ fontSize: 17, margin: 0 }}>Recent activity</h2>
