@@ -14,6 +14,7 @@ import SendForSignatureModal from "../../../../components/SendForSignatureModal"
 import DocumentAuditPanel from "../../../../components/DocumentAuditPanel";
 import ShareLedgerModal from "../../../../components/ShareLedgerModal";
 import FolderTasksPanel from "../../../../components/FolderTasksPanel";
+import FolderCommentsPanel from "../../../../components/FolderCommentsPanel";
 import LeaseForm from "../../../../components/LeaseForm";
 import LeasePreview from "../../../../components/LeasePreview";
 import ResidentialLeaseForm from "../../../../components/ResidentialLeaseForm";
@@ -149,6 +150,7 @@ export default function FolderWorkspacePage() {
   const [auditPanelOpen, setAuditPanelOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [tasksPanelOpen, setTasksPanelOpen] = useState(false);
+  const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
 
   // Load the current folder (server resolves its own ancestor chain -- see
   // app/api/folders/[id]/route.js's added `ancestors` field, Task 3 Step 3's
@@ -679,15 +681,25 @@ export default function FolderWorkspacePage() {
           current={{ name: folder.name }}
           selectedDocName={ledger ? ledger.name : undefined}
         />
-        <button
-          type="button"
-          onClick={() => setTasksPanelOpen(true)}
-          style={{ margin: "0 16px", padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer", flex: "0 0 auto" }}
-        >
-          ✓ Tasks
-        </button>
+        <div style={{ display: "flex", gap: 8, margin: "0 16px", flex: "0 0 auto" }}>
+          <button
+            type="button"
+            onClick={() => setTasksPanelOpen(true)}
+            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+          >
+            ✓ Tasks
+          </button>
+          <button
+            type="button"
+            onClick={() => setCommentsPanelOpen(true)}
+            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+          >
+            💬 Comments
+          </button>
+        </div>
       </div>
       <FolderTasksPanel folderId={folder.id} isOpen={tasksPanelOpen} onClose={() => setTasksPanelOpen(false)} />
+      <FolderCommentsPanel folderId={folder.id} isOpen={commentsPanelOpen} onClose={() => setCommentsPanelOpen(false)} />
 
       {folder.isCreator ? (
         <div

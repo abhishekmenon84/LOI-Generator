@@ -34,6 +34,7 @@ model User {
   ledgerParticipations LedgerParticipant[]
   tasksAssigned   Task[]
   tasksCreated    Task[] @relation("TaskCreator")
+  folderComments  FolderComment[]
 }
 
 model Organization {
@@ -409,12 +410,33 @@ model Folder {
   auditEvents     FolderAuditEvent[]
   files           FolderFile[]
   tasks           Task[]
+  comments        FolderComment[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@index([orgId])
   @@index([createdByUserId])
   @@index([parentFolderId])
+}
+
+// In-app deal communication, keeping negotiation/clarification discussion
+// auditable in one place instead of scattered across email/text --
+// dotloop's other major differentiator alongside tasks (both previously
+// entirely absent). Scoped to a Folder (the deal), not a Ledger, since a
+// comment thread is usually about the deal as a whole, not one document.
+// Never edited once posted (no updatedAt/edit support) -- an audit trail
+// of discussion is more useful immutable, matching how FolderAuditEvent
+// and SignatureEvent are both already append-only.
+model FolderComment {
+  id            String   @id @default(cuid())
+  folderId      String
+  folder        Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  authorUserId  String
+  author        User     @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  body          String
+  createdAt     DateTime @default(now())
+
+  @@index([folderId])
 }
 
 // A deal-level checklist/deadline item -- dotloop's most emphasized
