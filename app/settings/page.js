@@ -68,8 +68,9 @@ export default async function SettingsPage() {
           </p>
         ) : (
           <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>
-            Manage a team&apos;s deal pipeline with a Business org — starts with a 7-day free trial, no card required.{" "}
-            <Link href="/keeper" className="marketing-cta-button" style={{ display: "inline-block", marginLeft: 8 }}>
+            Manage a team&apos;s deal pipeline with a Business org — pick your team size and start a
+            7-day free trial. A card is required to start, but nothing is charged until day 7.{" "}
+            <Link href="/pricing" className="marketing-cta-button" style={{ display: "inline-block", marginLeft: 8 }}>
               Start a Business org
             </Link>
           </p>

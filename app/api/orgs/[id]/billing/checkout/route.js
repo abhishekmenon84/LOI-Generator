@@ -32,11 +32,18 @@ export async function POST(request, { params }) {
 
   const origin = request.headers.get("origin") || new URL(request.url).origin;
 
+  // A 7-day trial (card required, nothing charged until day 7) is offered
+  // exactly once per org, on its first-ever subscribe -- an org that
+  // already has a stripeSubscriptionId (resubscribing after a downgrade,
+  // or changing seat count) goes straight to normal billing.
+  const trialDays = org.stripeSubscriptionId ? undefined : 7;
+
   try {
     const checkoutSession = await createOrgSubscriptionCheckout({
       org,
       tier,
       seatCount,
+      trialDays,
       successUrl: `${origin}/keeper?billing=success`,
       cancelUrl: `${origin}/keeper?billing=cancelled`,
     });

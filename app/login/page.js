@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
@@ -15,8 +16,12 @@ import { getTierForSeatCount, quotaForSeatCount, suggestedRetentionYears, RETENT
 // creates the actual Organization row exactly once). A verification
 // DOCUMENT can't be threaded through a URL, so that's collected in a
 // separate step after the org exists (see app/dashboard/verify-business).
-function BusinessDetailsFields({ details, onChange }) {
-  const [seats, setSeats] = useState(5);
+//
+// seats/onSeatsChange are lifted to the parent (not local state) so the
+// public Pricing page's slider (components/PublicPricingSlider.jsx) can
+// deep-link here with a chosen seat count already selected -- see
+// LoginPageInner's useSearchParams read below.
+function BusinessDetailsFields({ details, onChange, seats, onSeatsChange }) {
   const tier = getTierForSeatCount(seats);
   const quota = quotaForSeatCount(seats);
   const suggestedYears = suggestedRetentionYears(seats);
@@ -76,7 +81,7 @@ function BusinessDetailsFields({ details, onChange }) {
             min={1}
             max={150}
             value={seats}
-            onChange={(e) => setSeats(Number(e.target.value))}
+            onChange={(e) => onSeatsChange(Number(e.target.value))}
           />
         </label>
         <p style={{ fontSize: 12.5, color: "var(--text-secondary)", margin: 0 }}>
@@ -112,11 +117,19 @@ function BusinessDetailsFields({ details, onChange }) {
   );
 }
 
-export default function LoginPage() {
+function LoginPageInner() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState("link"); // "link" | "password"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [accountType, setAccountType] = useState("personal");
+  // Prefilled from /pricing's slider (see components/PublicPricingSlider.jsx),
+  // which deep-links here as /login?accountType=business&seats=N -- falls
+  // back to today's defaults (personal, 5 seats) for a direct /login visit.
+  const [accountType, setAccountType] = useState(() => (searchParams.get("accountType") === "business" ? "business" : "personal"));
+  const [seats, setSeats] = useState(() => {
+    const fromUrl = Number(searchParams.get("seats"));
+    return Number.isFinite(fromUrl) && fromUrl >= 1 ? fromUrl : 5;
+  });
   const [businessDetails, setBusinessDetails] = useState({
     businessName: "",
     businessPhone: "",
@@ -135,6 +148,12 @@ export default function LoginPage() {
       businessAddress: businessDetails.businessAddress,
       province: businessDetails.province,
       retentionYears: String(businessDetails.retentionYears),
+      // Threaded through so app/dashboard/page.js can kick off Stripe
+      // Checkout for the same seat count the user previewed on /pricing or
+      // in this form's own slider -- previously this value was collected
+      // but never actually sent anywhere (org creation only ever used the
+      // creator's own single Membership as the real seat count).
+      seats: String(seats),
     });
     return `/dashboard?${params.toString()}`;
   }
@@ -248,7 +267,7 @@ export default function LoginPage() {
               </label>
 
               {accountType === "business" && (
-                <BusinessDetailsFields details={businessDetails} onChange={setBusinessDetails} />
+                <BusinessDetailsFields details={businessDetails} onChange={setBusinessDetails} seats={seats} onSeatsChange={setSeats} />
               )}
 
               <input
@@ -278,5 +297,15 @@ export default function LoginPage() {
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary during prerendering (same
+// requirement app/dashboard/verify-business/page.js already follows).
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

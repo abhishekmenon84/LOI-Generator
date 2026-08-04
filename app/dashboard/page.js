@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { auth } from "../../lib/auth";
 import { getPrimaryOrgForShell, hasBusinessOrgMembership } from "../../lib/orgAccess";
 import { listAccessibleFolders } from "../../lib/folderAccess";
-import { retentionYearsToDays } from "../../lib/pricingTiers";
+import { retentionYearsToDays, getTierForSeatCount } from "../../lib/pricingTiers";
+import { createOrgSubscriptionCheckout } from "../../lib/orgBilling";
 import { prisma } from "../../lib/prisma";
 import AppShell from "../../components/AppShell";
 import DashboardGreeting from "../../components/DashboardGreeting";
@@ -72,7 +74,44 @@ export default async function DashboardPage({ searchParams }) {
         memberships: { create: { userId: session.user.id, role: "admin" } },
       },
     });
-    redirect(`/dashboard/verify-business?orgId=${businessOrg.id}`);
+
+    // Collect a card immediately, as part of signup, rather than deferring
+    // it to a later "Subscribe" click in Settings -- 7-day Stripe-native
+    // trial (see lib/orgBilling.js's createOrgSubscriptionCheckout): the
+    // card is validated and stored now, nothing is charged until day 7,
+    // and each period after that bills in advance automatically. The org
+    // row above already exists in the local no-card "trial" planTier as a
+    // fallback -- if Stripe isn't configured, or the user cancels
+    // Stripe's hosted checkout page, they land back in that same usable
+    // (if unbilled) state rather than a broken half-signed-up org, and can
+    // complete checkout later from Settings.
+    const seatCount = Math.max(1, Number(searchParams?.seats) || 1);
+    const tier = getTierForSeatCount(seatCount);
+    // next/navigation's redirect() works by throwing internally, so the
+    // call itself must never sit inside a try/catch that's also guarding
+    // against real errors -- only the Stripe API call is wrapped here;
+    // the resulting URL is redirected to afterward, unconditionally.
+    let checkoutUrl = null;
+    if (tier && process.env.STRIPE_SECRET_KEY) {
+      const host = headers().get("host");
+      const protocol = host?.startsWith("localhost") ? "http" : "https";
+      const origin = `${protocol}://${host}`;
+      try {
+        const checkoutSession = await createOrgSubscriptionCheckout({
+          org: businessOrg,
+          tier,
+          seatCount,
+          trialDays: 7,
+          successUrl: `${origin}/dashboard/verify-business?orgId=${businessOrg.id}`,
+          cancelUrl: `${origin}/dashboard/verify-business?orgId=${businessOrg.id}`,
+        });
+        checkoutUrl = checkoutSession.url;
+      } catch (err) {
+        console.error("[dashboard] signup-time Stripe checkout failed, continuing with no-card trial:", err);
+      }
+    }
+
+    redirect(checkoutUrl || `/dashboard/verify-business?orgId=${businessOrg.id}`);
   }
 
   const primaryOrg = await getPrimaryOrgForShell(session.user.id);

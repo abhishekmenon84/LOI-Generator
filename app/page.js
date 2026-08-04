@@ -11,21 +11,55 @@ export default async function HomePage() {
       <SiteHeader isLoggedIn={isLoggedIn} />
       <main>
         <div className="home-hero">
-          <h1>The fastest way to draft a combined business + real estate Letter of Intent.</h1>
+          <h1>Draft, share, and sign real estate deals — without leaving one tab.</h1>
           <p>
-            Trusted structure for brokers, buyers, and sellers. Build a professional,
-            non-binding LOI in minutes — itemized price allocation, dollars-in-words, and
-            export-ready formatting handled for you.
+            Ledgerlot drafts LOIs and leases, collects e-signatures in the right order, and
+            keeps every folder's tasks, comments, and audit trail in one place — for solo agents
+            and full brokerage teams alike.
           </p>
           <a className="marketing-cta-button" href={isLoggedIn ? "/dashboard" : "/login"}>
             {isLoggedIn ? "Go to Dashboard →" : "Start Building →"}
           </a>
           <div className="home-feature-strip">
-            <span>Free account</span>
+            <span>Free personal account</span>
             <span>·</span>
-            <span>Save &amp; resume deals</span>
+            <span>7-day business trial, no card charged upfront</span>
             <span>·</span>
             <span>Export to Word or PDF</span>
+          </div>
+        </div>
+
+        <div className="home-features">
+          <h2>Everything a deal needs, in one place</h2>
+          <div className="home-features-grid">
+            <div className="home-feature-card">
+              <h3>Draft LOIs &amp; leases</h3>
+              <p>Guided forms for purchase LOIs, commercial leases, and New Brunswick residential leases — live preview as you type.</p>
+            </div>
+            <div className="home-feature-card">
+              <h3>Any PDF, made fillable</h3>
+              <p>Upload your own brokerage forms and anchor the fields once — reuse them as a template on every future deal.</p>
+            </div>
+            <div className="home-feature-card">
+              <h3>Sequential e-signature</h3>
+              <p>Buyer signs, then seller is unlocked, then the brokerage — enforced automatically, with a tamper-evident audit trail.</p>
+            </div>
+            <div className="home-feature-card">
+              <h3>Deal collaboration</h3>
+              <p>Tasks, threaded comments, and a unified activity feed live on the folder itself — no separate project tool needed.</p>
+            </div>
+            <div className="home-feature-card">
+              <h3>API &amp; webhooks</h3>
+              <p>Push a new folder from your CRM, or get notified the instant a document is fully signed — included, no add-on tier.</p>
+            </div>
+            <div className="home-feature-card">
+              <h3>Granular sharing</h3>
+              <p>Grant a lender view-only access to one financing document, without exposing the rest of the deal folder.</p>
+            </div>
+          </div>
+          <div className="home-features-cta">
+            <a href="/compare">See how this compares to dotloop &amp; DocuSign →</a>
+            <a href="/pricing">View pricing →</a>
           </div>
         </div>
 
