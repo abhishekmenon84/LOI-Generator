@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import SiteHeader from "../../components/SiteHeader";
 import SiteFooter from "../../components/SiteFooter";
 import { CA_PROVINCES } from "../../lib/provinces";
@@ -112,7 +113,9 @@ function BusinessDetailsFields({ details, onChange }) {
 }
 
 export default function LoginPage() {
+  const [mode, setMode] = useState("link"); // "link" | "password"
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [accountType, setAccountType] = useState("personal");
   const [businessDetails, setBusinessDetails] = useState({
     businessName: "",
@@ -134,6 +137,20 @@ export default function LoginPage() {
       retentionYears: String(businessDetails.retentionYears),
     });
     return `/dashboard?${params.toString()}`;
+  }
+
+  async function handlePasswordSubmit(e) {
+    e.preventDefault();
+    setStatus({ loading: true, error: null });
+    try {
+      const res = await signIn("password", { email, password, redirect: false });
+      if (res?.error) {
+        throw new Error("Incorrect email or password.");
+      }
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setStatus({ loading: false, error: err.message });
+    }
   }
 
   async function handleSubmit(e) {
@@ -177,39 +194,87 @@ export default function LoginPage() {
       <SiteHeader />
       <main className="marketing-page">
         <h1>Sign in</h1>
-        <p>Enter your email and we&apos;ll send you a sign-in link — no password needed.</p>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 400 }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-secondary)" }}>How are you using Ledgerlot?</span>
-            <select
-              value={accountType}
-              onChange={(e) => setAccountType(e.target.value)}
-              style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
-            >
-              <option value="personal">Personal — build documents for my own deals</option>
-              <option value="business">Business — manage my team's deal pipeline (7-day free trial)</option>
-            </select>
-          </label>
 
-          {accountType === "business" && (
-            <BusinessDetailsFields details={businessDetails} onChange={setBusinessDetails} />
-          )}
+        {mode === "password" ? (
+          <>
+            <p>Sign in with your email and password.</p>
+            <form onSubmit={handlePasswordSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 400 }}>
+              <input
+                type="email"
+                required
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+              />
+              <input
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+              />
+              {status.error && (
+                <div className="status-banner status-error" role="alert">⚠️ {status.error}</div>
+              )}
+              <button type="submit" className="marketing-cta-button" disabled={status.loading}>
+                {status.loading ? "Signing in…" : "Sign in"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("link"); setStatus({ loading: false, error: null }); }}
+                style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0 }}
+              >
+                Forgot your password, or never set one? Use an email sign-in link instead.
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <p>Enter your email and we&apos;ll send you a sign-in link — no password needed.</p>
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 400 }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-secondary)" }}>How are you using Ledgerlot?</span>
+                <select
+                  value={accountType}
+                  onChange={(e) => setAccountType(e.target.value)}
+                  style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+                >
+                  <option value="personal">Personal — build documents for my own deals</option>
+                  <option value="business">Business — manage my team's deal pipeline (7-day free trial)</option>
+                </select>
+              </label>
 
-          <input
-            type="email"
-            required
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
-          />
-          {status.error && (
-            <div className="status-banner status-error" role="alert">⚠️ {status.error}</div>
-          )}
-          <button type="submit" className="marketing-cta-button" disabled={status.loading}>
-            {status.loading ? "Sending…" : "Send me a sign-in link"}
-          </button>
-        </form>
+              {accountType === "business" && (
+                <BusinessDetailsFields details={businessDetails} onChange={setBusinessDetails} />
+              )}
+
+              <input
+                type="email"
+                required
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+              />
+              {status.error && (
+                <div className="status-banner status-error" role="alert">⚠️ {status.error}</div>
+              )}
+              <button type="submit" className="marketing-cta-button" disabled={status.loading}>
+                {status.loading ? "Sending…" : "Send me a sign-in link"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("password"); setStatus({ loading: false, error: null }); }}
+                style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0 }}
+              >
+                Already set a password? Sign in with it instead.
+              </button>
+            </form>
+          </>
+        )}
       </main>
       <SiteFooter />
     </>

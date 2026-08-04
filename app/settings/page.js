@@ -2,9 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
-import { getPersonalOrgId } from "../../lib/orgAccess";
+import { getPersonalOrgId, getPrimaryOrgForShell } from "../../lib/orgAccess";
 import AppShell from "../../components/AppShell";
 import PersonalProfileSettings from "../../components/PersonalProfileSettings";
+import PasswordSettings from "../../components/PasswordSettings";
 import { PERSONAL_DOC_PRICE_CENTS, PERSONAL_DAILY_CAP, PERSONAL_MONTHLY_CAP } from "../../lib/orgBilling";
 
 export const metadata = {
@@ -26,9 +27,10 @@ export default async function SettingsPage() {
     include: { org: true },
   });
   const businessOrg = businessMembership?.org || null;
+  const shellOrg = await getPrimaryOrgForShell(session.user.id);
 
   return (
-    <AppShell org={org ? { name: org.name, isPersonal: true, planTier: org.planTier } : null} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
+    <AppShell org={shellOrg} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 28px" }}>
         <h1>Settings</h1>
         <PersonalProfileSettings
@@ -41,6 +43,9 @@ export default async function SettingsPage() {
             email: session.user.email,
           }}
         />
+
+        <h2 style={{ margin: "28px 0 8px" }}>Password</h2>
+        <PasswordSettings hasPassword={!!currentUser?.passwordHash} />
 
         <h2 style={{ marginBottom: 8 }}>Change tier</h2>
 

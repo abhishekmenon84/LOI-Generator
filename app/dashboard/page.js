@@ -7,6 +7,7 @@ import { retentionYearsToDays } from "../../lib/pricingTiers";
 import { prisma } from "../../lib/prisma";
 import AppShell from "../../components/AppShell";
 import DashboardGreeting from "../../components/DashboardGreeting";
+import SetPasswordBanner from "../../components/SetPasswordBanner";
 
 export const metadata = {
   title: "Dashboard — Ledgerlot",
@@ -75,6 +76,7 @@ export default async function DashboardPage({ searchParams }) {
   }
 
   const primaryOrg = await getPrimaryOrgForShell(session.user.id);
+  const currentUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { passwordHash: true } });
 
   // listAccessibleFolders with no options already excludes archived
   // folders -- everything returned here is active.
@@ -138,7 +140,8 @@ export default async function DashboardPage({ searchParams }) {
     <AppShell org={primaryOrg} userInitial={(session.user.email || "?").charAt(0).toUpperCase()}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 28px" }}>
         <DashboardGreeting style={{ marginBottom: 4 }} />
-        <p style={{ color: "var(--text-secondary)", marginBottom: 28 }}>Signed in as {session.user.email}.</p>
+        <p style={{ color: "var(--text-secondary)", marginBottom: 20 }}>Signed in as {session.user.email}.</p>
+        <SetPasswordBanner hasPassword={!!currentUser?.passwordHash} />
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 32 }}>
           <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}>

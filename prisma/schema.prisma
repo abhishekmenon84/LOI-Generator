@@ -17,6 +17,11 @@ model User {
   phone           String?
   licenseNumber   String?
   signatureImageUrl String?
+  // bcrypt hash only -- the plaintext password never touches storage. Null
+  // means the user has never set one and signs in via magic link only (see
+  // lib/auth.js's Credentials provider, which is only offered/attempted
+  // when this is non-null).
+  passwordHash    String?
   accounts            Account[]
   sessions            Session[]
   memberships         Membership[]
