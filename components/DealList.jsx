@@ -41,7 +41,6 @@ function workspacePath(folderId) {
 // in the app; a folder is either Active or Archived.
 export default function DealList({ initialFolders, userOrgs = [] }) {
   const router = useRouter();
-  const [view, setView] = useState("active");
   const [deals, setDeals] = useState(initialFolders);
   const [creatingNew, setCreatingNew] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState(null);
@@ -54,30 +53,16 @@ export default function DealList({ initialFolders, userOrgs = [] }) {
   // { folderId, action: "archive" }
   const [reasonModal, setReasonModal] = useState(null);
 
-  // "favorites" is a filter over the active list, not a separate lifecycle
-  // bucket -- a favorited folder still shows up under "active" too, it's
-  // just also reachable pre-filtered from the sidebar.
-  const visibleDeals = view === "favorites" ? deals.filter((d) => d.favorite) : deals;
-
   // "New Ledger" only ever creates a Folder now -- what to put inside it
   // (a built-in document, a custom template, or an uploaded file) is
   // decided afterwards, inside the Folder workspace's own "+ Add" menu
   // (components/FolderTreePanel.jsx), which already offers all three.
-  // The Sidebar's Favorites link lands here as /documents?view=favorites
-  // to pre-select that tab, same convention as quickCreate below.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    let handled = false;
     if (params.get("quickCreate") != null) {
       setCreatingNew(true);
-      handled = true;
+      router.replace("/documents", { scroll: false });
     }
-    const requestedView = params.get("view");
-    if (requestedView === "favorites") {
-      setView(requestedView);
-      handled = true;
-    }
-    if (handled) router.replace("/documents", { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -85,24 +70,6 @@ export default function DealList({ initialFolders, userOrgs = [] }) {
     setCreatingNew(false);
     setSelectedOrgId(null);
     setNewDealName("");
-  }
-
-  async function toggleFavorite(folderId) {
-    const folder = deals.find((d) => d.id === folderId);
-    if (!folder) return;
-    const next = !folder.favorite;
-    setDeals((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: next } : d)));
-    try {
-      const res = await fetch(`/api/folders/${folderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ favorite: next }),
-      });
-      if (!res.ok) throw new Error("Could not update favorite.");
-    } catch (err) {
-      setDeals((cur) => cur.map((d) => (d.id === folderId ? { ...d, favorite: !next } : d)));
-      setError(err.message);
-    }
   }
 
   async function handleCreate(e) {
@@ -251,38 +218,11 @@ export default function DealList({ initialFolders, userOrgs = [] }) {
 
       {error && <div className="status-banner status-error" role="alert">⚠️ {error}</div>}
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {["active", "favorites"].map((v) => (
-          <button
-            key={v}
-            type="button"
-            onClick={() => setView(v)}
-            style={{
-              padding: "6px 14px",
-              borderRadius: 999,
-              border: "1px solid var(--border)",
-              background: view === v ? "var(--accent-subtle)" : "transparent",
-              color: view === v ? "var(--accent-light)" : "var(--text-secondary)",
-              cursor: "pointer",
-              fontSize: "0.8rem",
-              fontWeight: 600,
-              textTransform: "capitalize",
-            }}
-          >
-            {v}
-          </button>
-        ))}
-      </div>
-
-      {visibleDeals.length === 0 ? (
-        <p>
-          {view === "active"
-            ? "No ledgers yet — create one above to get started."
-            : "No favorites yet — star a ledger to pin it here."}
-        </p>
+      {deals.length === 0 ? (
+        <p>No ledgers yet — create one above to get started.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {visibleDeals.map((deal) => {
+          {deals.map((deal) => {
             const meta = typeMeta(deal.documentType);
             return (
               <div
@@ -307,13 +247,6 @@ export default function DealList({ initialFolders, userOrgs = [] }) {
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => toggleFavorite(deal.id)}
-                  style={{ border: "none", background: "transparent", fontSize: 15, color: deal.favorite ? "oklch(72% 0.15 75)" : "oklch(80% 0.01 264)", cursor: "pointer", flex: "0 0 auto" }}
-                >
-                  ★
-                </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 650, marginBottom: 3, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {deal.name}

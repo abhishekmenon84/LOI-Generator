@@ -10,7 +10,6 @@ const NAV_ITEMS = [
   { href: "/contacts", label: "Contacts", glyph: "●" },
   { href: "/keeper", label: "Organizations", glyph: "◈" },
   { href: "/inbox", label: "Inbox", glyph: "▧" },
-  { href: "/documents?view=favorites", label: "Favorites", glyph: "★" },
   { href: "/archive", label: "Archive", glyph: "□" },
   { href: "/settings", label: "Settings", glyph: "⚙" },
 ];

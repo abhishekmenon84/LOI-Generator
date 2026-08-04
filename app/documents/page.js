@@ -119,7 +119,6 @@ export default async function DocumentsPage() {
     writeAccess: f._writeAccess,
     parentFolderId: f.parentFolderId,
     priority: f.priority,
-    favorite: f.favorite,
   });
 
   const personalOrgId = await getPersonalOrgId(session.user.id);

@@ -52,7 +52,6 @@ export async function GET(request, { params }) {
     name: folder.name,
     stage: folder.stage,
     priority: folder.priority,
-    favorite: folder.favorite,
     parentFolderId: folder.parentFolderId,
     orgId: folder.orgId,
     readOnly: !folder._writeAccess,
@@ -82,7 +81,6 @@ export async function PATCH(request, { params }) {
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
   if (typeof body.stage === "string" && VALID_STAGES.includes(body.stage)) data.stage = body.stage;
   if (body.priority === null || ["green", "yellow", "grey"].includes(body.priority)) data.priority = body.priority;
-  if (typeof body.favorite === "boolean") data.favorite = body.favorite;
   if (typeof body.restrictedToParticipants === "boolean") {
     // Only the folder's creator can toggle this -- it's a confidentiality
     // decision (excluding org admins from seeing the folder), not a routine
@@ -94,5 +92,5 @@ export async function PATCH(request, { params }) {
   }
 
   const updated = await prisma.folder.update({ where: { id: folder.id }, data });
-  return NextResponse.json({ id: updated.id, name: updated.name, stage: updated.stage, priority: updated.priority, favorite: updated.favorite, restrictedToParticipants: updated.restrictedToParticipants, updatedAt: updated.updatedAt });
+  return NextResponse.json({ id: updated.id, name: updated.name, stage: updated.stage, priority: updated.priority, restrictedToParticipants: updated.restrictedToParticipants, updatedAt: updated.updatedAt });
 }
