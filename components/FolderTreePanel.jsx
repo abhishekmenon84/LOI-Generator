@@ -52,11 +52,11 @@ function ArchiveToggleButton({ archived, onToggle, title }) {
 // out (per doc.archivedAt) and are moved into a separate "Archived"
 // section by the caller -- this component just renders whatever list it's
 // given, active or archived alike.
-function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive, onDuplicate }) {
+function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive, onDuplicate, isEditing, editValue, onStartEdit, onEditChange, onCommitEdit, onCancelEdit }) {
   const archived = !!doc.archivedAt;
   return (
     <div
-      onClick={() => onSelectLedger?.(doc.id, doc.documentType)}
+      onClick={() => !isEditing && onSelectLedger?.(doc.id, doc.documentType)}
       style={{
         display: "flex",
         alignItems: "center",
@@ -68,21 +68,59 @@ function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive, onDuplica
         opacity: archived ? 0.55 : 1,
       }}
     >
-      <span style={{ fontSize: "11px", flex: "0 0 auto" }}>{DOC_ICONS.ledger}</span>
-      <span
-        style={{
-          fontSize: "11px",
-          fontWeight: isSelected ? 700 : 500,
-          color: isSelected ? "oklch(24% 0.015 264)" : "oklch(35% 0.01 264)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          flex: 1,
-        }}
-      >
-        {doc.name}
-      </span>
-      {onDuplicate && !archived && (
+      <span style={{ fontSize: "15px", flex: "0 0 auto" }}>{DOC_ICONS.ledger}</span>
+      {isEditing ? (
+        <input
+          type="text"
+          autoFocus
+          value={editValue}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => onEditChange(e.target.value)}
+          onBlur={onCommitEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onCommitEdit();
+            if (e.key === "Escape") onCancelEdit();
+          }}
+          style={{
+            fontSize: "11px",
+            fontWeight: 500,
+            border: "1px solid oklch(88% 0.008 60)",
+            borderRadius: "5px",
+            padding: "2px 6px",
+            outline: "none",
+            flex: 1,
+            minWidth: 0,
+          }}
+        />
+      ) : (
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: isSelected ? 700 : 500,
+            color: isSelected ? "oklch(24% 0.015 264)" : "oklch(35% 0.01 264)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+          }}
+        >
+          {doc.name}
+        </span>
+      )}
+      {!isEditing && onStartEdit && !archived && (
+        <button
+          type="button"
+          title="Rename"
+          onClick={(e) => {
+            e.stopPropagation();
+            onStartEdit();
+          }}
+          style={{ flex: "0 0 auto", background: "none", border: "none", cursor: "pointer", fontSize: "11px", color: "oklch(55% 0.01 264)", padding: "2px 4px" }}
+        >
+          ✎
+        </button>
+      )}
+      {!isEditing && onDuplicate && !archived && (
         <button
           type="button"
           title="Duplicate"
@@ -95,7 +133,7 @@ function LedgerRow({ doc, isSelected, onSelectLedger, onToggleArchive, onDuplica
           ⧉
         </button>
       )}
-      {onToggleArchive && (
+      {!isEditing && onToggleArchive && (
         <ArchiveToggleButton
           archived={archived}
           onToggle={() => onToggleArchive(doc.id, !archived)}
@@ -127,7 +165,7 @@ function FileRow({ doc, isSelected, onSelectFile, onToggleArchive }) {
         opacity: archived ? 0.55 : 1,
       }}
     >
-      <span style={{ fontSize: "11px", flex: "0 0 auto" }}>{DOC_ICONS.file}</span>
+      <span style={{ fontSize: "15px", flex: "0 0 auto" }}>{DOC_ICONS.file}</span>
       <span
         style={{
           fontSize: "11px",
@@ -239,6 +277,7 @@ export default function FolderTreePanel({
   onSelectFile,
   onNavigateFolder,
   onRenameFolder,
+  onRenameLedger,
   onAddLedger,
   onAddFromTemplate,
   onUploadFile,
@@ -285,6 +324,16 @@ export default function FolderTreePanel({
     setEditingId(null);
     if (!val) return;
     onRenameFolder?.(folderId, val);
+  }
+
+  // Same shape as commitEdit above, but for a Ledger row (editingId
+  // prefixed "ledger:<id>", see the three LedgerRow call sites below) --
+  // kept separate since it must call onRenameLedger, not onRenameFolder.
+  function commitLedgerEdit(ledgerId) {
+    const val = editingValue.trim();
+    setEditingId(null);
+    if (!val) return;
+    onRenameLedger?.(ledgerId, val);
   }
 
   function toggleSubfolder(id) {
@@ -420,16 +469,25 @@ export default function FolderTreePanel({
                 move into the separate "Archived" section below. */}
             {activeLedgers.length > 0 || activeFiles.length > 0 ? (
               <div style={{ paddingLeft: "28px" }}>
-                {activeLedgers.map((doc) => (
-                  <LedgerRow
-                    key={doc.id}
-                    doc={doc}
-                    isSelected={selectedLedgerId === doc.id}
-                    onSelectLedger={onSelectLedger}
-                    onToggleArchive={onToggleLedgerArchive}
-                    onDuplicate={onDuplicateLedger}
-                  />
-                ))}
+                {activeLedgers.map((doc) => {
+                  const editId = `ledger:${doc.id}`;
+                  return (
+                    <LedgerRow
+                      key={doc.id}
+                      doc={doc}
+                      isSelected={selectedLedgerId === doc.id}
+                      onSelectLedger={onSelectLedger}
+                      onToggleArchive={onToggleLedgerArchive}
+                      onDuplicate={onDuplicateLedger}
+                      isEditing={editingId === editId}
+                      editValue={editingValue}
+                      onStartEdit={() => startEdit(editId, doc.name)}
+                      onEditChange={setEditingValue}
+                      onCommitEdit={() => commitLedgerEdit(doc.id)}
+                      onCancelEdit={cancelEdit}
+                    />
+                  );
+                })}
                 {activeFiles.map((doc) => (
                   <FileRow
                     key={doc.id}
@@ -533,16 +591,25 @@ export default function FolderTreePanel({
               </div>
               {expanded ? (
                 <div style={{ paddingLeft: "28px" }}>
-                  {ledgers.map((doc) => (
-                    <LedgerRow
-                      key={doc.id}
-                      doc={doc}
-                      isSelected={selectedLedgerId === doc.id}
-                      onSelectLedger={onSelectLedger}
-                      onToggleArchive={onToggleLedgerArchive}
-                      onDuplicate={onDuplicateLedger}
-                    />
-                  ))}
+                  {ledgers.map((doc) => {
+                    const editId = `ledger:${doc.id}`;
+                    return (
+                      <LedgerRow
+                        key={doc.id}
+                        doc={doc}
+                        isSelected={selectedLedgerId === doc.id}
+                        onSelectLedger={onSelectLedger}
+                        onToggleArchive={onToggleLedgerArchive}
+                        onDuplicate={onDuplicateLedger}
+                        isEditing={editingId === editId}
+                        editValue={editingValue}
+                        onStartEdit={() => startEdit(editId, doc.name)}
+                        onEditChange={setEditingValue}
+                        onCommitEdit={() => commitLedgerEdit(doc.id)}
+                        onCancelEdit={cancelEdit}
+                      />
+                    );
+                  })}
                   {sfFiles.map((doc) => (
                     <FileRow
                       key={doc.id}

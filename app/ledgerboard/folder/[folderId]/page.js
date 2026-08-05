@@ -515,6 +515,29 @@ export default function FolderWorkspacePage() {
     }
   }
 
+  // Mirrors handleRenameFolder immediately above, but targets a Ledger row
+  // instead of a Folder -- PATCH /api/ledgers/[id] rejects a name change on
+  // a locked (fully signed) ledger with a 409, so unlike the folder-rename
+  // path this surfaces a real error via the existing uploadError banner
+  // rather than silently doing nothing.
+  async function handleRenameLedger(id, name) {
+    const res = await fetch(`/api/ledgers/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }).catch(() => null);
+    const body = await res?.json().catch(() => ({})) ?? {};
+    if (!res || !res.ok) {
+      setUploadError(body.error || "Could not rename this document.");
+      return;
+    }
+    setFolderLedgers((cur) => cur.map((l) => (l.id === id ? { ...l, name } : l)));
+    setSubfolders((cur) => cur.map((sf) => ({ ...sf, ledgers: sf.ledgers.map((l) => (l.id === id ? { ...l, name } : l)) })));
+    if (ledger && ledger.id === id) {
+      setLedger((cur) => (cur ? { ...cur, name } : cur));
+    }
+  }
+
   async function handleAddLedger(documentType) {
     setBuiltInPickerOpen(false);
     const res = await fetch("/api/ledgers", {
@@ -768,6 +791,7 @@ export default function FolderWorkspacePage() {
           onSelectFile={handleSelectFile}
           onNavigateFolder={handleNavigateFolder}
           onRenameFolder={handleRenameFolder}
+          onRenameLedger={handleRenameLedger}
           onAddLedger={() => setBuiltInPickerOpen(true)}
           onAddFromTemplate={handleAddFromTemplate}
           onUploadFile={() => fileInputRef.current?.click()}
