@@ -1,6 +1,8 @@
 "use client";
 
 import SectionCard from "./SectionCard";
+import SectionHeadingsEditor from "./SectionHeadingsEditor";
+import { LEASE_SECTION_DEFS } from "../lib/leaseEngine";
 
 function calcProgress(data) {
   const checks = [
@@ -137,6 +139,16 @@ export default function LeaseForm({ data, onChange, onExport, onClearDraft, expo
           <div className="progress-fill" style={{ width: `${progress}%` }} />
         </div>
       </div>
+
+      <SectionCard icon="✏️" title="Document Title & Headings" accent="risk">
+        <SectionHeadingsEditor
+          sectionDefs={LEASE_SECTION_DEFS}
+          documentTitle={data.documentTitle}
+          sectionOverrides={data.sectionOverrides}
+          onDocumentTitleChange={(documentTitle) => set({ documentTitle })}
+          onSectionOverridesChange={(sectionOverrides) => set({ sectionOverrides })}
+        />
+      </SectionCard>
 
       <SectionCard icon="📅" title="Date & Parties" accent="dates" stepNum="1">
         <div className="form-group">

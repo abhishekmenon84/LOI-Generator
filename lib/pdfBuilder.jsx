@@ -71,7 +71,7 @@ function LOIPdfDocument({ model }) {
   return (
     <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
-        <Text style={styles.header}>LETTER OF INTENT TO PURCHASE</Text>
+        <Text style={styles.header}>{model.documentTitle.toUpperCase()}</Text>
 
         <Text style={styles.para}>
           <Text style={styles.bold}>Date: </Text>
@@ -92,72 +92,96 @@ function LOIPdfDocument({ model }) {
           (&quot;Sellers&quot;).
         </Text>
 
-        <Text style={styles.sectionTitle}>1. ASSETS TO BE ACQUIRED AND TRANSACTION SCOPE</Text>
-        <Text style={styles.para}>
-          The transaction comprises the purchase of the following assets (collectively, the &quot;Assets&quot;):
-        </Text>
-        {model.inclusionPoints.map((p, i) => (
-          <View style={styles.bullet} key={i}>
-            <Text style={styles.bulletDot}>•</Text>
-            <RichText html={p.html} style={styles.bulletText} />
-          </View>
-        ))}
-
-        <Text style={styles.sectionTitle}>2. PURCHASE PRICE AND ALLOCATION</Text>
-        <Text style={styles.para}>
-          The proposed aggregate contract purchase value is $
-          {model.grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} ({model.grandTotalWords}), with
-          financial allocation structures detailed explicitly below:
-        </Text>
-        <View style={styles.table}>
-          {model.allocationRows.map((row, i) => (
-            <View style={row.total ? styles.totalRow : styles.row} key={i}>
-              <Text style={[styles.cellLabel, row.total ? styles.bold : null]}>{row.label}</Text>
-              <Text style={[styles.cellValue, row.total ? styles.bold : null]}>
-                ${row.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <Text style={styles.sectionTitle}>3. BROKERAGE COMMISSION ARRANGEMENTS</Text>
-        <Text style={styles.para}>
-          <Text style={styles.bold}>Commission Notice: </Text>
-          It is hereby mutually acknowledged and agreed that the {model.commissionPayerLabel} shall hold exclusive
-          responsibility for satisfying the agent commission fee of {model.commissionSizeLabel} directly to the
-          designated Brokerage Representative. The opposing principal party shall possess zero liability or
-          performance obligations regarding this specific representative transaction element.
-        </Text>
-
-        <Text style={styles.sectionTitle}>4. CONFIDENTIALITY</Text>
-        <Text style={styles.para}>
-          Both Buyer and Sellers agree that all financial details, operational frameworks, and negotiation tracks
-          tied to this potential asset acquisition remain strictly confidential and shall not be released to
-          unapproved external parties without execution of written consent.
-        </Text>
-
-        <Text style={styles.sectionTitle}>5. CONDITIONS PRECEDENT AND STRATEGIC PROTECTIONS</Text>
-        <Text style={styles.para}>
-          Final commercial transaction execution and asset transitions remain contingent upon satisfactory
-          satisfaction of the following structural checkpoints within 45 days of LOI signing:
-        </Text>
-        {model.conditions.map((c, i) => (
-          <View style={styles.bullet} key={i}>
-            <Text style={styles.bulletDot}>•</Text>
-            <RichText html={c} style={styles.bulletText} />
-          </View>
-        ))}
-
-        <Text style={styles.sectionTitle}>6. NON-BINDING NATURE</Text>
-        <Text style={styles.para}>
-          This document outlines intent for framework architecture only. Excepting the Confidentiality covenants
-          above, this LOI does not create enforceable closing mandates. Legal bindings manifest exclusively inside
-          finalized, formal Purchase and Sale agreements executed later by explicit signatures.
-        </Text>
-
-        {model.agencyDisclosures.length > 0 && (
+        {model.sectionEnabled.assets && (
           <>
-            <Text style={styles.sectionTitle}>7. AGENCY DISCLOSURE</Text>
+            <Text style={styles.sectionTitle}>{model.headings.assets}</Text>
+            <Text style={styles.para}>
+              The transaction comprises the purchase of the following assets (collectively, the &quot;Assets&quot;):
+            </Text>
+            {model.inclusionPoints.map((p, i) => (
+              <View style={styles.bullet} key={i}>
+                <Text style={styles.bulletDot}>•</Text>
+                <RichText html={p.html} style={styles.bulletText} />
+              </View>
+            ))}
+          </>
+        )}
+
+        {model.sectionEnabled.price && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.price}</Text>
+            <Text style={styles.para}>
+              The proposed aggregate contract purchase value is $
+              {model.grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} ({model.grandTotalWords}), with
+              financial allocation structures detailed explicitly below:
+            </Text>
+            <View style={styles.table}>
+              {model.allocationRows.map((row, i) => (
+                <View style={row.total ? styles.totalRow : styles.row} key={i}>
+                  <Text style={[styles.cellLabel, row.total ? styles.bold : null]}>{row.label}</Text>
+                  <Text style={[styles.cellValue, row.total ? styles.bold : null]}>
+                    ${row.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {model.sectionEnabled.commission && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.commission}</Text>
+            <Text style={styles.para}>
+              <Text style={styles.bold}>Commission Notice: </Text>
+              It is hereby mutually acknowledged and agreed that the {model.commissionPayerLabel} shall hold exclusive
+              responsibility for satisfying the agent commission fee of {model.commissionSizeLabel} directly to the
+              designated Brokerage Representative. The opposing principal party shall possess zero liability or
+              performance obligations regarding this specific representative transaction element.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.confidentiality && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.confidentiality}</Text>
+            <Text style={styles.para}>
+              Both Buyer and Sellers agree that all financial details, operational frameworks, and negotiation tracks
+              tied to this potential asset acquisition remain strictly confidential and shall not be released to
+              unapproved external parties without execution of written consent.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.conditions && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.conditions}</Text>
+            <Text style={styles.para}>
+              Final commercial transaction execution and asset transitions remain contingent upon satisfactory
+              satisfaction of the following structural checkpoints within 45 days of LOI signing:
+            </Text>
+            {model.conditions.map((c, i) => (
+              <View style={styles.bullet} key={i}>
+                <Text style={styles.bulletDot}>•</Text>
+                <RichText html={c} style={styles.bulletText} />
+              </View>
+            ))}
+          </>
+        )}
+
+        {model.sectionEnabled.nonBinding && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.nonBinding}</Text>
+            <Text style={styles.para}>
+              This document outlines intent for framework architecture only. Excepting the Confidentiality covenants
+              above, this LOI does not create enforceable closing mandates. Legal bindings manifest exclusively inside
+              finalized, formal Purchase and Sale agreements executed later by explicit signatures.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.agency && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.agency}</Text>
             {model.agencyDisclosures.map((d, i) => (
               <Text key={i} style={styles.para}>
                 <Text style={styles.bold}>{d.label}: </Text>
@@ -198,7 +222,7 @@ function LeasePdfDocument({ model }) {
   return (
     <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
-        <Text style={styles.header}>LETTER OF INTENT TO LEASE</Text>
+        <Text style={styles.header}>{model.documentTitle.toUpperCase()}</Text>
 
         <Text style={styles.para}>
           <Text style={styles.bold}>Date: </Text>
@@ -210,69 +234,109 @@ function LeasePdfDocument({ model }) {
           {model.landlordName} (&quot;Landlord&quot;).
         </Text>
 
-        <Text style={styles.sectionTitle}>1. PARTIES & PREMISES</Text>
-        <Text style={styles.para}>
-          Landlord: {model.landlordName}. Tenant: {model.tenantName}. Premises: {model.premisesAddress},
-          approximately {model.squareFootage} square feet.
-        </Text>
-
-        <Text style={styles.sectionTitle}>2. LEASE TERM & COMMENCEMENT</Text>
-        <Text style={styles.para}>
-          The Lease Term shall be {model.leaseTermYears} year(s), with a target Lease Commencement Date of{" "}
-          {model.commencementDate}.
-        </Text>
-
-        <Text style={styles.sectionTitle}>3. BASE RENT & ESCALATIONS</Text>
-        <Text style={styles.para}>
-          Base Monthly Rent: ${model.baseMonthlyRent.toLocaleString("en-US", { minimumFractionDigits: 2 })}.
-        </Text>
-        <Text style={styles.para}>{model.escalationText}</Text>
-
-        <Text style={styles.sectionTitle}>4. SECURITY DEPOSIT</Text>
-        <Text style={styles.para}>
-          Tenant shall deposit ${model.securityDeposit.toLocaleString("en-US", { minimumFractionDigits: 2 })} as a
-          security deposit prior to lease commencement.
-        </Text>
-
-        <Text style={styles.sectionTitle}>5. PERMITTED USE</Text>
-        <Text style={styles.para}>{model.permittedUse}</Text>
-
-        <Text style={styles.sectionTitle}>6. TENANT IMPROVEMENTS / BUILD-OUT ALLOWANCE</Text>
-        <Text style={styles.para}>
-          Landlord shall provide a tenant improvement allowance of $
-          {model.tiAllowance.toLocaleString("en-US", { minimumFractionDigits: 2 })}.
-        </Text>
-        <Text style={styles.para}>{model.tiScopeText}</Text>
-
-        <Text style={styles.sectionTitle}>7. RENEWAL OPTION(S)</Text>
-        <Text style={styles.para}>{model.renewalText}</Text>
-
-        <Text style={styles.sectionTitle}>8. BROKERAGE COMMISSION</Text>
-        <Text style={styles.para}>
-          <Text style={styles.bold}>Commission Notice: </Text>
-          It is hereby mutually acknowledged and agreed that the {model.commissionPayerLabel} shall hold exclusive
-          responsibility for satisfying the agent commission fee of {model.commissionSizeLabel} directly to the
-          designated Brokerage Representative.
-        </Text>
-
-        <Text style={styles.sectionTitle}>9. CONDITIONS PRECEDENT</Text>
-        {model.conditions.map((c, i) => (
-          <View style={styles.bullet} key={i}>
-            <Text style={styles.bulletDot}>•</Text>
-            <RichText html={c} style={styles.bulletText} />
-          </View>
-        ))}
-
-        <Text style={styles.sectionTitle}>10. NON-BINDING NATURE</Text>
-        <Text style={styles.para}>
-          This document outlines intent for framework architecture only and does not create enforceable leasing
-          mandates. Legal bindings manifest exclusively inside a finalized, formal Lease Agreement executed later
-          by explicit signatures.
-        </Text>
-
-        {model.agencyDisclosures.length > 0 && (
+        {model.sectionEnabled.parties && (
           <>
-            <Text style={styles.sectionTitle}>11. AGENCY DISCLOSURE</Text>
+            <Text style={styles.sectionTitle}>{model.headings.parties}</Text>
+            <Text style={styles.para}>
+              Landlord: {model.landlordName}. Tenant: {model.tenantName}. Premises: {model.premisesAddress},
+              approximately {model.squareFootage} square feet.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.term && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.term}</Text>
+            <Text style={styles.para}>
+              The Lease Term shall be {model.leaseTermYears} year(s), with a target Lease Commencement Date of{" "}
+              {model.commencementDate}.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.rent && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.rent}</Text>
+            <Text style={styles.para}>
+              Base Monthly Rent: ${model.baseMonthlyRent.toLocaleString("en-US", { minimumFractionDigits: 2 })}.
+            </Text>
+            <Text style={styles.para}>{model.escalationText}</Text>
+          </>
+        )}
+
+        {model.sectionEnabled.deposit && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.deposit}</Text>
+            <Text style={styles.para}>
+              Tenant shall deposit ${model.securityDeposit.toLocaleString("en-US", { minimumFractionDigits: 2 })} as a
+              security deposit prior to lease commencement.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.use && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.use}</Text>
+            <Text style={styles.para}>{model.permittedUse}</Text>
+          </>
+        )}
+
+        {model.sectionEnabled.ti && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.ti}</Text>
+            <Text style={styles.para}>
+              Landlord shall provide a tenant improvement allowance of $
+              {model.tiAllowance.toLocaleString("en-US", { minimumFractionDigits: 2 })}.
+            </Text>
+            <Text style={styles.para}>{model.tiScopeText}</Text>
+          </>
+        )}
+
+        {model.sectionEnabled.renewal && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.renewal}</Text>
+            <Text style={styles.para}>{model.renewalText}</Text>
+          </>
+        )}
+
+        {model.sectionEnabled.commission && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.commission}</Text>
+            <Text style={styles.para}>
+              <Text style={styles.bold}>Commission Notice: </Text>
+              It is hereby mutually acknowledged and agreed that the {model.commissionPayerLabel} shall hold exclusive
+              responsibility for satisfying the agent commission fee of {model.commissionSizeLabel} directly to the
+              designated Brokerage Representative.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.conditions && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.conditions}</Text>
+            {model.conditions.map((c, i) => (
+              <View style={styles.bullet} key={i}>
+                <Text style={styles.bulletDot}>•</Text>
+                <RichText html={c} style={styles.bulletText} />
+              </View>
+            ))}
+          </>
+        )}
+
+        {model.sectionEnabled.nonBinding && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.nonBinding}</Text>
+            <Text style={styles.para}>
+              This document outlines intent for framework architecture only and does not create enforceable leasing
+              mandates. Legal bindings manifest exclusively inside a finalized, formal Lease Agreement executed later
+              by explicit signatures.
+            </Text>
+          </>
+        )}
+
+        {model.sectionEnabled.agency && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.agency}</Text>
             {model.agencyDisclosures.map((d, i) => (
               <Text key={i} style={styles.para}>
                 <Text style={styles.bold}>{d.label}: </Text>
@@ -313,7 +377,7 @@ function ResidentialLeasePdfDocument({ model }) {
   return (
     <Document creationDate={PDF_CREATION_DATE}>
       <Page size="LETTER" style={styles.page}>
-        <Text style={styles.header}>RESIDENTIAL LEASE</Text>
+        <Text style={styles.header}>{model.documentTitle.toUpperCase()}</Text>
         <Text style={{ textAlign: "center", marginBottom: 16, fontStyle: "italic" }}>
           (Standard Form of Lease — New Brunswick, Form 6)
         </Text>
@@ -322,48 +386,72 @@ function ResidentialLeasePdfDocument({ model }) {
           {model.date}
         </Text>
 
-        <Text style={styles.sectionTitle}>SECTION 1 — PARTIES</Text>
-        <Text style={styles.para}>
-          <Text style={styles.bold}>Landlord: </Text>
-          {model.landlordName}, {model.landlordAddress}, {model.landlordPhone}, {model.landlordEmail}
-        </Text>
-        {model.landlordHasAgent && (
-          <Text style={styles.para}>
-            <Text style={styles.bold}>Landlord&apos;s Agent: </Text>
-            {model.landlordAgentName}
-          </Text>
+        {model.sectionEnabled.parties && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.parties}</Text>
+            <Text style={styles.para}>
+              <Text style={styles.bold}>Landlord: </Text>
+              {model.landlordName}, {model.landlordAddress}, {model.landlordPhone}, {model.landlordEmail}
+            </Text>
+            {model.landlordHasAgent && (
+              <Text style={styles.para}>
+                <Text style={styles.bold}>Landlord&apos;s Agent: </Text>
+                {model.landlordAgentName}
+              </Text>
+            )}
+            <Text style={styles.para}>
+              <Text style={styles.bold}>Tenant(s): </Text>
+              {model.tenantNamesText}
+            </Text>
+            {model.tenantWantsEmergencyContacts && model.emergencyContacts.length > 0 && (
+              <Text style={styles.para}>
+                <Text style={styles.bold}>Emergency Contacts: </Text>
+                {model.emergencyContacts.map((c) => `${c.name} — ${c.phone}`).join("; ")}
+              </Text>
+            )}
+          </>
         )}
-        <Text style={styles.para}>
-          <Text style={styles.bold}>Tenant(s): </Text>
-          {model.tenantNamesText}
-        </Text>
-        {model.tenantWantsEmergencyContacts && model.emergencyContacts.length > 0 && (
-          <Text style={styles.para}>
-            <Text style={styles.bold}>Emergency Contacts: </Text>
-            {model.emergencyContacts.map((c) => `${c.name} — ${c.phone}`).join("; ")}
-          </Text>
+
+        {model.sectionEnabled.premises && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.premises}</Text>
+            <Text style={styles.para}>
+              Address: {model.premisesAddressText}. Type of premises: {model.premisesTypeText}.
+            </Text>
+          </>
         )}
 
-        <Text style={styles.sectionTitle}>SECTION 2 — PREMISES</Text>
-        <Text style={styles.para}>
-          Address: {model.premisesAddressText}. Type of premises: {model.premisesTypeText}.
-        </Text>
+        {model.sectionEnabled.tenancy && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.tenancy}</Text>
+            <Text style={styles.para}>{model.tenancyText}</Text>
+          </>
+        )}
 
-        <Text style={styles.sectionTitle}>SECTION 3 — LENGTH OF TENANCY</Text>
-        <Text style={styles.para}>{model.tenancyText}</Text>
+        {model.sectionEnabled.rent && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.rent}</Text>
+            <Text style={styles.para}>{model.rentText}</Text>
+            {model.rentIncreaseText ? <Text style={styles.para}>{model.rentIncreaseText}</Text> : null}
+            <Text style={styles.para}>{model.lateFeeText}</Text>
+            <Text style={styles.para}>{model.servicesText}</Text>
+            <Text style={styles.para}>{model.furnishingsText}</Text>
+          </>
+        )}
 
-        <Text style={styles.sectionTitle}>SECTION 4 — RENT</Text>
-        <Text style={styles.para}>{model.rentText}</Text>
-        {model.rentIncreaseText ? <Text style={styles.para}>{model.rentIncreaseText}</Text> : null}
-        <Text style={styles.para}>{model.lateFeeText}</Text>
-        <Text style={styles.para}>{model.servicesText}</Text>
-        <Text style={styles.para}>{model.furnishingsText}</Text>
+        {model.sectionEnabled.deposit && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.deposit}</Text>
+            <Text style={styles.para}>{model.securityDepositText}</Text>
+          </>
+        )}
 
-        <Text style={styles.sectionTitle}>SECTION 5 — SECURITY DEPOSIT</Text>
-        <Text style={styles.para}>{model.securityDepositText}</Text>
-
-        <Text style={styles.sectionTitle}>SECTION 6 — ASSIGNMENT</Text>
-        <Text style={styles.para}>{model.assignmentText}</Text>
+        {model.sectionEnabled.assignment && (
+          <>
+            <Text style={styles.sectionTitle}>{model.headings.assignment}</Text>
+            <Text style={styles.para}>{model.assignmentText}</Text>
+          </>
+        )}
 
         {model.conditions.length > 0 && (
           <>
@@ -377,23 +465,27 @@ function ResidentialLeasePdfDocument({ model }) {
           </>
         )}
 
-        <Text style={styles.para}>
-          The Landlord and Tenant have read this lease including Attachment A, provided separately as required by
-          The Residential Tenancies Act. This lease is binding on and is for the benefit of the heirs, executors
-          and administrators, successors and assigns of the Landlord and the Tenant.
-        </Text>
-
-        <Text style={styles.sectionTitle}>SECTION 7 — SIGNATURES</Text>
-        <View style={styles.sigBlock}>
-          <Text>Signature of Landlord ({model.landlordName}): ___________________________  Date: ___________</Text>
-        </View>
-        {model.signatureBlocks.map((s, i) => (
-          <View style={styles.sigBlock} key={i}>
-            <Text>
-              Signature of {s.title} ({s.name}): ___________________________  Date: ___________
+        {model.sectionEnabled.signatures && (
+          <>
+            <Text style={styles.para}>
+              The Landlord and Tenant have read this lease including Attachment A, provided separately as required by
+              The Residential Tenancies Act. This lease is binding on and is for the benefit of the heirs, executors
+              and administrators, successors and assigns of the Landlord and the Tenant.
             </Text>
-          </View>
-        ))}
+
+            <Text style={styles.sectionTitle}>{model.headings.signatures}</Text>
+            <View style={styles.sigBlock}>
+              <Text>Signature of Landlord ({model.landlordName}): ___________________________  Date: ___________</Text>
+            </View>
+            {model.signatureBlocks.map((s, i) => (
+              <View style={styles.sigBlock} key={i}>
+                <Text>
+                  Signature of {s.title} ({s.name}): ___________________________  Date: ___________
+                </Text>
+              </View>
+            ))}
+          </>
+        )}
       </Page>
     </Document>
   );

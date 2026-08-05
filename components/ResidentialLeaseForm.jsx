@@ -1,6 +1,8 @@
 "use client";
 
 import SectionCard from "./SectionCard";
+import SectionHeadingsEditor from "./SectionHeadingsEditor";
+import { RESIDENTIAL_LEASE_SECTION_DEFS } from "../lib/residentialLeaseEngine";
 
 const SERVICE_OPTIONS = [
   ["water", "Water"], ["propane", "Propane"], ["snowRemoval", "Snow removal"], ["roomCleaning", "Room cleaning"],
@@ -191,6 +193,16 @@ export default function ResidentialLeaseForm({ data, onChange, onExport, onClear
           <div className="progress-fill" style={{ width: `${progress}%` }} />
         </div>
       </div>
+
+      <SectionCard icon="✏️" title="Document Title & Headings" accent="risk">
+        <SectionHeadingsEditor
+          sectionDefs={RESIDENTIAL_LEASE_SECTION_DEFS}
+          documentTitle={data.documentTitle}
+          sectionOverrides={data.sectionOverrides}
+          onDocumentTitleChange={(documentTitle) => set({ documentTitle })}
+          onSectionOverridesChange={(sectionOverrides) => set({ sectionOverrides })}
+        />
+      </SectionCard>
 
       <SectionCard icon="📅" title="Date" accent="dates" stepNum="1">
         <div className="form-group">

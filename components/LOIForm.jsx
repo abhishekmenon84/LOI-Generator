@@ -1,6 +1,8 @@
 "use client";
 
 import SectionCard from "./SectionCard";
+import SectionHeadingsEditor from "./SectionHeadingsEditor";
+import { LOI_SECTION_DEFS } from "../lib/loiEngine";
 
 const BASE_PROPERTY_VALUES = [350000, 250000, 150000, 100000];
 
@@ -165,6 +167,17 @@ export default function LOIForm({ data, onChange, onExport, onClearDraft, export
           <div className="progress-fill" style={{ width: `${progress}%` }} />
         </div>
       </div>
+
+      {/* ── Document title & section headings ────────────── */}
+      <SectionCard icon="✏️" title="Document Title & Headings" accent="risk">
+        <SectionHeadingsEditor
+          sectionDefs={LOI_SECTION_DEFS}
+          documentTitle={data.documentTitle}
+          sectionOverrides={data.sectionOverrides}
+          onDocumentTitleChange={(documentTitle) => set({ documentTitle })}
+          onSectionOverridesChange={(sectionOverrides) => set({ sectionOverrides })}
+        />
+      </SectionCard>
 
       {/* ── §1 Transaction Dates ─────────────────────────── */}
       <SectionCard icon="📅" title="Transaction Dates" accent="dates" stepNum="1">
