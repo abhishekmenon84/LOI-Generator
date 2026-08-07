@@ -37,7 +37,7 @@ function seedAnchors(suggestedAnchors, participants) {
   }));
 }
 
-export default function SignatureAnchorReview({ pdfBase64, pageSizes, suggestedAnchors, participants, onConfirm, onCancel, submitting = false }) {
+export default function SignatureAnchorReview({ pdfBase64, pageSizes, suggestedAnchors, participants, onConfirm, onCancel, submitting = false, externalError = null }) {
   const signerParticipants = participants
     .map((p, index) => ({ ...p, _participantIndex: index }))
     .filter((p) => p.kind === "signer" && (p.name || "").trim());
@@ -171,7 +171,13 @@ export default function SignatureAnchorReview({ pdfBase64, pageSizes, suggestedA
           </div>
         ))}
 
-        {error && <div className="status-banner status-error" role="alert">⚠️ {error}</div>}
+        {/* externalError comes from the parent's submit attempt (e.g. the
+            create-request POST failing after the user confirmed placement);
+            it takes precedence since it reflects the most recent action. Our
+            own validation `error` still shows when there's no external one. */}
+        {(externalError || error) && (
+          <div className="status-banner status-error" role="alert">⚠️ {externalError || error}</div>
+        )}
 
         <div style={{ marginTop: "auto", display: "flex", gap: 10 }}>
           <button type="button" onClick={onCancel} disabled={submitting} style={{ flex: 1, background: "none", border: "1px solid var(--border)", padding: "8px 10px", borderRadius: 8, cursor: submitting ? "not-allowed" : "pointer" }}>

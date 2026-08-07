@@ -67,9 +67,13 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
       // actually deliver the notification email (e.g. its sandbox sender is
       // restricted to your own address until a domain is verified), keep
       // the modal open to show that instead of silently closing on a
-      // request that looked successful but notified no one.
+      // request that looked successful but notified no one. This must land
+      // on its own "done" step (not "placement") -- the request has already
+      // been created, so re-showing the drag-and-drop placement UI would let
+      // the user click Continue again and create a duplicate SignatureRequest.
       if (body.emailWarning) {
         setEmailWarning(body.emailWarning);
+        setStep("done");
       } else {
         onClose();
       }
@@ -83,6 +87,31 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
 
   if (!isOpen) return null;
 
+  if (step === "done") {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Send for signature"
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      >
+        <div style={{ background: "var(--bg-panel)", borderRadius: 12, maxWidth: 560, width: "100%", padding: 24 }}>
+          <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Send for signature</h2>
+          {emailWarning && (
+            <div className="status-banner status-error" role="alert" style={{ marginBottom: 12 }}>
+              ⚠️ {emailWarning}
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button type="button" onClick={onClose} className="marketing-cta-button">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (step === "placement" && preview) {
     return (
       <SignatureAnchorReview
@@ -93,6 +122,7 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
         onCancel={() => setStep("participants")}
         onConfirm={handleSend}
         submitting={sending}
+        externalError={error}
       />
     );
   }
