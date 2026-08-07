@@ -16,11 +16,11 @@
 // document types use -- see handleSendForSignature below and
 // lib/signerRoles.js's isValidRole, which now accepts this document
 // type's dynamic (per-template) roles. Note: burnSignatures() (called
-// from lib/signatureFinalize.js once every signer has signed) always
-// appends signatures as a trailing page rather than positioning them at
-// each template's own signature-anchor coordinates -- a pre-existing,
-// documented simplification in pdfSignatureBurn.js, not something this
-// wiring changes.
+// from lib/signatureFinalize.js once every signer has signed) now uses
+// this template's own signature-anchor coordinates (confirmed by the
+// sender in the placement-review step below, seeded from TemplateAnchor
+// rows) to position each signature -- the trailing-page append is only a
+// fallback for a signer with no explicit anchor.
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -265,7 +265,11 @@ export default function CustomTemplateSignerAssignmentPage() {
       return;
     }
     setPlacementStep(false);
-    setSendMessage("Sent! Each signer will receive an email with a link to sign.");
+    setSendMessage(
+      body.emailWarning
+        ? `Sent, but: ${body.emailWarning}`
+        : "Sent! Each signer will receive an email with a link to sign."
+    );
   }
 
   if (loadError) {

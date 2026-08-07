@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ROLES_BY_DOCUMENT_TYPE, ROLE_LABELS } from "../lib/signerRoles";
 import SignatureAnchorReview from "./SignatureAnchorReview";
 
@@ -19,6 +19,23 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
 
   const availableRoles = ROLES_BY_DOCUMENT_TYPE[documentType] || ["other"];
 
+  // Most call sites mount this modal once and toggle `isOpen` rather than
+  // keying it per-ledger, so step/preview/emailWarning/error (React state
+  // internal to this component) would otherwise survive a close/reopen of
+  // the SAME instance -- leaving a reopened modal stranded on a stale
+  // "done" or "placement" step instead of back at the participants form.
+  // Reset flow-position state (not `participants` -- the form should still
+  // remember what was typed) whenever the modal transitions to open.
+  useEffect(() => {
+    if (isOpen) {
+      setStep("participants");
+      setPreview(null);
+      setEmailWarning(null);
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   function updateParticipant(index, patch) {
     setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
   }
@@ -32,8 +49,20 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
   }
 
   async function handleContinueToPlacement() {
-    setLoadingPreview(true);
     setError(null);
+    // Client-side completeness check up front (mirrors the custom-template
+    // page's equivalent handleContinueToPlacement) so a blank name/email is
+    // caught here instead of only much later by the create route, after a
+    // full server-side PDF render and a placement-step round-trip.
+    const incomplete = participants.filter(
+      (p) => p.kind === "signer" && (!p.name?.trim() || !p.email?.trim())
+    );
+    if (incomplete.length > 0) {
+      setError("Please fill in a name and email for every signer.");
+      return;
+    }
+
+    setLoadingPreview(true);
     try {
       const res = await fetch(`/api/ledgers/${ledgerId}/signature-request/preview`, {
         method: "POST",
