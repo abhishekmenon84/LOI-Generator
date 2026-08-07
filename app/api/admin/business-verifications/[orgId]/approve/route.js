@@ -3,6 +3,7 @@ import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { isPlatformAdmin } from "../../../../../../lib/platformAdmin";
 import { renderEmail, escapeHtml } from "../../../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 export async function POST(request, { params }) {
@@ -30,23 +31,23 @@ export async function POST(request, { params }) {
     }),
   ]);
 
+  let emailWarning;
   if (org.ownerUserId) {
     const owner = await prisma.user.findUnique({ where: { id: org.ownerUserId }, select: { email: true } });
     if (owner?.email) {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails
-        .send({
-          from: "Ledgerlot <onboarding@resend.dev>",
-          to: owner.email,
-          subject: `Business verified: ${org.name}`,
-          html: renderEmail({
-            title: "Business verification approved",
-            body: `<strong>${escapeHtml(org.name)}</strong> has been verified.`,
-          }),
-        })
-        .catch((err) => console.error("[business verification approve] email failed:", err));
+      const result = await sendEmail(resend, {
+        from: "Ledgerlot <onboarding@resend.dev>",
+        to: owner.email,
+        subject: `Business verified: ${org.name}`,
+        html: renderEmail({
+          title: "Business verification approved",
+          body: `<strong>${escapeHtml(org.name)}</strong> has been verified.`,
+        }),
+      });
+      if (!result.ok) emailWarning = `Notification email could not be sent. ${result.error}`;
     }
   }
 
-  return NextResponse.json({ ok: true, status: "verified" });
+  return NextResponse.json({ ok: true, status: "verified", ...(emailWarning ? { emailWarning } : {}) });
 }

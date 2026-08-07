@@ -27,7 +27,6 @@ const DOC_TYPE_CONFIG = {
 };
 
 const noopExportState = { loading: false, format: null, error: null, success: null };
-const EXPORT_UNAVAILABLE_MESSAGE = "Export isn't available in this workspace yet.";
 
 // A dedicated single-document view for users who only have a
 // LedgerParticipant grant on this one Ledger (no FolderParticipant/org
@@ -92,8 +91,31 @@ export default function SharedDocumentPage() {
     return () => clearTimeout(timeout);
   }, [ledgerData, ledgerId, readOnly, config]);
 
-  function handleExport() {
-    setExportState({ loading: false, format: null, error: EXPORT_UNAVAILABLE_MESSAGE, success: null });
+  async function handleExport(format) {
+    setExportState({ loading: true, format, error: null, success: null });
+    try {
+      const res = await fetch(`/api/ledgers/${ledgerId}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || "Export failed.");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(ledger?.name || "document").replace(/[^a-z0-9]+/gi, "_")}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setExportState({ loading: false, format: null, error: null, success: "Your document has been downloaded." });
+    } catch (err) {
+      setExportState({ loading: false, format: null, error: err.message, success: null });
+    }
   }
 
   if (loadError) {
@@ -143,7 +165,11 @@ export default function SharedDocumentPage() {
 
       <div
         style={{
-          flex: "0 0 42%",
+          // The document-paper content below is capped at 760px regardless
+          // of this panel's width (matches the folder workspace's own
+          // preview panel, see that page's rightPct comment) -- 38% avoids
+          // the large empty gutter a wider fixed share would leave.
+          flex: "0 0 38%",
           overflowY: "auto",
           background: "oklch(93% 0.012 60)",
           display: "flex",

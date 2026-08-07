@@ -8,6 +8,7 @@ import { getOrgLimits, checkAndIncrementUsage } from "../../../../../lib/orgBill
 import { nextSlotsToNotify } from "../../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
 import { getEmailBranding } from "../../../../../lib/orgBranding";
+import { sendEmail } from "../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 const SIGNING_LINK_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
@@ -132,10 +133,10 @@ export async function POST(request, { params }) {
   // notify_only participants always get their copy immediately.
   const firstToNotify = nextSlotsToNotify(sigRequest.signers);
   const notifyOnlySlots = sigRequest.signers.filter((s) => s.kind === "notify_only");
-  await Promise.all(
+  const results = await Promise.all(
     [...firstToNotify, ...notifyOnlySlots].map((s) =>
       s.kind === "signer"
-        ? resend.emails.send({
+        ? sendEmail(resend, {
             from: "Ledgerlot <onboarding@resend.dev>",
             to: s.email,
             subject: `Please sign: ${ledger.name}`,
@@ -148,8 +149,8 @@ export async function POST(request, { params }) {
               brandName: branding.brandName,
               brandLogoUrl: branding.brandLogoUrl,
             }),
-          })
-        : resend.emails.send({
+          }).then((r) => ({ ...r, email: s.email }))
+        : sendEmail(resend, {
             from: "Ledgerlot <onboarding@resend.dev>",
             to: s.email,
             subject: `FYI: ${ledger.name} sent for signature`,
@@ -159,9 +160,25 @@ export async function POST(request, { params }) {
               brandName: branding.brandName,
               brandLogoUrl: branding.brandLogoUrl,
             }),
-          })
+          }).then((r) => ({ ...r, email: s.email }))
     )
   );
 
-  return NextResponse.json({ id: sigRequest.id, verifyCode: sigRequest.verifyCode }, { status: 201 });
+  // The SignatureRequest/SignerSlot rows are already created and correct
+  // regardless of email delivery (the signing link itself still works if
+  // the recipient learns about it some other way) -- but silently
+  // returning 201 when Resend rejected every send (e.g. its sandbox sender
+  // is restricted to the account owner's own email until a domain is
+  // verified) left the sender believing this worked with zero visibility.
+  const failed = results.filter((r) => !r.ok);
+  return NextResponse.json(
+    {
+      id: sigRequest.id,
+      verifyCode: sigRequest.verifyCode,
+      ...(failed.length > 0
+        ? { emailWarning: `Signing links were created, but ${failed.length} notification email(s) could not be sent (${failed.map((f) => f.email).join(", ")}). ${failed[0].error}` }
+        : {}),
+    },
+    { status: 201 }
+  );
 }

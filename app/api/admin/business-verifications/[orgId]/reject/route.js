@@ -3,6 +3,7 @@ import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { isPlatformAdmin } from "../../../../../../lib/platformAdmin";
 import { renderEmail, escapeHtml } from "../../../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 export async function POST(request, { params }) {
@@ -30,23 +31,23 @@ export async function POST(request, { params }) {
     }),
   ]);
 
+  let emailWarning;
   if (org.ownerUserId) {
     const owner = await prisma.user.findUnique({ where: { id: org.ownerUserId }, select: { email: true } });
     if (owner?.email) {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails
-        .send({
-          from: "Ledgerlot <onboarding@resend.dev>",
-          to: owner.email,
-          subject: `Business verification needs attention: ${org.name}`,
-          html: renderEmail({
-            title: "Business verification not approved",
-            body: `We couldn't verify <strong>${escapeHtml(org.name)}</strong>.<br/><br/>Reason: ${escapeHtml(rejectionReason)}<br/><br/>You can re-submit your document from Settings at any time.`,
-          }),
-        })
-        .catch((err) => console.error("[business verification reject] email failed:", err));
+      const result = await sendEmail(resend, {
+        from: "Ledgerlot <onboarding@resend.dev>",
+        to: owner.email,
+        subject: `Business verification needs attention: ${org.name}`,
+        html: renderEmail({
+          title: "Business verification not approved",
+          body: `We couldn't verify <strong>${escapeHtml(org.name)}</strong>.<br/><br/>Reason: ${escapeHtml(rejectionReason)}<br/><br/>You can re-submit your document from Settings at any time.`,
+        }),
+      });
+      if (!result.ok) emailWarning = `Notification email could not be sent. ${result.error}`;
     }
   }
 
-  return NextResponse.json({ ok: true, status: "rejected" });
+  return NextResponse.json({ ok: true, status: "rejected", ...(emailWarning ? { emailWarning } : {}) });
 }

@@ -3,6 +3,7 @@ import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../../lib/folderAccess";
 import { renderEmail, escapeHtml } from "../../../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 async function loadAccessibleLedger(ledgerId, userId) {
@@ -40,21 +41,23 @@ export async function POST(request, { params }) {
   // them silently hit a "no longer active" error if they click it later
   // with no explanation of why.
   const resend = new Resend(process.env.RESEND_API_KEY);
-  await Promise.all(
+  const results = await Promise.all(
     pending.signers.map((s) =>
-      resend.emails
-        .send({
-          from: "Ledgerlot <onboarding@resend.dev>",
-          to: s.email,
-          subject: `Signature request cancelled: ${ledger.name}`,
-          html: renderEmail({
-            title: "Signature request cancelled",
-            body: `The request to sign <strong>${escapeHtml(ledger.name)}</strong> has been cancelled by the sender. No action is needed on your part.`,
-          }),
-        })
-        .catch((err) => console.error("[signature-request void] notification email failed:", err))
+      sendEmail(resend, {
+        from: "Ledgerlot <onboarding@resend.dev>",
+        to: s.email,
+        subject: `Signature request cancelled: ${ledger.name}`,
+        html: renderEmail({
+          title: "Signature request cancelled",
+          body: `The request to sign <strong>${escapeHtml(ledger.name)}</strong> has been cancelled by the sender. No action is needed on your part.`,
+        }),
+      })
     )
   );
 
-  return NextResponse.json({ ok: true });
+  const failed = results.filter((r) => !r.ok);
+  return NextResponse.json({
+    ok: true,
+    ...(failed.length > 0 ? { emailWarning: `${failed.length} cancellation email(s) could not be sent. ${failed[0].error}` } : {}),
+  });
 }

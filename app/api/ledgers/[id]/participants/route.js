@@ -4,6 +4,7 @@ import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { getUserMembership } from "../../../../../lib/orgAccess";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 // Document-level sharing, distinct from folder-level FolderParticipant
@@ -96,19 +97,20 @@ export async function POST(request, { params }) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails
-    .send({
-      from: "Ledgerlot <onboarding@resend.dev>",
-      to: email,
-      subject: `A document has been shared with you on Ledgerlot`,
-      html: renderEmail({
-        title: "A document has been shared with you",
-        body: `<strong>${escapeHtml(ledger.name)}</strong> has been shared with you (${permission === "write" ? "can edit" : "view only"}).`,
-        ctaLabel: "Sign in to view it",
-        ctaUrl: `${appUrl}/login`,
-      }),
-    })
-    .catch((err) => console.error("[ledger participant add] notification email failed:", err));
+  const result = await sendEmail(resend, {
+    from: "Ledgerlot <onboarding@resend.dev>",
+    to: email,
+    subject: `A document has been shared with you on Ledgerlot`,
+    html: renderEmail({
+      title: "A document has been shared with you",
+      body: `<strong>${escapeHtml(ledger.name)}</strong> has been shared with you (${permission === "write" ? "can edit" : "view only"}).`,
+      ctaLabel: "Sign in to view it",
+      ctaUrl: `${appUrl}/login`,
+    }),
+  });
 
-  return NextResponse.json({ id: participant.id, permission: participant.permission }, { status: existing ? 200 : 201 });
+  return NextResponse.json(
+    { id: participant.id, permission: participant.permission, ...(result.ok ? {} : { emailWarning: `Notification email could not be sent. ${result.error}` }) },
+    { status: existing ? 200 : 201 }
+  );
 }

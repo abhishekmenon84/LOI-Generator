@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 // Vercel Cron target (see vercel.json's crons entry) -- daily, reminds a
@@ -34,28 +35,28 @@ export async function GET(request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const resend = new Resend(process.env.RESEND_API_KEY);
   let reminded = 0;
+  let failedEmails = 0;
 
   for (const task of tasks) {
     const recipientEmail = task.assignedTo?.email || task.createdBy?.email;
     if (!recipientEmail) continue;
 
-    await resend.emails
-      .send({
-        from: "Ledgerlot <onboarding@resend.dev>",
-        to: recipientEmail,
-        subject: `Deadline approaching: ${task.title}`,
-        html: renderEmail({
-          title: "Deadline approaching",
-          body: `<strong>${escapeHtml(task.title)}</strong> in <strong>${escapeHtml(task.folder.name)}</strong> is due ${new Date(task.dueDate).toLocaleDateString()}.`,
-          ctaLabel: "View folder",
-          ctaUrl: `${appUrl}/ledgerboard/folder/${task.folder.id}`,
-        }),
-      })
-      .catch((err) => console.error("[cron task-deadline-reminders] send failed:", err));
+    const result = await sendEmail(resend, {
+      from: "Ledgerlot <onboarding@resend.dev>",
+      to: recipientEmail,
+      subject: `Deadline approaching: ${task.title}`,
+      html: renderEmail({
+        title: "Deadline approaching",
+        body: `<strong>${escapeHtml(task.title)}</strong> in <strong>${escapeHtml(task.folder.name)}</strong> is due ${new Date(task.dueDate).toLocaleDateString()}.`,
+        ctaLabel: "View folder",
+        ctaUrl: `${appUrl}/ledgerboard/folder/${task.folder.id}`,
+      }),
+    });
+    if (!result.ok) failedEmails++;
 
     await prisma.task.update({ where: { id: task.id }, data: { reminderSentAt: new Date() } });
     reminded++;
   }
 
-  return NextResponse.json({ ok: true, reminded });
+  return NextResponse.json({ ok: true, reminded, failedEmails });
 }

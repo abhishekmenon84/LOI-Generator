@@ -9,6 +9,7 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
   ]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [emailWarning, setEmailWarning] = useState(null);
 
   const availableRoles = ROLES_BY_DOCUMENT_TYPE[documentType] || ["other"];
 
@@ -36,7 +37,16 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || "Could not send for signature.");
       onSent();
-      onClose();
+      // Signing links were created either way -- but if Resend couldn't
+      // actually deliver the notification email (e.g. its sandbox sender is
+      // restricted to your own address until a domain is verified), keep
+      // the modal open to show that instead of silently closing on a
+      // request that looked successful but notified no one.
+      if (body.emailWarning) {
+        setEmailWarning(body.emailWarning);
+      } else {
+        onClose();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -115,6 +125,11 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
         </button>
 
         {error && <div className="status-banner status-error" role="alert" style={{ marginBottom: 12 }}>⚠️ {error}</div>}
+        {emailWarning && (
+          <div className="status-banner status-error" role="alert" style={{ marginBottom: 12 }}>
+            ⚠️ {emailWarning}
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
           <button
@@ -122,9 +137,9 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
             onClick={onClose}
             style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}
           >
-            Cancel
+            {emailWarning ? "Close" : "Cancel"}
           </button>
-          <button type="button" onClick={handleSend} disabled={sending} className="marketing-cta-button">
+          <button type="button" onClick={handleSend} disabled={sending || !!emailWarning} className="marketing-cta-button">
             {sending ? "Sending…" : "Send"}
           </button>
         </div>

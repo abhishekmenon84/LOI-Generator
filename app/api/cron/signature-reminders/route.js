@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { nextSlotsToNotify } from "../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 const REMINDER_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
@@ -30,32 +31,32 @@ export async function GET(request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const resend = new Resend(process.env.RESEND_API_KEY);
   let remindedRequests = 0;
+  let failedEmails = 0;
 
   for (const sigRequest of candidates) {
     const toNotify = nextSlotsToNotify(sigRequest.signers);
     if (toNotify.length === 0) continue;
 
-    await Promise.all(
+    const results = await Promise.all(
       toNotify.map((s) =>
-        resend.emails
-          .send({
-            from: "Ledgerlot <onboarding@resend.dev>",
-            to: s.email,
-            subject: `Reminder: please sign ${sigRequest.ledger.name}`,
-            html: renderEmail({
-              title: "Reminder: your signature is requested",
-              body: `This is a reminder that you've been asked to sign <strong>${escapeHtml(sigRequest.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
-              ctaLabel: "Review and sign",
-              ctaUrl: `${appUrl}/sign/${s.signingToken}`,
-              footerNote: "Didn't expect this? You can safely ignore this email.",
-            }),
-          })
-          .catch((err) => console.error("[cron signature-reminders] send failed:", err))
+        sendEmail(resend, {
+          from: "Ledgerlot <onboarding@resend.dev>",
+          to: s.email,
+          subject: `Reminder: please sign ${sigRequest.ledger.name}`,
+          html: renderEmail({
+            title: "Reminder: your signature is requested",
+            body: `This is a reminder that you've been asked to sign <strong>${escapeHtml(sigRequest.ledger.name)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+            ctaLabel: "Review and sign",
+            ctaUrl: `${appUrl}/sign/${s.signingToken}`,
+            footerNote: "Didn't expect this? You can safely ignore this email.",
+          }),
+        })
       )
     );
+    failedEmails += results.filter((r) => !r.ok).length;
     await prisma.signatureRequest.update({ where: { id: sigRequest.id }, data: { lastReminderSentAt: new Date() } });
     remindedRequests++;
   }
 
-  return NextResponse.json({ ok: true, remindedRequests });
+  return NextResponse.json({ ok: true, remindedRequests, failedEmails });
 }

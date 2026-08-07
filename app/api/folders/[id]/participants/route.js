@@ -3,6 +3,7 @@ import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { getUserMembership } from "../../../../../lib/orgAccess";
+import { sendEmail } from "../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 function escapeHtml(str) {
@@ -92,12 +93,15 @@ export async function POST(request, { params }) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
+  const emailResult = await sendEmail(resend, {
     from: "Ledgerlot <onboarding@resend.dev>",
     to: email,
     subject: `A folder has been shared with you on Ledgerlot`,
     html: `<p>${escapeHtml(folder.name)} has been shared with you (${permission === "write" ? "can edit" : "view only"}).</p><p><a href="${appUrl}/login">Sign in</a> with this email address (${escapeHtml(email)}) to view it.</p>`,
   });
 
-  return NextResponse.json({ id: participant.id, permission: participant.permission }, { status: 201 });
+  return NextResponse.json(
+    { id: participant.id, permission: participant.permission, ...(emailResult.ok ? {} : { emailWarning: `Shared, but the notification email could not be sent. ${emailResult.error}` }) },
+    { status: 201 }
+  );
 }

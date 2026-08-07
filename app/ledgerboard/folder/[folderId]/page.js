@@ -66,14 +66,6 @@ const DOC_TYPE_CONFIG = {
 
 const noopExportState = { loading: false, format: null, error: null, success: null };
 
-// Fix round 1 (Important #2): Ledger-scoped export doesn't exist yet (no
-// /api/export/... route accepts a ledgerId), so exporting here can't work.
-// Rather than a silent no-op, surface an honest, visible message via the
-// same exportState contract app/app/page.js uses ({loading, format, error,
-// success}) so the Form components' existing error-banner rendering picks
-// it up -- a disclosed limitation instead of dead silence.
-const EXPORT_UNAVAILABLE_MESSAGE = "Export isn't available in this workspace yet.";
-
 export default function FolderWorkspacePage() {
   const params = useParams();
   const router = useRouter();
@@ -94,7 +86,13 @@ export default function FolderWorkspacePage() {
   // rightPanelFlex/middlePanelFlex below for how collapse state overrides
   // these.
   const [leftPct, setLeftPct] = useState(10);
-  const [rightPct, setRightPct] = useState(50);
+  // The preview panel's actual content (document-paper, below) is capped at
+  // 760px regardless of panel width, so a 50% default (this panel's
+  // original value) left a large empty gutter on either side of the page
+  // on any reasonably wide screen -- 38% comfortably fits the page with far
+  // less dead space, while the drag handle (clamped 30-70 below) still lets
+  // a user widen it back if they want.
+  const [rightPct, setRightPct] = useState(38);
   // Measured to translate a drag's pixel delta into a percentage delta.
   const panelsRef = useRef(null);
 
@@ -639,13 +637,32 @@ export default function FolderWorkspacePage() {
     router.push(`/ledgerboard/custom-template/${created.id}`);
   }
 
-  function handleExport() {
-    setExportState({
-      loading: false,
-      format: null,
-      error: EXPORT_UNAVAILABLE_MESSAGE,
-      success: null,
-    });
+  async function handleExport(format) {
+    if (!selectedLedgerId) return;
+    setExportState({ loading: true, format, error: null, success: null });
+    try {
+      const res = await fetch(`/api/ledgers/${selectedLedgerId}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Export failed.");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(ledger?.name || "document").replace(/[^a-z0-9]+/gi, "_")}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setExportState({ loading: false, format: null, error: null, success: "Your document has been downloaded." });
+    } catch (err) {
+      setExportState({ loading: false, format: null, error: err.message, success: null });
+    }
   }
 
   const hasActiveLedger = !!selectedLedgerId;

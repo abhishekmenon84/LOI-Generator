@@ -4,6 +4,7 @@ import { prisma } from "../../../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../../../lib/folderAccess";
 import { nextSlotsToNotify } from "../../../../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 // Manually re-sends the signing-link email to whoever's currently unlocked
@@ -44,9 +45,9 @@ export async function POST(request, { params }) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
-  await Promise.all(
+  const results = await Promise.all(
     toNotify.map((s) =>
-      resend.emails.send({
+      sendEmail(resend, {
         from: "Ledgerlot <onboarding@resend.dev>",
         to: s.email,
         subject: `Reminder: please sign ${ledger.name}`,
@@ -63,5 +64,10 @@ export async function POST(request, { params }) {
 
   await prisma.signatureRequest.update({ where: { id: sigRequest.id }, data: { lastReminderSentAt: new Date() } });
 
-  return NextResponse.json({ ok: true, remindedCount: toNotify.length });
+  const failed = results.filter((r) => !r.ok);
+  return NextResponse.json({
+    ok: true,
+    remindedCount: toNotify.length,
+    ...(failed.length > 0 ? { emailWarning: `${failed.length} reminder email(s) could not be sent. ${failed[0].error}` } : {}),
+  });
 }

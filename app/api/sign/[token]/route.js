@@ -8,6 +8,7 @@ import { isSlotUnlocked, nextSlotsToNotify } from "../../../../lib/signingOrder"
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
 import { getEmailBranding } from "../../../../lib/orgBranding";
 import { dispatchWebhookEvent } from "../../../../lib/webhooks";
+import { sendEmail } from "../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 async function loadSlotByToken(token) {
@@ -109,21 +110,19 @@ export async function PATCH(request, { params }) {
   const creator = await prisma.user.findUnique({ where: { id: slot.request.createdByUserId }, select: { email: true } });
   if (creator?.email) {
     const branding = await getEmailBranding(slot.request.ledger.folder?.orgId);
-    await resend.emails
-      .send({
-        from: "Ledgerlot <onboarding@resend.dev>",
-        to: creator.email,
-        subject: `Signature declined: ${snapshotLedgerName}`,
-        html: renderEmail({
-          title: "Signature declined",
-          body: `<strong>${escapeHtml(slot.name)}</strong> (${escapeHtml(slot.roleOtherLabel || slot.role)}) declined to sign <strong>${escapeHtml(snapshotLedgerName)}</strong>.${declineReason ? `<br/><br/>Reason: ${escapeHtml(declineReason)}` : ""}`,
-          ctaLabel: "View the document",
-          ctaUrl: `${appUrl}/ledgerboard/folder/${slot.request.ledger.folderId}`,
-          brandName: branding.brandName,
-          brandLogoUrl: branding.brandLogoUrl,
-        }),
-      })
-      .catch((err) => console.error("[sign decline] notification email failed:", err));
+    await sendEmail(resend, {
+      from: "Ledgerlot <onboarding@resend.dev>",
+      to: creator.email,
+      subject: `Signature declined: ${snapshotLedgerName}`,
+      html: renderEmail({
+        title: "Signature declined",
+        body: `<strong>${escapeHtml(slot.name)}</strong> (${escapeHtml(slot.roleOtherLabel || slot.role)}) declined to sign <strong>${escapeHtml(snapshotLedgerName)}</strong>.${declineReason ? `<br/><br/>Reason: ${escapeHtml(declineReason)}` : ""}`,
+        ctaLabel: "View the document",
+        ctaUrl: `${appUrl}/ledgerboard/folder/${slot.request.ledger.folderId}`,
+        brandName: branding.brandName,
+        brandLogoUrl: branding.brandLogoUrl,
+      }),
+    });
   }
 
   if (slot.request.ledger.folder?.orgId) {
@@ -213,6 +212,7 @@ export async function POST(request, { params }) {
   const remainingSlots = await prisma.signerSlot.findMany({ where: { requestId: slot.requestId } });
   const remainingSigners = remainingSlots.filter((s) => s.kind === "signer" && !s.tokenUsedAt).length;
 
+  let emailWarning;
   if (remainingSigners === 0) {
     // Deferred to Task 8: finalization (burn signatures, email everyone) is
     // triggered here but implemented as its own function for testability.
@@ -227,28 +227,28 @@ export async function POST(request, { params }) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
       const resend = new Resend(process.env.RESEND_API_KEY);
       const branding = await getEmailBranding(slot.request.ledger.folder?.orgId);
-      await Promise.all(
+      const results = await Promise.all(
         toNotify.map((s) =>
-          resend.emails
-            .send({
-              from: "Ledgerlot <onboarding@resend.dev>",
-              to: s.email,
-              subject: `Please sign: ${snapshotLedgerName}`,
-              html: renderEmail({
-                title: "Your signature is requested",
-                body: `You've been asked to sign <strong>${escapeHtml(snapshotLedgerName)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
-                ctaLabel: "Review and sign",
-                ctaUrl: `${appUrl}/sign/${s.signingToken}`,
-                footerNote: "Didn't expect this? You can safely ignore this email.",
-                brandName: branding.brandName,
-                brandLogoUrl: branding.brandLogoUrl,
-              }),
-            })
-            .catch((err) => console.error("[sign] next-signer notification failed:", err))
+          sendEmail(resend, {
+            from: "Ledgerlot <onboarding@resend.dev>",
+            to: s.email,
+            subject: `Please sign: ${snapshotLedgerName}`,
+            html: renderEmail({
+              title: "Your signature is requested",
+              body: `You've been asked to sign <strong>${escapeHtml(snapshotLedgerName)}</strong> as ${escapeHtml(s.roleOtherLabel || s.role)}.`,
+              ctaLabel: "Review and sign",
+              ctaUrl: `${appUrl}/sign/${s.signingToken}`,
+              footerNote: "Didn't expect this? You can safely ignore this email.",
+              brandName: branding.brandName,
+              brandLogoUrl: branding.brandLogoUrl,
+            }),
+          })
         )
       );
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length > 0) emailWarning = `${failed.length} notification email(s) could not be sent. ${failed[0].error}`;
     }
   }
 
-  return NextResponse.json({ ok: true, allComplete: remainingSigners === 0 });
+  return NextResponse.json({ ok: true, allComplete: remainingSigners === 0, ...(emailWarning ? { emailWarning } : {}) });
 }

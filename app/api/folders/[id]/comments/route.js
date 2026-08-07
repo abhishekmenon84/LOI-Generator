@@ -3,6 +3,7 @@ import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
+import { sendEmail } from "../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 export async function GET(request, { params }) {
@@ -68,27 +69,28 @@ export async function POST(request, { params }) {
     where: { folderId: folder.id, userId: { not: session.user.id } },
     include: { user: { select: { email: true } } },
   });
+  let emailWarning;
   if (participants.length > 0) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const resend = new Resend(process.env.RESEND_API_KEY);
     const authorName = comment.author.name || comment.author.email;
-    await Promise.all(
+    const results = await Promise.all(
       participants.map((p) =>
-        resend.emails
-          .send({
-            from: "Ledgerlot <onboarding@resend.dev>",
-            to: p.user.email,
-            subject: `New comment on ${folder.name}`,
-            html: renderEmail({
-              title: "New comment",
-              body: `<strong>${escapeHtml(authorName)}</strong> commented on <strong>${escapeHtml(folder.name)}</strong>:<br/><br/>${escapeHtml(text)}`,
-              ctaLabel: "View the conversation",
-              ctaUrl: `${appUrl}/ledgerboard/folder/${folder.id}`,
-            }),
-          })
-          .catch((err) => console.error("[folder comment] notification email failed:", err))
+        sendEmail(resend, {
+          from: "Ledgerlot <onboarding@resend.dev>",
+          to: p.user.email,
+          subject: `New comment on ${folder.name}`,
+          html: renderEmail({
+            title: "New comment",
+            body: `<strong>${escapeHtml(authorName)}</strong> commented on <strong>${escapeHtml(folder.name)}</strong>:<br/><br/>${escapeHtml(text)}`,
+            ctaLabel: "View the conversation",
+            ctaUrl: `${appUrl}/ledgerboard/folder/${folder.id}`,
+          }),
+        })
       )
     );
+    const failed = results.filter((r) => !r.ok);
+    if (failed.length > 0) emailWarning = `${failed.length} notification email(s) could not be sent. ${failed[0].error}`;
   }
 
   return NextResponse.json(
@@ -98,6 +100,7 @@ export async function POST(request, { params }) {
       createdAt: comment.createdAt,
       author: { id: comment.author.id, name: comment.author.name, email: comment.author.email },
       isSelf: true,
+      ...(emailWarning ? { emailWarning } : {}),
     },
     { status: 201 }
   );
