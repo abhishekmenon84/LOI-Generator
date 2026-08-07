@@ -9,6 +9,7 @@ import { nextSlotsToNotify } from "../../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
 import { getEmailBranding } from "../../../../../lib/orgBranding";
 import { sendEmail } from "../../../../../lib/sendEmail";
+import { sanitizeSignatureAnchors, validateSignatureAnchors } from "../../../../../lib/signatureAnchors.js";
 import { Resend } from "resend";
 
 const SIGNING_LINK_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
@@ -95,6 +96,16 @@ export async function POST(request, { params }) {
     order: p.kind === "signer" ? signerOrderCounter++ : 0,
   }));
 
+  const signerOrders = withOrder.filter((p) => p.kind === "signer").map((p) => p.order);
+  const sanitizedAnchors = sanitizeSignatureAnchors(body.signatureAnchors);
+  const anchorErrors = validateSignatureAnchors(
+    body.signatureAnchors === undefined ? undefined : sanitizedAnchors,
+    signerOrders
+  );
+  if (anchorErrors.length > 0) {
+    return NextResponse.json({ error: anchorErrors.join(" ") }, { status: 400 });
+  }
+
   const verifyCode = generateVerifyCode();
   const sigRequest = await prisma.signatureRequest.create({
     data: {
@@ -109,6 +120,7 @@ export async function POST(request, { params }) {
       snapshotDocumentType: ledger.documentType,
       snapshotTemplateId: ledger.templateId,
       snapshotName: ledger.name,
+      signatureAnchors: body.signatureAnchors === undefined ? undefined : sanitizedAnchors,
       signers: {
         create: withOrder.map((p) => ({
           kind: p.kind,
