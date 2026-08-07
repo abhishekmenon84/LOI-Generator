@@ -1,21 +1,66 @@
 "use client";
 
+import EditableSpan from "./EditableSpan";
+import { mapCustomClauseConditions } from "../lib/customClauseMapping";
+
 function Html({ html }) {
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-export default function ResidentialLeasePreview({ model }) {
+// See components/LOIPreview.jsx's header comment for the editable/computed
+// split rule. Almost every field in lib/residentialLeaseEngine.js's model
+// is a composed sentence joining several raw inputs at once (rentText,
+// tenancyText, premisesAddressText, etc.) with no single field an edit
+// could write back to -- documentTitle, date, and custom clauses are the
+// only genuinely 1:1 raw fields this document type's model exposes, so
+// those are the only ones made editable here.
+export default function ResidentialLeasePreview({ model, data, onEdit, readOnly }) {
+  const editable = !!data && !!onEdit && !readOnly;
+
+  function set(patch) {
+    onEdit({ ...data, ...patch });
+  }
+
+  function addCustomClause() {
+    set({ customClauses: [...(data.customClauses || []), "New clause -- click to edit."] });
+  }
+  function setCustomClause(index, value) {
+    const customClauses = data.customClauses.slice();
+    customClauses[index] = value;
+    set({ customClauses });
+  }
+  function removeCustomClause(index) {
+    const customClauses = data.customClauses.slice();
+    customClauses.splice(index, 1);
+    set({ customClauses });
+  }
+
+  const { fixedCount, clauseIndices } = editable
+    ? mapCustomClauseConditions(model.conditions.length, data.customClauses)
+    : { fixedCount: model.conditions.length, clauseIndices: [] };
+
   return (
     <div className="preview-panel">
       <div className="document-paper">
         <div id="loi-content">
-          <div className="preview-header">{model.documentTitle}</div>
+          <div className="preview-header">
+            {editable ? (
+              <EditableSpan value={data.documentTitle} onCommit={(v) => set({ documentTitle: v })} placeholder={model.documentTitle} />
+            ) : (
+              model.documentTitle
+            )}
+          </div>
           <p style={{ textAlign: "center", fontStyle: "italic", marginTop: -10 }}>
             (Standard Form of Lease — New Brunswick, Form 6)
           </p>
 
           <p>
-            <strong>Date:</strong> <span className="highlight-blank">{model.date}</span>
+            <strong>Date:</strong>{" "}
+            {editable ? (
+              <EditableSpan className="highlight-blank" value={data.currentDate} onCommit={(v) => set({ currentDate: v })} />
+            ) : (
+              <span className="highlight-blank">{model.date}</span>
+            )}
           </p>
 
           {model.sectionEnabled.parties && (
@@ -108,13 +153,35 @@ export default function ResidentialLeasePreview({ model }) {
                 <strong>ADDITIONAL NOTES</strong>
               </p>
               <ul style={{ paddingLeft: 20 }}>
-                {model.conditions.map((c, i) => (
-                  <li key={i}>
-                    <Html html={c} />
-                  </li>
-                ))}
+                {model.conditions.map((c, i) => {
+                  const clauseIdx = i >= fixedCount ? clauseIndices[i - fixedCount] : null;
+                  return (
+                    <li key={i} className={clauseIdx != null ? "editable-clause-row" : undefined}>
+                      {clauseIdx != null ? (
+                        <>
+                          <EditableSpan value={data.customClauses[clauseIdx]} onCommit={(v) => setCustomClause(clauseIdx, v)} />
+                          <button type="button" className="editable-remove-btn" onClick={() => removeCustomClause(clauseIdx)} title="Remove clause">
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <Html html={c} />
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
+              {editable && (
+                <button type="button" className="editable-add-btn" onClick={addCustomClause}>
+                  + Add clause
+                </button>
+              )}
             </>
+          )}
+          {editable && model.conditions.length === 0 && (
+            <button type="button" className="editable-add-btn" onClick={addCustomClause}>
+              + Add note
+            </button>
           )}
 
           {model.sectionEnabled.signatures && (

@@ -1,19 +1,83 @@
 "use client";
 
+import EditableSpan from "./EditableSpan";
+import { mapCustomClauseConditions } from "../lib/customClauseMapping";
+
 function Html({ html }) {
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-export default function LOIPreview({ model }) {
+// `data`/`onEdit`/`readOnly` are optional -- omitting them (as the
+// docx/pdf export code paths never pass them) renders exactly the old
+// read-only preview. When present, spans backed by a single raw form
+// field (documentTitle, date, buyerName, property rows, custom clauses)
+// become click-to-edit; computed/derived text (grand total, its word-form
+// spelling, the reSubject/salutation/signature-block sentences built from
+// several fields at once) stays display-only -- there is no single field
+// an edit to those could unambiguously write back to.
+export default function LOIPreview({ model, data, onEdit, readOnly }) {
+  const editable = !!data && !!onEdit && !readOnly;
+
+  function set(patch) {
+    onEdit({ ...data, ...patch });
+  }
+
+  function setProperty(index, patch) {
+    const properties = data.properties.slice();
+    properties[index] = { ...properties[index], ...patch };
+    set({ properties });
+  }
+
+  function removeProperty(index) {
+    const properties = data.properties.slice();
+    properties.splice(index, 1);
+    set({ properties });
+  }
+
+  function addProperty() {
+    set({ properties: [...(data.properties || []), { address: "", value: 0 }] });
+  }
+
+  function addCustomClause() {
+    set({ customClauses: [...(data.customClauses || []), "New clause -- click to edit."] });
+  }
+
+  function setCustomClause(index, value) {
+    const customClauses = data.customClauses.slice();
+    customClauses[index] = value;
+    set({ customClauses });
+  }
+
+  function removeCustomClause(index) {
+    const customClauses = data.customClauses.slice();
+    customClauses.splice(index, 1);
+    set({ customClauses });
+  }
+
+  const { fixedCount, clauseIndices } = editable
+    ? mapCustomClauseConditions(model.conditions.length, data.customClauses)
+    : { fixedCount: model.conditions.length, clauseIndices: [] };
+
   return (
     <div className="preview-panel">
       {/* ── Document Paper ────────────────────────────────── */}
       <div className="document-paper">
         <div id="loi-content">
-          <div className="preview-header">{model.documentTitle}</div>
+          <div className="preview-header">
+            {editable ? (
+              <EditableSpan value={data.documentTitle} onCommit={(v) => set({ documentTitle: v })} placeholder={model.documentTitle} />
+            ) : (
+              model.documentTitle
+            )}
+          </div>
 
           <p>
-            <strong>Date:</strong> <span className="highlight-blank">{model.date}</span>
+            <strong>Date:</strong>{" "}
+            {editable ? (
+              <EditableSpan className="highlight-blank" value={data.currentDate} onCommit={(v) => set({ currentDate: v })} />
+            ) : (
+              <span className="highlight-blank">{model.date}</span>
+            )}
           </p>
           <p>
             <strong>TO:</strong> <span className="highlight-blank">{model.sellerText}</span>
@@ -24,9 +88,13 @@ export default function LOIPreview({ model }) {
 
           <p>
             This Letter of Intent (&quot;LOI&quot;) outlines the preliminary terms and conditions under which{" "}
-            <span className="highlight-blank">{model.buyerName}</span> (&quot;Buyer&quot;) proposes to execute the
-            purchase of designated strategic assets and property from the corporate and individual entities currently
-            holding interest as detailed herein (&quot;Sellers&quot;).
+            {editable ? (
+              <EditableSpan className="highlight-blank" value={data.buyerName} onCommit={(v) => set({ buyerName: v })} />
+            ) : (
+              <span className="highlight-blank">{model.buyerName}</span>
+            )}{" "}
+            (&quot;Buyer&quot;) proposes to execute the purchase of designated strategic assets and property from the
+            corporate and individual entities currently holding interest as detailed herein (&quot;Sellers&quot;).
           </p>
 
           {model.sectionEnabled.assets && (
@@ -66,12 +134,42 @@ export default function LOIPreview({ model }) {
                 <tbody>
                   {model.allocationRows.map((row, i) => (
                     <tr key={i} className={row.total ? "total" : undefined}>
-                      <td style={row.total ? undefined : { fontStyle: "italic" }}>{row.label}</td>
-                      <td>${row.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                      {editable && row.source === "property" ? (
+                        <>
+                          <td style={{ fontStyle: "italic" }}>
+                            <EditableSpan
+                              value={data.properties[row.index]?.address || ""}
+                              onCommit={(v) => setProperty(row.index, { address: v })}
+                              placeholder="Property address"
+                            />
+                          </td>
+                          <td>
+                            $
+                            <EditableSpan
+                              value={String(data.properties[row.index]?.value ?? "")}
+                              onCommit={(v) => setProperty(row.index, { value: v })}
+                              placeholder="0.00"
+                            />
+                            <button type="button" className="editable-remove-btn" onClick={() => removeProperty(row.index)} title="Remove property">
+                              ×
+                            </button>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={row.total ? undefined : { fontStyle: "italic" }}>{row.label}</td>
+                          <td>${row.value.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
+              {editable && model.sectionEnabled.price && data.includeRealEstate && (
+                <button type="button" className="editable-add-btn" onClick={addProperty}>
+                  + Add property
+                </button>
+              )}
             </>
           )}
 
@@ -107,12 +205,32 @@ export default function LOIPreview({ model }) {
                 satisfaction of the following structural checkpoints within 45 days of LOI signing:
               </p>
               <ul style={{ paddingLeft: 20 }}>
-                {model.conditions.map((c, i) => (
-                  <li key={i}>
-                    <Html html={c} />
-                  </li>
-                ))}
+                {model.conditions.map((c, i) => {
+                  const clauseIdx = i >= fixedCount ? clauseIndices[i - fixedCount] : null;
+                  return (
+                    <li key={i} className={clauseIdx != null ? "editable-clause-row" : undefined}>
+                      {clauseIdx != null ? (
+                        <>
+                          <EditableSpan
+                            value={data.customClauses[clauseIdx]}
+                            onCommit={(v) => setCustomClause(clauseIdx, v)}
+                          />
+                          <button type="button" className="editable-remove-btn" onClick={() => removeCustomClause(clauseIdx)} title="Remove clause">
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <Html html={c} />
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
+              {editable && (
+                <button type="button" className="editable-add-btn" onClick={addCustomClause}>
+                  + Add clause
+                </button>
+              )}
             </>
           )}
 

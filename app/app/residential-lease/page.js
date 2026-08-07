@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import ResidentialLeaseForm from "../../../components/ResidentialLeaseForm";
 import ResidentialLeasePreview from "../../../components/ResidentialLeasePreview";
+import ResizableSplitPane from "../../../components/ResizableSplitPane";
 import DealShareModal from "../../../components/DealShareModal";
 import SendForSignatureModal from "../../../components/SendForSignatureModal";
 import DocumentAuditPanel from "../../../components/DocumentAuditPanel";
@@ -164,32 +165,37 @@ function ResidentialLeasePageInner() {
   return (
     <>
       <Navbar />
-      <div className="dashboard-layout">
-        <ResidentialLeaseForm
-          data={data}
-          onChange={setData}
-          onExport={handleExport}
-          onClearDraft={handleResetDeal}
-          exportState={exportState}
-          readOnly={readOnly}
-          actionBar={
-            <DocumentActionBar
+      <div className="dashboard-layout" style={{ display: "block", padding: 0 }}>
+        <ResizableSplitPane
+          storageKey="panel-width:residential_lease"
+          left={
+            <ResidentialLeaseForm
+              data={data}
+              onChange={setData}
+              onExport={handleExport}
+              onClearDraft={handleResetDeal}
+              exportState={exportState}
               readOnly={readOnly}
-              onShare={() => setShareModalOpen(true)}
-              onSendForSignature={() =>
-                ledgerId
-                  ? setSendForSignatureOpen(true)
-                  : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so it can't be sent for signature." }))
-              }
-              onAudit={() =>
-                ledgerId
-                  ? setAuditPanelOpen(true)
-                  : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so there is no audit trail." }))
+              actionBar={
+                <DocumentActionBar
+                  readOnly={readOnly}
+                  onShare={() => setShareModalOpen(true)}
+                  onSendForSignature={() =>
+                    ledgerId
+                      ? setSendForSignatureOpen(true)
+                      : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so it can't be sent for signature." }))
+                  }
+                  onAudit={() =>
+                    ledgerId
+                      ? setAuditPanelOpen(true)
+                      : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so there is no audit trail." }))
+                  }
+                />
               }
             />
           }
+          right={<ResidentialLeasePreview model={model} data={data} onEdit={setData} readOnly={readOnly} />}
         />
-        <ResidentialLeasePreview model={model} />
       </div>
       <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
       <SendForSignatureModal

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import LOIForm from "../../../../components/LOIForm";
 import LOIPreview from "../../../../components/LOIPreview";
+import ResizableSplitPane from "../../../../components/ResizableSplitPane";
 import DocumentActionBar from "../../../../components/DocumentActionBar";
 import DocumentAuditPanel from "../../../../components/DocumentAuditPanel";
 import LeaseForm from "../../../../components/LeaseForm";
@@ -135,65 +136,45 @@ export default function SharedDocumentPage() {
   return (
     <div
       style={{
-        display: "flex",
         height: "100vh",
         fontFamily: "'Inter',-apple-system,system-ui,sans-serif",
         color: "oklch(24% 0.015 264)",
         background: "oklch(97% 0.006 60)",
       }}
     >
-      <div style={{ flex: "1 1 auto", minWidth: 0, overflowY: "auto", padding: "26px 28px" }}>
-        <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "oklch(48% 0.01 264)", marginBottom: 10 }}>
-          {ledger.name} {ledger.viewOnly ? "· Shared with you (view only)" : "· Shared with you"}
-        </div>
-        {!config ? (
-          <div style={{ padding: "40px", color: "oklch(45% 0.01 264)" }}>
-            No editor is available for this document type yet ({ledger.documentType}).
+      <ResizableSplitPane
+        storageKey={`panel-width:${ledger.documentType || "document"}`}
+        left={
+          <div style={{ height: "100%", overflowY: "auto", padding: "26px 28px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "oklch(48% 0.01 264)", marginBottom: 10 }}>
+              {ledger.name} {ledger.viewOnly ? "· Shared with you (view only)" : "· Shared with you"}
+            </div>
+            {!config ? (
+              <div style={{ padding: "40px", color: "oklch(45% 0.01 264)" }}>
+                No editor is available for this document type yet ({ledger.documentType}).
+              </div>
+            ) : (
+              <config.Form
+                data={ledgerData}
+                onChange={setLedgerData}
+                onExport={handleExport}
+                onClearDraft={() => setLedgerData({ ...config.defaultData, currentDate: todayLabel() })}
+                exportState={exportState}
+                readOnly={readOnly}
+                actionBar={<DocumentActionBar readOnly={readOnly} onAudit={() => setAuditPanelOpen(true)} />}
+              />
+            )}
           </div>
-        ) : (
-          <config.Form
-            data={ledgerData}
-            onChange={setLedgerData}
-            onExport={handleExport}
-            onClearDraft={() => setLedgerData({ ...config.defaultData, currentDate: todayLabel() })}
-            exportState={exportState}
-            readOnly={readOnly}
-            actionBar={<DocumentActionBar readOnly={readOnly} onAudit={() => setAuditPanelOpen(true)} />}
-          />
-        )}
-      </div>
-
-      <div
-        style={{
-          // The document-paper content below is capped at 760px regardless
-          // of this panel's width (matches the folder workspace's own
-          // preview panel, see that page's rightPct comment) -- 38% avoids
-          // the large empty gutter a wider fixed share would leave.
-          flex: "0 0 38%",
-          overflowY: "auto",
-          background: "oklch(93% 0.012 60)",
-          display: "flex",
-          justifyContent: "center",
-          padding: "16px 6px 16px",
-        }}
-      >
-        {model ? (
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "760px",
-              background: "white",
-              padding: "32px 28px",
-              fontFamily: "'Source Serif 4',Georgia,serif",
-              color: "oklch(20% 0.01 264)",
-              minHeight: "600px",
-              height: "fit-content",
-            }}
-          >
-            <config.Preview model={model} />
-          </div>
-        ) : null}
-      </div>
+        }
+        right={
+          // Preview itself renders .preview-panel/.document-paper (the same
+          // "paper" look every other preview uses) -- this used to also be
+          // wrapped in a second, duplicate white/padded box here, which is
+          // exactly the 3-places-set-padding duplication this feature's
+          // design flagged; dropped in favor of the one shared style.
+          model && config ? <config.Preview model={model} data={ledgerData} onEdit={setLedgerData} readOnly={readOnly} /> : null
+        }
+      />
 
       <DocumentAuditPanel ledgerId={ledger.id} isOpen={auditPanelOpen} onClose={() => setAuditPanelOpen(false)} />
     </div>

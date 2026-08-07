@@ -1029,19 +1029,13 @@ export default function FolderWorkspacePage() {
               panel's empty state (handoff's showPreviewContent / showPreviewEmpty,
               ~L260-271). Only rendered when the panel itself isn't collapsed. */}
           {!rightCollapsed && docSelected && model ? (
-            <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "0 6px 16px" }}>
-              <div
-                style={{
-                  width: "100%",
-                  maxWidth: "760px",
-                  background: "white",
-                  padding: "32px 28px",
-                  fontFamily: "'Source Serif 4',Georgia,serif",
-                  color: "oklch(20% 0.01 264)",
-                  minHeight: "600px",
-                }}
-              >
-                <config.Preview model={model} />
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", overflowY: "auto", minHeight: 0 }}>
+              {/* Preview itself renders .preview-panel/.document-paper (the
+                  shared "paper" look) -- dropped the extra white/padded
+                  wrapper this used to duplicate it in, same fix as the
+                  single-document workspace page. */}
+              <div style={{ width: "100%", maxWidth: "760px" }}>
+                <config.Preview model={model} data={ledgerData} onEdit={setLedgerData} readOnly={ledgerReadOnly} />
               </div>
             </div>
           ) : null}

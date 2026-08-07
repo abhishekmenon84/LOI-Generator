@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import LOIForm from "../../components/LOIForm";
 import LOIPreview from "../../components/LOIPreview";
+import ResizableSplitPane from "../../components/ResizableSplitPane";
 import DealShareModal from "../../components/DealShareModal";
 import SendForSignatureModal from "../../components/SendForSignatureModal";
 import DocumentAuditPanel from "../../components/DocumentAuditPanel";
@@ -163,32 +164,37 @@ function AppPageInner() {
   return (
     <>
       <Navbar />
-      <div className="dashboard-layout">
-        <LOIForm
-          data={data}
-          onChange={setData}
-          onExport={handleExport}
-          onClearDraft={handleResetDeal}
-          exportState={exportState}
-          readOnly={readOnly}
-          actionBar={
-            <DocumentActionBar
+      <div className="dashboard-layout" style={{ display: "block", padding: 0 }}>
+        <ResizableSplitPane
+          storageKey="panel-width:purchase_loi"
+          left={
+            <LOIForm
+              data={data}
+              onChange={setData}
+              onExport={handleExport}
+              onClearDraft={handleResetDeal}
+              exportState={exportState}
               readOnly={readOnly}
-              onShare={() => setShareModalOpen(true)}
-              onSendForSignature={() =>
-                ledgerId
-                  ? setSendForSignatureOpen(true)
-                  : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so it can't be sent for signature." }))
-              }
-              onAudit={() =>
-                ledgerId
-                  ? setAuditPanelOpen(true)
-                  : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so there is no audit trail." }))
+              actionBar={
+                <DocumentActionBar
+                  readOnly={readOnly}
+                  onShare={() => setShareModalOpen(true)}
+                  onSendForSignature={() =>
+                    ledgerId
+                      ? setSendForSignatureOpen(true)
+                      : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so it can't be sent for signature." }))
+                  }
+                  onAudit={() =>
+                    ledgerId
+                      ? setAuditPanelOpen(true)
+                      : setExportState((s) => ({ ...s, error: "This deal has no associated ledger yet, so there is no audit trail." }))
+                  }
+                />
               }
             />
           }
+          right={<LOIPreview model={model} data={data} onEdit={setData} readOnly={readOnly} />}
         />
-        <LOIPreview model={model} />
       </div>
       <DealShareModal dealId={dealId} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
       <SendForSignatureModal

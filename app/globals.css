@@ -281,7 +281,7 @@ body {
   height: 100%;
   overflow-y: auto;
   background: var(--bg-base);
-  padding: 8px;
+  padding: 2px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
 }
@@ -822,7 +822,7 @@ select option {
   background: #fff;
   color: #1a1a1a;
   border-radius: var(--radius-md);
-  padding: 32px 28px;
+  padding: 20px 18px;
   min-height: 600px;
   animation: fadeSlideUp 0.5s var(--ease) both;
   flex: 1;
@@ -849,6 +849,66 @@ select option {
 .highlight-blank {
   font-weight: 700;
   color: #1a1a1a;
+}
+
+/* Preview-canvas fields with a genuine 1:1 raw form field behind them
+   (components/EditableSpan.jsx) -- computed/derived text (totals, joined
+   sentences) is deliberately never given this class, since there's no
+   single field an edit to it could write back to. */
+.editable-field {
+  cursor: text;
+  border-radius: 3px;
+  padding: 0 2px;
+  margin: 0 -2px;
+  outline: none;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.editable-field:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  font-weight: 400;
+}
+.editable-field:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+}
+.editable-field:focus {
+  background-color: rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+}
+
+.editable-clause-row,
+.editable-property-row {
+  position: relative;
+}
+.editable-remove-btn {
+  border: none;
+  background: rgba(192, 57, 43, 0.1);
+  color: #c0392b;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0;
+  vertical-align: middle;
+}
+.editable-add-btn {
+  border: 1px dashed #94a3b8;
+  background: none;
+  color: #475569;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 10.5pt;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 6px;
+}
+.editable-add-btn:hover {
+  background: rgba(37, 99, 235, 0.06);
+  border-color: #2563eb;
+  color: #2563eb;
 }
 
 .preview-table {
@@ -891,6 +951,24 @@ select option {
     grid-template-columns: 1fr;
     height: auto;
     overflow: visible;
+  }
+
+  /* ResizableSplitPane (components/ResizableSplitPane.jsx) sets its own
+     inline pixel widths for drag-resizing on desktop -- !important here
+     overrides those inline styles to stack the two panes on narrow
+     viewports instead, the same fallback .dashboard-layout already used
+     above. The drag handle serves no purpose once stacked. */
+  .resizable-split-pane {
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  .resizable-split-pane-left,
+  .resizable-split-pane-right {
+    width: 100% !important;
+    height: auto !important;
+  }
+  .resizable-split-pane-handle {
+    display: none;
   }
 
   .form-panel {

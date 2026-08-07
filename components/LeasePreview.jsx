@@ -1,24 +1,69 @@
 "use client";
 
+import EditableSpan from "./EditableSpan";
+import { mapCustomClauseConditions } from "../lib/customClauseMapping";
+
 function Html({ html }) {
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-export default function LeasePreview({ model }) {
+// See components/LOIPreview.jsx's header comment for the editable/computed
+// split rule this follows -- `data`/`onEdit`/`readOnly` optional, computed
+// text (escalationText/renewalText/commission labels/agencyDisclosures)
+// stays display-only since it's built from more than one field.
+export default function LeasePreview({ model, data, onEdit, readOnly }) {
+  const editable = !!data && !!onEdit && !readOnly;
+
+  function set(patch) {
+    onEdit({ ...data, ...patch });
+  }
+
+  function addCustomClause() {
+    set({ customClauses: [...(data.customClauses || []), "New clause -- click to edit."] });
+  }
+  function setCustomClause(index, value) {
+    const customClauses = data.customClauses.slice();
+    customClauses[index] = value;
+    set({ customClauses });
+  }
+  function removeCustomClause(index) {
+    const customClauses = data.customClauses.slice();
+    customClauses.splice(index, 1);
+    set({ customClauses });
+  }
+
+  const { fixedCount, clauseIndices } = editable
+    ? mapCustomClauseConditions(model.conditions.length, data.customClauses)
+    : { fixedCount: model.conditions.length, clauseIndices: [] };
+
+  function Field({ field, className }) {
+    return editable ? (
+      <EditableSpan className={className} value={data[field]} onCommit={(v) => set({ [field]: v })} />
+    ) : (
+      <span className={className}>{model[field]}</span>
+    );
+  }
+
   return (
     <div className="preview-panel">
       <div className="document-paper">
         <div id="loi-content">
-          <div className="preview-header">{model.documentTitle}</div>
+          <div className="preview-header">
+            {editable ? (
+              <EditableSpan value={data.documentTitle} onCommit={(v) => set({ documentTitle: v })} placeholder={model.documentTitle} />
+            ) : (
+              model.documentTitle
+            )}
+          </div>
 
           <p>
-            <strong>Date:</strong> <span className="highlight-blank">{model.date}</span>
+            <strong>Date:</strong> <Field field="currentDate" className="highlight-blank" />
           </p>
 
           <p>
             This Letter of Intent (&quot;LOI&quot;) outlines the preliminary terms and conditions under which{" "}
-            <span className="highlight-blank">{model.tenantName}</span> (&quot;Tenant&quot;) proposes to lease the
-            premises described herein from <span className="highlight-blank">{model.landlordName}</span>{" "}
+            <Field field="tenantName" className="highlight-blank" /> (&quot;Tenant&quot;) proposes to lease the
+            premises described herein from <Field field="landlordName" className="highlight-blank" />{" "}
             (&quot;Landlord&quot;).
           </p>
 
@@ -26,10 +71,10 @@ export default function LeasePreview({ model }) {
             <p>
               <strong>{model.headings.parties}</strong>
               <br />
-              Landlord: <span className="highlight-blank">{model.landlordName}</span>. Tenant:{" "}
-              <span className="highlight-blank">{model.tenantName}</span>. Premises:{" "}
-              <span className="highlight-blank">{model.premisesAddress}</span>, approximately{" "}
-              <span className="highlight-blank">{model.squareFootage}</span> square feet.
+              Landlord: <Field field="landlordName" className="highlight-blank" />. Tenant:{" "}
+              <Field field="tenantName" className="highlight-blank" />. Premises:{" "}
+              <Field field="premisesAddress" className="highlight-blank" />, approximately{" "}
+              <Field field="squareFootage" className="highlight-blank" /> square feet.
             </p>
           )}
 
@@ -37,8 +82,8 @@ export default function LeasePreview({ model }) {
             <p>
               <strong>{model.headings.term}</strong>
               <br />
-              The Lease Term shall be <span className="highlight-blank">{model.leaseTermYears}</span> year(s), with a
-              target Lease Commencement Date of <span className="highlight-blank">{model.commencementDate}</span>.
+              The Lease Term shall be <Field field="leaseTermYears" className="highlight-blank" /> year(s), with a
+              target Lease Commencement Date of <Field field="commencementDate" className="highlight-blank" />.
             </p>
           )}
 
@@ -47,9 +92,13 @@ export default function LeasePreview({ model }) {
               <strong>{model.headings.rent}</strong>
               <br />
               Base Monthly Rent: $
-              <span className="highlight-blank">
-                {model.baseMonthlyRent.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-              </span>
+              {editable ? (
+                <EditableSpan className="highlight-blank" value={String(data.baseMonthlyRent ?? "")} onCommit={(v) => set({ baseMonthlyRent: v })} />
+              ) : (
+                <span className="highlight-blank">
+                  {model.baseMonthlyRent.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              )}
               .
               <br />
               {model.escalationText}
@@ -61,9 +110,13 @@ export default function LeasePreview({ model }) {
               <strong>{model.headings.deposit}</strong>
               <br />
               Tenant shall deposit $
-              <span className="highlight-blank">
-                {model.securityDeposit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-              </span>{" "}
+              {editable ? (
+                <EditableSpan className="highlight-blank" value={String(data.securityDeposit ?? "")} onCommit={(v) => set({ securityDeposit: v })} />
+              ) : (
+                <span className="highlight-blank">
+                  {model.securityDeposit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              )}{" "}
               as a security deposit prior to lease commencement.
             </p>
           )}
@@ -72,7 +125,7 @@ export default function LeasePreview({ model }) {
             <p>
               <strong>{model.headings.use}</strong>
               <br />
-              <span className="highlight-blank">{model.permittedUse}</span>
+              <Field field="permittedUse" className="highlight-blank" />
             </p>
           )}
 
@@ -81,12 +134,20 @@ export default function LeasePreview({ model }) {
               <strong>{model.headings.ti}</strong>
               <br />
               Landlord shall provide a tenant improvement allowance of $
-              <span className="highlight-blank">
-                {model.tiAllowance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-              </span>
+              {editable ? (
+                <EditableSpan className="highlight-blank" value={String(data.tiAllowance ?? "")} onCommit={(v) => set({ tiAllowance: v })} />
+              ) : (
+                <span className="highlight-blank">
+                  {model.tiAllowance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              )}
               .
               <br />
-              {model.tiScopeText}
+              {editable ? (
+                <EditableSpan value={data.tiScopeText} onCommit={(v) => set({ tiScopeText: v })} placeholder="Tenant improvement scope" />
+              ) : (
+                model.tiScopeText
+              )}
             </p>
           )}
 
@@ -116,12 +177,29 @@ export default function LeasePreview({ model }) {
                 <strong>{model.headings.conditions}</strong>
               </p>
               <ul style={{ paddingLeft: 20 }}>
-                {model.conditions.map((c, i) => (
-                  <li key={i}>
-                    <Html html={c} />
-                  </li>
-                ))}
+                {model.conditions.map((c, i) => {
+                  const clauseIdx = i >= fixedCount ? clauseIndices[i - fixedCount] : null;
+                  return (
+                    <li key={i} className={clauseIdx != null ? "editable-clause-row" : undefined}>
+                      {clauseIdx != null ? (
+                        <>
+                          <EditableSpan value={data.customClauses[clauseIdx]} onCommit={(v) => setCustomClause(clauseIdx, v)} />
+                          <button type="button" className="editable-remove-btn" onClick={() => removeCustomClause(clauseIdx)} title="Remove clause">
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <Html html={c} />
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
+              {editable && (
+                <button type="button" className="editable-add-btn" onClick={addCustomClause}>
+                  + Add clause
+                </button>
+              )}
             </>
           )}
 
