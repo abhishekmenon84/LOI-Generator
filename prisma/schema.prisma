@@ -384,6 +384,17 @@ model SignatureRequest {
   // request was already marked fully_executed -- surfaces the failure to
   // admins instead of it being silently swallowed (see signatureFinalize.js).
   deliveryError String?
+  // Sender-finalized signature/initials/date placement for this specific
+  // request, captured at send time via the "Send for signature" placement
+  // review step. Null for pre-migration rows and for any signer this array
+  // has no entry for -- burnSignatures() (lib/pdfSignatureBurn.js) falls
+  // back to its existing findSignatureLines()/trailing-page behavior in
+  // both cases, so nothing that already works regresses.
+  // Shape: Array<{ signerOrder: number, type: "signature"|"initials"|"date",
+  // page: number, xPct: number, yPct: number, widthPct: number, heightPct: number }>
+  // signerOrder matches SignerSlot.order (ascending, signer-kind only) --
+  // resolved by direct lookup at burn time, not stored as a foreign key.
+  signatureAnchors Json?
   // Snapshot of the Ledger's content (formData/documentType/templateId) at
   // the moment this SignatureRequest was created -- NOT a live reference to
   // Ledger.formData. Every signer sees and signs this frozen snapshot, and
