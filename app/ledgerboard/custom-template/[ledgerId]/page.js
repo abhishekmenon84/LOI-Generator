@@ -24,6 +24,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import SignatureAnchorReview from "../../../../components/SignatureAnchorReview";
 
 export default function CustomTemplateSignerAssignmentPage() {
   const params = useParams();
@@ -44,6 +45,16 @@ export default function CustomTemplateSignerAssignmentPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [sendMessage, setSendMessage] = useState(null);
   const [sending, setSending] = useState(false);
+  // Two-step flow: participants-step (existing form, above) -> placementStep
+  // (drag/confirm signature placement, see SignatureAnchorReview) -> submit.
+  const [placementStep, setPlacementStep] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  // Separate from sendMessage: sendMessage renders in the participants-step
+  // JSX, which is unreachable while placementStep is true, so a failed final
+  // send needs its own slot threaded into SignatureAnchorReview's
+  // externalError prop instead (mirrors SendForSignatureModal.jsx's `error`).
+  const [placementError, setPlacementError] = useState(null);
 
   useEffect(() => {
     if (!ledgerId) return;
@@ -189,7 +200,16 @@ export default function CustomTemplateSignerAssignmentPage() {
   // "custom_template" (stamps customTemplateAnswers via
   // stampCustomTemplate, then burns signatures) -- that part required no
   // changes, only this UI's wiring and the role-validation gap above.
-  async function handleSendForSignature() {
+  function buildParticipants() {
+    return Object.keys(assignments).map((role) => ({
+      kind: "signer",
+      role,
+      name: assignments[role].name.trim(),
+      email: assignments[role].email.trim(),
+    }));
+  }
+
+  async function handleContinueToPlacement() {
     setSendMessage(null);
     const roles = Object.keys(assignments);
     const incomplete = roles.filter((r) => !assignments[r]?.name?.trim() || !assignments[r]?.email?.trim());
@@ -202,26 +222,49 @@ export default function CustomTemplateSignerAssignmentPage() {
       return;
     }
 
+    setLoadingPreview(true);
+    const participants = buildParticipants();
+    const res = await fetch(`/api/ledgers/${ledgerId}/signature-request/preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participants }),
+    }).catch(() => null);
+    setLoadingPreview(false);
+
+    const body = await res?.json().catch(() => ({})) ?? {};
+    if (!res || !res.ok) {
+      setSendMessage(body.error || "Could not prepare a preview of this document.");
+      return;
+    }
+    setPreview(body);
+    setPlacementError(null);
+    setPlacementStep(true);
+  }
+
+  // On failure this sets placementError (not sendMessage) and stays on
+  // placementStep -- sendMessage's display lives in the participants-step
+  // JSX below, which is unreachable while placementStep is true, so a failed
+  // final send must surface via SignatureAnchorReview's externalError prop
+  // instead, with the user's anchors kept intact for a retry.
+  async function handleSendForSignature(signatureAnchors) {
     setSending(true);
-    const participants = roles.map((role) => ({
-      kind: "signer",
-      role,
-      name: assignments[role].name.trim(),
-      email: assignments[role].email.trim(),
-    }));
+    setPlacementError(null);
+    const participants = buildParticipants();
 
     const res = await fetch(`/api/ledgers/${ledgerId}/signature-request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participants }),
+      body: JSON.stringify({ participants, signatureAnchors }),
     }).catch(() => null);
     setSending(false);
 
     const body = await res?.json().catch(() => ({})) ?? {};
     if (!res || !res.ok) {
-      setSendMessage(body.error || "Could not send for signature. Please try again.");
+      setPlacementError(body.error || "Could not send for signature. Please try again.");
+      setPlacementStep(true);
       return;
     }
+    setPlacementStep(false);
     setSendMessage("Sent! Each signer will receive an email with a link to sign.");
   }
 
@@ -239,6 +282,21 @@ export default function CustomTemplateSignerAssignmentPage() {
       <div style={{ padding: "40px", fontFamily: "'Inter',-apple-system,system-ui,sans-serif" }}>
         Loading…
       </div>
+    );
+  }
+
+  if (placementStep && preview) {
+    return (
+      <SignatureAnchorReview
+        pdfBase64={preview.pdfBase64}
+        pageSizes={preview.pageSizes}
+        suggestedAnchors={preview.suggestedAnchors}
+        participants={buildParticipants()}
+        onCancel={() => setPlacementStep(false)}
+        onConfirm={handleSendForSignature}
+        submitting={sending}
+        externalError={placementError}
+      />
     );
   }
 
@@ -427,8 +485,8 @@ export default function CustomTemplateSignerAssignmentPage() {
             </button>
             <button
               type="button"
-              onClick={handleSendForSignature}
-              disabled={sending}
+              onClick={handleContinueToPlacement}
+              disabled={loadingPreview}
               style={{
                 padding: "10px 18px",
                 borderRadius: "9px",
@@ -437,10 +495,10 @@ export default function CustomTemplateSignerAssignmentPage() {
                 color: "oklch(24% 0.015 264)",
                 fontWeight: 600,
                 fontSize: "13px",
-                cursor: sending ? "not-allowed" : "pointer",
+                cursor: loadingPreview ? "not-allowed" : "pointer",
               }}
             >
-              {sending ? "Sending…" : "Send for signature"}
+              {loadingPreview ? "Preparing…" : "Send for signature"}
             </button>
           </div>
 
