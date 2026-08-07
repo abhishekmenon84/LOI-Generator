@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ROLES_BY_DOCUMENT_TYPE, ROLE_LABELS } from "../lib/signerRoles";
+import SignatureAnchorReview from "./SignatureAnchorReview";
 
 export default function SendForSignatureModal({ ledgerId, documentType, isOpen, onClose, onSent }) {
   const [participants, setParticipants] = useState([
@@ -10,6 +11,11 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [emailWarning, setEmailWarning] = useState(null);
+  // Two-step flow: "participants" (existing form) -> "placement" (drag/
+  // confirm signature placement, see SignatureAnchorReview) -> submit.
+  const [step, setStep] = useState("participants");
+  const [preview, setPreview] = useState(null); // { pdfBase64, pageSizes, suggestedAnchors }
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const availableRoles = ROLES_BY_DOCUMENT_TYPE[documentType] || ["other"];
 
@@ -25,14 +31,34 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
     setParticipants((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handleSend() {
+  async function handleContinueToPlacement() {
+    setLoadingPreview(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/ledgers/${ledgerId}/signature-request/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participants }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "Could not prepare a preview of this document.");
+      setPreview(body);
+      setStep("placement");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  async function handleSend(signatureAnchors) {
     setSending(true);
     setError(null);
     try {
       const res = await fetch(`/api/ledgers/${ledgerId}/signature-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ participants }),
+        body: JSON.stringify({ participants, signatureAnchors }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || "Could not send for signature.");
@@ -49,12 +75,27 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
       }
     } catch (err) {
       setError(err.message);
+      setStep("placement");
     } finally {
       setSending(false);
     }
   }
 
   if (!isOpen) return null;
+
+  if (step === "placement" && preview) {
+    return (
+      <SignatureAnchorReview
+        pdfBase64={preview.pdfBase64}
+        pageSizes={preview.pageSizes}
+        suggestedAnchors={preview.suggestedAnchors}
+        participants={participants}
+        onCancel={() => setStep("participants")}
+        onConfirm={handleSend}
+        submitting={sending}
+      />
+    );
+  }
 
   return (
     <div
@@ -139,8 +180,8 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
           >
             {emailWarning ? "Close" : "Cancel"}
           </button>
-          <button type="button" onClick={handleSend} disabled={sending || !!emailWarning} className="marketing-cta-button">
-            {sending ? "Sending…" : "Send"}
+          <button type="button" onClick={handleContinueToPlacement} disabled={loadingPreview || !!emailWarning} className="marketing-cta-button">
+            {loadingPreview ? "Preparing…" : "Continue"}
           </button>
         </div>
       </div>
