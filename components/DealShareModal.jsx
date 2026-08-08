@@ -54,7 +54,17 @@ export default function DealShareModal({ dealId, isOpen, onClose }) {
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
     >
       <div style={{ background: "var(--bg-panel)", borderRadius: 12, maxWidth: 420, width: "100%", padding: 24 }}>
-        <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Share this document</h2>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Share this document</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{ flexShrink: 0, background: "none", border: "none", fontSize: "1.3rem", lineHeight: 1, color: "var(--text-secondary)", cursor: "pointer", padding: 4 }}
+          >
+            ×
+          </button>
+        </div>
         <form onSubmit={handleAdd} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <input
             type="email"

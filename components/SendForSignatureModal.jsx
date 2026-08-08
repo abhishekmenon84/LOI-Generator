@@ -290,7 +290,17 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
     >
       <div style={{ background: "var(--bg-panel)", borderRadius: 12, maxWidth: 560, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: 24 }}>
-        <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Send for signature</h2>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Send for signature</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{ flexShrink: 0, background: "none", border: "none", fontSize: "1.3rem", lineHeight: 1, color: "var(--text-secondary)", cursor: "pointer", padding: 4 }}
+          >
+            ×
+          </button>
+        </div>
 
         {participants.map((p, i) => (
           <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: 12, marginBottom: 10 }}>

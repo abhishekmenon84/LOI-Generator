@@ -63,7 +63,17 @@ export default function FolderCommentsPanel({ folderId, isOpen, onClose }) {
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
     >
       <div style={{ background: "var(--bg-panel)", borderRadius: 12, maxWidth: 520, width: "100%", maxHeight: "80vh", display: "flex", flexDirection: "column", padding: 24 }}>
-        <h2 style={{ margin: "0 0 12px", fontSize: "1.05rem" }}>Comments</h2>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+          <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Comments</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{ flexShrink: 0, background: "none", border: "none", fontSize: "1.3rem", lineHeight: 1, color: "var(--text-secondary)", cursor: "pointer", padding: 4 }}
+          >
+            ×
+          </button>
+        </div>
 
         <div ref={listRef} style={{ flex: 1, overflowY: "auto", marginBottom: 12, minHeight: 200 }}>
           {!comments && !error && <p>Loading…</p>}

@@ -745,25 +745,17 @@ export default function FolderWorkspacePage() {
               }}
             />
           )}
-          <button
-            type="button"
-            onClick={() => setTasksPanelOpen(true)}
-            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
-          >
+          {/* Same .btn-doc-action class DocumentActionBar's own buttons use
+              (see app/globals.css) -- these used to be styled by hand with
+              slightly different padding/radius/weight, which is exactly
+              the "buttons look different" mismatch this fixes. */}
+          <button type="button" className="btn-doc-action" onClick={() => setTasksPanelOpen(true)}>
             ✓ Tasks
           </button>
-          <button
-            type="button"
-            onClick={() => setCommentsPanelOpen(true)}
-            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
-          >
+          <button type="button" className="btn-doc-action" onClick={() => setCommentsPanelOpen(true)}>
             💬 Comments
           </button>
-          <button
-            type="button"
-            onClick={() => setActivityPanelOpen(true)}
-            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid var(--border)", background: "white", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
-          >
+          <button type="button" className="btn-doc-action" onClick={() => setActivityPanelOpen(true)}>
             ⏱ Activity
           </button>
         </div>
@@ -896,14 +888,7 @@ export default function FolderWorkspacePage() {
                 }
                 exportState={exportState}
                 readOnly={ledgerReadOnly}
-                actionBar={
-                  <DocumentActionBar
-                    readOnly={ledgerReadOnly}
-                    onShare={() => setShareModalOpen(true)}
-                    onSendForSignature={() => setSendForSignatureOpen(true)}
-                    onAudit={() => setAuditPanelOpen(true)}
-                  />
-                }
+                hideExportButtons
               />
             )
           ) : (

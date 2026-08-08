@@ -45,7 +45,17 @@ export default function DocumentAuditPanel({ ledgerId, isOpen, onClose }) {
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
     >
       <div style={{ background: "var(--bg-panel)", borderRadius: 12, maxWidth: 640, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: 24 }}>
-        <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Signature Audit Trail</h2>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Signature Audit Trail</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{ flexShrink: 0, background: "none", border: "none", fontSize: "1.3rem", lineHeight: 1, color: "var(--text-secondary)", cursor: "pointer", padding: 4 }}
+          >
+            ×
+          </button>
+        </div>
         {error && <div className="status-banner status-error" role="alert">⚠️ {error}</div>}
         {!data && !error && <p>Loading…</p>}
         {data && data.requests.length === 0 && <p style={{ color: "var(--text-muted)" }}>No signature requests yet.</p>}

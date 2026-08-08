@@ -81,8 +81,18 @@ export default function AddTemplateToFolderModal({ template, kind, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{ background: "white", borderRadius: 16, padding: "26px 26px 22px", width: 480, maxHeight: "80vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(30,25,15,.25)" }}
       >
-        <div style={{ fontWeight: 750, fontSize: 17, marginBottom: 4 }}>
-          {kind === "built-in" ? template.label : template.name}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ fontWeight: 750, fontSize: 17, marginBottom: 4 }}>
+            {kind === "built-in" ? template.label : template.name}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{ flexShrink: 0, background: "none", border: "none", fontSize: "1.3rem", lineHeight: 1, color: "var(--text-secondary)", cursor: "pointer", padding: 4 }}
+          >
+            ×
+          </button>
         </div>
         <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 16 }}>
           {kind === "built-in" ? "Built-in document" : `${template.pageCount} page${template.pageCount === 1 ? "" : "s"} · ${template.fieldCount} field${template.fieldCount === 1 ? "" : "s"}`}
