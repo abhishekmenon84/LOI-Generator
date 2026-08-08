@@ -8,7 +8,7 @@ import { getOrgLimits, checkAndIncrementUsage } from "../../../../../lib/orgBill
 import { nextSlotsToNotify } from "../../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
 import { getEmailBranding } from "../../../../../lib/orgBranding";
-import { sendEmail } from "../../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../../lib/sendEmail";
 import { sanitizeSignatureAnchors, validateSignatureAnchors } from "../../../../../lib/signatureAnchors.js";
 import { Resend } from "resend";
 
@@ -149,7 +149,7 @@ export async function POST(request, { params }) {
     [...firstToNotify, ...notifyOnlySlots].map((s) =>
       s.kind === "signer"
         ? sendEmail(resend, {
-            from: "Ledgerlot <onboarding@resend.dev>",
+            from: EMAIL_FROM,
             to: s.email,
             subject: `Please sign: ${ledger.name}`,
             html: renderEmail({
@@ -163,7 +163,7 @@ export async function POST(request, { params }) {
             }),
           }).then((r) => ({ ...r, email: s.email }))
         : sendEmail(resend, {
-            from: "Ledgerlot <onboarding@resend.dev>",
+            from: EMAIL_FROM,
             to: s.email,
             subject: `FYI: ${ledger.name} sent for signature`,
             html: renderEmail({

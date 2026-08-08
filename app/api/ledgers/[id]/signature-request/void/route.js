@@ -3,7 +3,7 @@ import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../../lib/folderAccess";
 import { renderEmail, escapeHtml } from "../../../../../../lib/emailTemplate";
-import { sendEmail } from "../../../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 async function loadAccessibleLedger(ledgerId, userId) {
@@ -44,7 +44,7 @@ export async function POST(request, { params }) {
   const results = await Promise.all(
     pending.signers.map((s) =>
       sendEmail(resend, {
-        from: "Ledgerlot <onboarding@resend.dev>",
+        from: EMAIL_FROM,
         to: s.email,
         subject: `Signature request cancelled: ${ledger.name}`,
         html: renderEmail({

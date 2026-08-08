@@ -8,7 +8,7 @@ import { isSlotUnlocked, nextSlotsToNotify } from "../../../../lib/signingOrder"
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
 import { getEmailBranding } from "../../../../lib/orgBranding";
 import { dispatchWebhookEvent } from "../../../../lib/webhooks";
-import { sendEmail } from "../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 async function loadSlotByToken(token) {
@@ -111,7 +111,7 @@ export async function PATCH(request, { params }) {
   if (creator?.email) {
     const branding = await getEmailBranding(slot.request.ledger.folder?.orgId);
     await sendEmail(resend, {
-      from: "Ledgerlot <onboarding@resend.dev>",
+      from: EMAIL_FROM,
       to: creator.email,
       subject: `Signature declined: ${snapshotLedgerName}`,
       html: renderEmail({
@@ -230,7 +230,7 @@ export async function POST(request, { params }) {
       const results = await Promise.all(
         toNotify.map((s) =>
           sendEmail(resend, {
-            from: "Ledgerlot <onboarding@resend.dev>",
+            from: EMAIL_FROM,
             to: s.email,
             subject: `Please sign: ${snapshotLedgerName}`,
             html: renderEmail({

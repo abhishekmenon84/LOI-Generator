@@ -4,7 +4,7 @@ import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../lib/folderAccess";
 import { getUserMembership } from "../../../../../lib/orgAccess";
 import { renderEmail, escapeHtml } from "../../../../../lib/emailTemplate";
-import { sendEmail } from "../../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 // Document-level sharing, distinct from folder-level FolderParticipant
@@ -98,7 +98,7 @@ export async function POST(request, { params }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
   const result = await sendEmail(resend, {
-    from: "Ledgerlot <onboarding@resend.dev>",
+    from: EMAIL_FROM,
     to: email,
     subject: `A document has been shared with you on Ledgerlot`,
     html: renderEmail({

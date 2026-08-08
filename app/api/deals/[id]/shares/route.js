@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { loadAccessibleDeal, getUserMembership } from "../../../../../lib/orgAccess";
-import { sendEmail } from "../../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 function escapeHtml(str) {
@@ -93,7 +93,7 @@ export async function POST(request, { params }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
   const emailResult = await sendEmail(resend, {
-    from: "Ledgerlot <onboarding@resend.dev>",
+    from: EMAIL_FROM,
     to: email,
     subject: `A document has been shared with you on Ledgerlot`,
     html: `<p>${escapeHtml(deal.name)} has been shared with you (${permission === "write" ? "can edit" : "view only"}).</p><p><a href="${appUrl}/login">Sign in</a> with this email address (${escapeHtml(email)}) to view it.</p>`,

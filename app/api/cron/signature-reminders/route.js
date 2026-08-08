@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { nextSlotsToNotify } from "../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
-import { sendEmail } from "../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 const REMINDER_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
@@ -40,7 +40,7 @@ export async function GET(request) {
     const results = await Promise.all(
       toNotify.map((s) =>
         sendEmail(resend, {
-          from: "Ledgerlot <onboarding@resend.dev>",
+          from: EMAIL_FROM,
           to: s.email,
           subject: `Reminder: please sign ${sigRequest.ledger.name}`,
           html: renderEmail({

@@ -4,7 +4,7 @@ import { prisma } from "../../../../../../../lib/prisma";
 import { loadAccessibleFolder } from "../../../../../../../lib/folderAccess";
 import { nextSlotsToNotify } from "../../../../../../../lib/signingOrder";
 import { renderEmail, escapeHtml } from "../../../../../../../lib/emailTemplate";
-import { sendEmail } from "../../../../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 // Manually re-sends the signing-link email to whoever's currently unlocked
@@ -48,7 +48,7 @@ export async function POST(request, { params }) {
   const results = await Promise.all(
     toNotify.map((s) =>
       sendEmail(resend, {
-        from: "Ledgerlot <onboarding@resend.dev>",
+        from: EMAIL_FROM,
         to: s.email,
         subject: `Reminder: please sign ${ledger.name}`,
         html: renderEmail({

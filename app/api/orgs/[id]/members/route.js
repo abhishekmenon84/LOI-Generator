@@ -3,7 +3,7 @@ import { auth } from "../../../../../lib/auth";
 import { prisma } from "../../../../../lib/prisma";
 import { getUserMembership, hasBusinessOrgMembership } from "../../../../../lib/orgAccess";
 import { isOrgActive, maybeAutoUpgradeTier } from "../../../../../lib/orgBilling";
-import { sendEmail } from "../../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 function escapeHtml(str) {
@@ -90,7 +90,7 @@ export async function POST(request, { params }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
   const resend = new Resend(process.env.RESEND_API_KEY);
   const emailResult = await sendEmail(resend, {
-    from: "Ledgerlot <onboarding@resend.dev>",
+    from: EMAIL_FROM,
     to: email,
     subject: `You've been added to ${org.name} on Ledgerlot`,
     html: `<p>You've been added as a member of <strong>${escapeHtml(org.name)}</strong> on Ledgerlot.</p><p><a href="${appUrl}/login">Sign in</a> with this email address (${escapeHtml(email)}) to get started.</p>`,

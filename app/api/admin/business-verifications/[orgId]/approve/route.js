@@ -3,7 +3,7 @@ import { auth } from "../../../../../../lib/auth";
 import { prisma } from "../../../../../../lib/prisma";
 import { isPlatformAdmin } from "../../../../../../lib/platformAdmin";
 import { renderEmail, escapeHtml } from "../../../../../../lib/emailTemplate";
-import { sendEmail } from "../../../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 export async function POST(request, { params }) {
@@ -37,7 +37,7 @@ export async function POST(request, { params }) {
     if (owner?.email) {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const result = await sendEmail(resend, {
-        from: "Ledgerlot <onboarding@resend.dev>",
+        from: EMAIL_FROM,
         to: owner.email,
         subject: `Business verified: ${org.name}`,
         html: renderEmail({

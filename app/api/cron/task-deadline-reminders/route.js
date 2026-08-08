@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { renderEmail, escapeHtml } from "../../../../lib/emailTemplate";
-import { sendEmail } from "../../../../lib/sendEmail";
+import { sendEmail, EMAIL_FROM } from "../../../../lib/sendEmail";
 import { Resend } from "resend";
 
 // Vercel Cron target (see vercel.json's crons entry) -- daily, reminds a
@@ -42,7 +42,7 @@ export async function GET(request) {
     if (!recipientEmail) continue;
 
     const result = await sendEmail(resend, {
-      from: "Ledgerlot <onboarding@resend.dev>",
+      from: EMAIL_FROM,
       to: recipientEmail,
       subject: `Deadline approaching: ${task.title}`,
       html: renderEmail({
