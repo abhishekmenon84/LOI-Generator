@@ -34,7 +34,11 @@ export default async function PricingPage() {
               Up to {PERSONAL_DAILY_CAP} documents/day, {PERSONAL_MONTHLY_CAP}/month. Billed monthly
               for whatever you actually use.
             </p>
-            <a className="marketing-cta-button" href="/login">
+            {/* Absolute -- /login lives on the app subdomain, not this
+                (marketing) one, so a relative href would 404. Falls back to
+                a plain relative link when NEXT_PUBLIC_APP_URL is unset
+                (local dev with no real subdomain split). */}
+            <a className="marketing-cta-button" href={`${process.env.NEXT_PUBLIC_APP_URL || ""}/login`}>
               Start free →
             </a>
           </div>

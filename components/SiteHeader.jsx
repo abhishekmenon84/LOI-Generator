@@ -77,7 +77,11 @@ export default function SiteHeader({ isLoggedIn = false }) {
         {isLoggedIn ? (
           <SignOutButton className="site-header-cta site-header-signout" />
         ) : (
-          <Link className="site-header-cta" href="/login">
+          // Absolute -- SiteHeader renders on both the marketing site and
+          // the app subdomain's own no-login pages (/sign, /verify), and
+          // /login only lives on the app subdomain. Falls back to a plain
+          // relative link when NEXT_PUBLIC_APP_URL is unset (local dev).
+          <Link className="site-header-cta" href={`${process.env.NEXT_PUBLIC_APP_URL || ""}/login`}>
             Sign In
           </Link>
         )}
