@@ -248,14 +248,24 @@ export default function KanbanDashboard({ initialFolders, userOrgs = [] }) {
   return (
     <div>
       <div className="kanban-toolbar">
-        <input
-          type="text"
-          placeholder="Search folders or people..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="kanban-search-input"
-          aria-label="Search folders or people"
-        />
+        {/* Labeled distinctly from TopBar's global ⌘K search directly
+            above -- same underlying /api/search, but this one filters
+            THIS board in place (with org/archived-status detail) instead
+            of jumping away, so it earns its own spot rather than reading
+            as an accidental duplicate. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--text-muted)" }}>
+            Filter this board
+          </span>
+          <input
+            type="text"
+            placeholder="Search folders or people..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="kanban-search-input"
+            aria-label="Search folders or people"
+          />
+        </div>
         <button
           type="button"
           className="marketing-cta-button"

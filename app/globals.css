@@ -1627,11 +1627,17 @@ select option {
   cursor: pointer;
 }
 
+/* 4 equal-width columns that always fit the available width (grid tracks
+   shrink to fit, unlike flex's fixed 280px-per-column which forced a
+   horizontal scrollbar on anything narrower than ~1180px even though the
+   columns' actual content rarely needs that much room). Falls back to the
+   old horizontal-scroll flex layout below ~900px, where 4 equal columns
+   would otherwise get too narrow to read a folder name in. */
 .kanban-board {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
-  align-items: flex-start;
-  overflow-x: auto;
+  align-items: start;
   padding-bottom: 12px;
 }
 
@@ -1644,13 +1650,23 @@ select option {
 }
 
 .kanban-column {
-  flex: 0 0 280px;
-  min-width: 280px;
+  min-width: 0;
   background: var(--bg-panel);
   border-radius: var(--radius-lg);
   padding: 14px;
   min-height: 120px;
   transition: box-shadow var(--dur) var(--ease);
+}
+
+@media (max-width: 900px) {
+  .kanban-board {
+    display: flex;
+    overflow-x: auto;
+  }
+  .kanban-column {
+    flex: 0 0 260px;
+    min-width: 260px;
+  }
 }
 
 .kanban-column-dragover {
