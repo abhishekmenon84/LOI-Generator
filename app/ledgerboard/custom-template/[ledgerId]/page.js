@@ -55,6 +55,64 @@ export default function CustomTemplateSignerAssignmentPage() {
   // send needs its own slot threaded into SignatureAnchorReview's
   // externalError prop instead (mirrors SendForSignatureModal.jsx's `error`).
   const [placementError, setPlacementError] = useState(null);
+  // See components/SendForSignatureModal.jsx's identical check -- a ledger
+  // can only ever have one pending SignatureRequest, so checking up front
+  // (same GET .../signature-audit endpoint DocumentAuditPanel already uses)
+  // lets this page offer a resend instead of a dead-end error after the
+  // sender fills out the whole assignment + placement flow again.
+  const [checkingPending, setCheckingPending] = useState(true);
+  const [pendingRequest, setPendingRequest] = useState(null);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState(null);
+  const [resendError, setResendError] = useState(null);
+  const [voiding, setVoiding] = useState(false);
+
+  useEffect(() => {
+    if (!ledgerId) return;
+    let cancelled = false;
+    fetch(`/api/ledgers/${ledgerId}/signature-audit`)
+      .then((res) => (res.ok ? res.json() : { requests: [] }))
+      .then((body) => {
+        if (cancelled) return;
+        setPendingRequest((body.requests || []).find((r) => r.status === "pending") || null);
+      })
+      .catch(() => {
+        if (!cancelled) setPendingRequest(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingPending(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ledgerId]);
+
+  async function handleResend() {
+    setResending(true);
+    setResendError(null);
+    setResendMessage(null);
+    const res = await fetch(`/api/ledgers/${ledgerId}/signature-request/${pendingRequest.id}/remind`, { method: "POST" }).catch(() => null);
+    const body = await res?.json().catch(() => ({})) ?? {};
+    setResending(false);
+    if (!res || !res.ok) {
+      setResendError(body.error || "Could not resend the signing email.");
+      return;
+    }
+    setResendMessage(body.emailWarning || `Reminded ${body.remindedCount} signer${body.remindedCount === 1 ? "" : "s"}.`);
+  }
+
+  async function handleVoidAndStartNew() {
+    if (!window.confirm("This will cancel the in-progress signature request (its signing links will stop working) so you can send a new one. Continue?")) return;
+    setVoiding(true);
+    const res = await fetch(`/api/ledgers/${ledgerId}/signature-request/void`, { method: "POST" }).catch(() => null);
+    setVoiding(false);
+    if (!res || !res.ok) {
+      const body = await res?.json().catch(() => ({})) ?? {};
+      setResendError(body.error || "Could not void the in-progress request.");
+      return;
+    }
+    setPendingRequest(null);
+  }
 
   useEffect(() => {
     if (!ledgerId) return;
@@ -281,10 +339,62 @@ export default function CustomTemplateSignerAssignmentPage() {
     );
   }
 
-  if (loading || !template) {
+  if (loading || !template || checkingPending) {
     return (
       <div style={{ padding: "40px", fontFamily: "'Inter',-apple-system,system-ui,sans-serif" }}>
         Loading…
+      </div>
+    );
+  }
+
+  if (pendingRequest) {
+    return (
+      <div style={{ padding: "40px", maxWidth: 560, fontFamily: "'Inter',-apple-system,system-ui,sans-serif" }}>
+        {ledger?.folderId && (
+          <button
+            type="button"
+            onClick={() => router.push(`/ledgerboard/folder/${ledger.folderId}`)}
+            style={{ marginBottom: "18px", background: "none", border: "none", padding: 0, color: "oklch(24% 0.015 264)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
+          >
+            ← Back to folder
+          </button>
+        )}
+        <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Signature request already sent</h2>
+        <div style={{ marginBottom: 12, background: "rgba(99,102,241,0.08)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", fontSize: "0.85rem" }}>
+          ⚠️ This document already has a signature request in progress
+          {pendingRequest.signers?.length > 0 && (
+            <>
+              {" "}
+              (
+              {pendingRequest.signers
+                .filter((s) => s.kind === "signer")
+                .map((s) => `${s.name} (${s.role})${s.signed ? " — signed" : s.declinedAt ? " — declined" : ""}`)
+                .join(", ")}
+              )
+            </>
+          )}
+          . You can resend the signing email instead of starting a new one.
+        </div>
+        {resendError && <div style={{ color: "oklch(45% 0.18 25)", marginBottom: 12, fontSize: "0.85rem" }}>⚠️ {resendError}</div>}
+        {resendMessage && <div style={{ color: "oklch(45% 0.01 264)", marginBottom: 12, fontSize: "0.85rem" }}>{resendMessage}</div>}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <button
+            type="button"
+            onClick={handleVoidAndStartNew}
+            disabled={voiding}
+            style={{ background: "none", border: "none", color: "oklch(45% 0.01 264)", textDecoration: "underline", cursor: voiding ? "not-allowed" : "pointer", fontSize: "0.85rem", padding: 0 }}
+          >
+            {voiding ? "Voiding…" : "Void it and start a new request instead"}
+          </button>
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            style={{ padding: "10px 18px", borderRadius: 9, border: "none", background: "oklch(24% 0.015 264)", color: "white", fontWeight: 600, fontSize: "13px", cursor: resending ? "not-allowed" : "pointer" }}
+          >
+            {resending ? "Resending…" : "Resend"}
+          </button>
+        </div>
       </div>
     );
   }

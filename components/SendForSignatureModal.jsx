@@ -17,6 +17,21 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
   const [preview, setPreview] = useState(null); // { pdfBase64, pageSizes, suggestedAnchors }
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  // A ledger can only ever have one "pending" SignatureRequest at a time
+  // (see the create route's existingPending check) -- previously that
+  // meant a sender who'd already sent could fill out the whole
+  // participants form and placement step again, only to be rejected at
+  // the very end with a dead-end error. Checking up front (GET
+  // .../signature-audit, the same endpoint DocumentAuditPanel already
+  // uses for its own "Send reminder" button) lets this modal skip straight
+  // to offering a resend instead.
+  const [checkingPending, setCheckingPending] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState(null); // { id, signers } | null
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState(null);
+  const [resendError, setResendError] = useState(null);
+  const [voiding, setVoiding] = useState(false);
+
   const availableRoles = ROLES_BY_DOCUMENT_TYPE[documentType] || ["other"];
 
   // Most call sites mount this modal once and toggle `isOpen` rather than
@@ -27,14 +42,64 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
   // Reset flow-position state (not `participants` -- the form should still
   // remember what was typed) whenever the modal transitions to open.
   useEffect(() => {
-    if (isOpen) {
-      setStep("participants");
-      setPreview(null);
-      setEmailWarning(null);
-      setError(null);
-    }
+    if (!isOpen) return;
+    setStep("participants");
+    setPreview(null);
+    setEmailWarning(null);
+    setError(null);
+    setResending(false);
+    setResendMessage(null);
+    setResendError(null);
+
+    let cancelled = false;
+    setCheckingPending(true);
+    fetch(`/api/ledgers/${ledgerId}/signature-audit`)
+      .then((res) => (res.ok ? res.json() : { requests: [] }))
+      .then((body) => {
+        if (cancelled) return;
+        const pending = (body.requests || []).find((r) => r.status === "pending") || null;
+        setPendingRequest(pending);
+      })
+      .catch(() => {
+        if (!cancelled) setPendingRequest(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingPending(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, ledgerId]);
+
+  async function handleResend() {
+    setResending(true);
+    setResendError(null);
+    setResendMessage(null);
+    const res = await fetch(`/api/ledgers/${ledgerId}/signature-request/${pendingRequest.id}/remind`, { method: "POST" }).catch(() => null);
+    const body = await res?.json().catch(() => ({})) ?? {};
+    setResending(false);
+    if (!res || !res.ok) {
+      setResendError(body.error || "Could not resend the signing email.");
+      return;
+    }
+    setResendMessage(
+      body.emailWarning || `Reminded ${body.remindedCount} signer${body.remindedCount === 1 ? "" : "s"}.`
+    );
+  }
+
+  async function handleVoidAndStartNew() {
+    if (!window.confirm("This will cancel the in-progress signature request (its signing links will stop working) so you can send a new one. Continue?")) return;
+    setVoiding(true);
+    const res = await fetch(`/api/ledgers/${ledgerId}/signature-request/void`, { method: "POST" }).catch(() => null);
+    setVoiding(false);
+    if (!res || !res.ok) {
+      const body = await res?.json().catch(() => ({})) ?? {};
+      setResendError(body.error || "Could not void the in-progress request.");
+      return;
+    }
+    setPendingRequest(null);
+  }
 
   function updateParticipant(index, patch) {
     setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -115,6 +180,67 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
   }
 
   if (!isOpen) return null;
+
+  if (checkingPending || pendingRequest) {
+    const dialogShellStyle = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 };
+    if (checkingPending) {
+      return (
+        <div role="dialog" aria-modal="true" aria-label="Send for signature" style={dialogShellStyle}>
+          <div style={{ background: "var(--bg-panel)", borderRadius: 12, maxWidth: 480, width: "100%", padding: 24 }}>
+            <p style={{ margin: 0, color: "var(--text-secondary)" }}>Checking for an in-progress signature request…</p>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div role="dialog" aria-modal="true" aria-label="Resend for signature" style={dialogShellStyle}>
+        <div style={{ background: "var(--bg-panel)", borderRadius: 12, maxWidth: 480, width: "100%", padding: 24 }}>
+          <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>Signature request already sent</h2>
+          <div className="status-banner" role="status" style={{ marginBottom: 12, background: "var(--accent-glow, rgba(99,102,241,0.1))", color: "var(--text-primary)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
+            ⚠️ This document already has a signature request in progress
+            {pendingRequest.signers?.length > 0 && (
+              <>
+                {" "}
+                (
+                {pendingRequest.signers
+                  .filter((s) => s.kind === "signer")
+                  .map((s) => `${s.name} (${s.role})${s.signed ? " — signed" : s.declinedAt ? " — declined" : ""}`)
+                  .join(", ")}
+                )
+              </>
+            )}
+            . You can resend the signing email instead of starting a new one.
+          </div>
+
+          {resendError && <div className="status-banner status-error" role="alert" style={{ marginBottom: 12 }}>⚠️ {resendError}</div>}
+          {resendMessage && <div className="status-banner" role="status" style={{ marginBottom: 12, color: "var(--text-secondary)" }}>{resendMessage}</div>}
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={handleVoidAndStartNew}
+              disabled={voiding}
+              style={{ background: "none", border: "none", color: "var(--text-secondary)", textDecoration: "underline", cursor: voiding ? "not-allowed" : "pointer", fontSize: "0.85rem", padding: 0 }}
+            >
+              {voiding ? "Voiding…" : "Void it and start a new request instead"}
+            </button>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-secondary)", padding: "10px 20px", borderRadius: 8, cursor: "pointer" }}
+              >
+                Close
+              </button>
+              <button type="button" onClick={handleResend} disabled={resending} className="marketing-cta-button">
+                {resending ? "Resending…" : "Resend"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "done") {
     return (
