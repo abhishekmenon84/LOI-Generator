@@ -82,7 +82,7 @@ export default function ShareLedgerModal({ ledgerId, isOpen, onClose }) {
           <select
             value={permission}
             onChange={(e) => setPermission(e.target.value)}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}
           >
             <option value="view">View only</option>
             <option value="write">Can edit</option>

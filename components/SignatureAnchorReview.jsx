@@ -20,6 +20,26 @@ import { ANCHOR_TYPES, validateSignatureAnchors } from "../lib/signatureAnchors.
 
 const TYPE_LABELS = { signature: "Signature", initials: "Initials", date: "Date" };
 
+// One color per SIGNER (not per anchor type -- AnchorBox.jsx's own
+// type-based palette still exists and is what the template-designer
+// AnchorEditor.jsx uses, but on a multi-signer document distinguishing
+// whose box is whose at a glance matters more than distinguishing
+// signature-vs-date-vs-initials, especially once several signers each
+// have their own signature box on the same page). Cycles if there are
+// more signers than colors -- rare in practice, and still distinguishable
+// via the sidebar's own selected-signer state and each box's tooltip.
+const SIGNER_COLORS = [
+  "oklch(58% 0.16 300)", // purple
+  "oklch(60% 0.17 40)", // orange
+  "oklch(55% 0.15 155)", // green
+  "oklch(58% 0.15 235)", // blue
+  "oklch(58% 0.19 15)", // red
+  "oklch(62% 0.15 95)", // olive
+];
+function colorForSigner(signerOrder) {
+  return SIGNER_COLORS[signerOrder % SIGNER_COLORS.length];
+}
+
 let cidCounter = 0;
 function nextCid() {
   cidCounter += 1;
@@ -156,7 +176,15 @@ export default function SignatureAnchorReview({ pdfBase64, pageSizes, suggestedA
         </p>
         {signersWithOrder.map((s) => (
           <div key={s.signerOrder} style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 10, borderBottom: "1px solid var(--border)" }}>
-            <button type="button" onClick={() => setSelectedSignerOrder(s.signerOrder)} style={sidebarButtonStyle(selectedSignerOrder === s.signerOrder)}>
+            <button
+              type="button"
+              onClick={() => setSelectedSignerOrder(s.signerOrder)}
+              style={{ ...sidebarButtonStyle(selectedSignerOrder === s.signerOrder), display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <span
+                aria-hidden="true"
+                style={{ width: 10, height: 10, borderRadius: "50%", background: colorForSigner(s.signerOrder), flexShrink: 0 }}
+              />
               {s.name}
             </button>
             {selectedSignerOrder === s.signerOrder && (
@@ -202,6 +230,7 @@ export default function SignatureAnchorReview({ pdfBase64, pageSizes, suggestedA
                 onMove={handleMove}
                 onResize={handleResize}
                 selected={a._cid === selectedAnchor?._cid}
+                signerColor={colorForSigner(a.signerOrder)}
               />
             ))}
           </div>

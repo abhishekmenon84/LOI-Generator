@@ -74,7 +74,7 @@ function VerifyBusinessForm() {
             <select
               value={documentType}
               onChange={(e) => setDocumentType(e.target.value)}
-              style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+              style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-panel)", color: "var(--text-primary)" }}
             >
               {DOCUMENT_TYPES.map((d) => (
                 <option key={d.value} value={d.value}>{d.label}</option>

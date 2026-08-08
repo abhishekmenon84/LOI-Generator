@@ -298,7 +298,7 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
               <select
                 value={p.role}
                 onChange={(e) => updateParticipant(i, { role: e.target.value })}
-                style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+                style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}
               >
                 {availableRoles.map((r) => (
                   <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>
@@ -307,7 +307,7 @@ export default function SendForSignatureModal({ ledgerId, documentType, isOpen, 
               <select
                 value={p.kind}
                 onChange={(e) => updateParticipant(i, { kind: e.target.value })}
-                style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+                style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}
               >
                 <option value="signer">Signer</option>
                 <option value="notify_only">Notify only</option>

@@ -172,7 +172,7 @@ body {
   padding: 4px 8px;
   font-size: 0.75rem;
   border-radius: 4px;
-  background: var(--bg-panel);
+  background-color: var(--bg-panel);
   color: var(--text-primary);
   border: 1px solid var(--border);
   cursor: pointer;
@@ -1785,7 +1785,7 @@ select option {
   padding: 3px 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: var(--bg-panel);
+  background-color: var(--bg-panel);
   color: var(--text-secondary);
   cursor: pointer;
   flex-shrink: 0;

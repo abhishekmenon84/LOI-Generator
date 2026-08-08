@@ -62,7 +62,7 @@ function BusinessDetailsFields({ details, onChange, seats, onSeatsChange }) {
           required
           value={details.province}
           onChange={(e) => onChange({ ...details, province: e.target.value })}
-          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-panel)", color: "var(--text-primary)" }}
         >
           <option value="" disabled>Choose a province…</option>
           {CA_PROVINCES.map((p) => (
@@ -106,7 +106,7 @@ function BusinessDetailsFields({ details, onChange, seats, onSeatsChange }) {
         <select
           value={details.retentionYears}
           onChange={(e) => onChange({ ...details, retentionYears: Number(e.target.value) })}
-          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-panel)", color: "var(--text-primary)" }}
         >
           {RETENTION_YEAR_OPTIONS.map((y) => (
             <option key={y} value={y}>{y} year{y === 1 ? "" : "s"}</option>
@@ -259,7 +259,7 @@ function LoginPageInner() {
                 <select
                   value={accountType}
                   onChange={(e) => setAccountType(e.target.value)}
-                  style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-primary)" }}
+                  style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-panel)", color: "var(--text-primary)" }}
                 >
                   <option value="personal">Personal — build documents for my own deals</option>
                   <option value="business">Business — manage my team's deal pipeline (7-day free trial)</option>

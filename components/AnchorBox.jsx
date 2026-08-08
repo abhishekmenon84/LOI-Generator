@@ -12,6 +12,8 @@ const ANCHOR_COLORS = {
 const LOW_CONFIDENCE_COLOR = "oklch(60% 0.19 45)";
 const SELECTED_COLOR = "oklch(45% 0.2 264)";
 
+const TYPE_SHORT_LABELS = { signature: "Signature", initials: "Initials", date: "Date" };
+
 // Per-class "check this" thresholds, NOT a single global 0.75.
 //
 // The old global 0.75 cutoff fired on essentially every detected box: Task
@@ -47,14 +49,21 @@ const DEFAULT_LOW_CONFIDENCE_THRESHOLD = 0.6;
 // still opens the toolbar instead of always being swallowed as a drag.
 const DRAG_THRESHOLD_PX = 3;
 
-export default function AnchorBox({ anchor, onSelect, onDelete, onMove, onResize, readOnly, selected }) {
+export default function AnchorBox({ anchor, onSelect, onDelete, onMove, onResize, readOnly, selected, signerColor }) {
   // Hand-placed anchors never carry a `confidence` (it's `null`/`undefined`
   // for anything the user drew themselves in AnchorEditor's click-to-place
   // flow), so `!= null` here must stay -- there is no "quality" signal to
   // second-guess for those.
   const threshold = LOW_CONFIDENCE_THRESHOLD[anchor.type] ?? DEFAULT_LOW_CONFIDENCE_THRESHOLD;
   const lowConfidence = anchor.confidence != null && anchor.confidence < threshold;
-  const baseColor = ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text;
+  // `signerColor` (SignatureAnchorReview.jsx's per-signer palette) takes
+  // priority over the default per-TYPE color -- on a multi-signer document,
+  // telling whose box is whose matters more than telling signature/
+  // initials/date apart by color alone (see TYPE_SHORT_LABELS' badge below,
+  // which keeps type distinguishable once color no longer carries it).
+  // AnchorEditor.jsx's template-authoring flow never passes signerColor, so
+  // it's visually unchanged.
+  const baseColor = signerColor || ANCHOR_COLORS[anchor.type] || ANCHOR_COLORS.text;
 
   function handleMoveMouseDown(e) {
     if (readOnly || !onMove) return;
@@ -150,6 +159,11 @@ export default function AnchorBox({ anchor, onSelect, onDelete, onMove, onResize
       }}
       title={`${anchor.type}: ${anchor.label}${lowConfidence ? " (low confidence — check this)" : ""}`}
     >
+      {signerColor && TYPE_SHORT_LABELS[anchor.type] && (
+        <span style={{ fontSize: "8px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", opacity: 0.8, padding: "0 4px" }}>
+          {TYPE_SHORT_LABELS[anchor.type]}
+        </span>
+      )}
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 4px" }}>
         {anchor.label}
       </span>

@@ -66,7 +66,7 @@ export default function DealShareModal({ dealId, isOpen, onClose }) {
           <select
             value={permission}
             onChange={(e) => setPermission(e.target.value)}
-            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-base)", color: "var(--text-primary)" }}
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}
           >
             <option value="read">Can view</option>
             <option value="write">Can edit</option>

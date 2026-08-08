@@ -68,7 +68,7 @@ export default function SiteHeader({ isLoggedIn = false }) {
         <select
           value={theme}
           onChange={(e) => handleThemeChange(e.target.value)}
-          style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "4px", background: "var(--bg-panel)", color: "var(--text-primary)", border: "1px solid var(--border)", cursor: "pointer", outline: "none" }}
+          style={{ padding: "4px 8px", fontSize: "0.75rem", borderRadius: "4px", backgroundColor: "var(--bg-panel)", color: "var(--text-primary)", border: "1px solid var(--border)", cursor: "pointer", outline: "none" }}
         >
           <option value="light">Light Mode</option>
           <option value="dark">Dark Mode</option>
