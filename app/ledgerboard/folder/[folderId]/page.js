@@ -723,7 +723,28 @@ export default function FolderWorkspacePage() {
           current={{ name: folder.name }}
           selectedDocName={ledger ? ledger.name : undefined}
         />
-        <div style={{ display: "flex", gap: 8, margin: "0 16px", flex: "0 0 auto" }}>
+        <div style={{ display: "flex", gap: 8, margin: "0 16px", flex: "0 0 auto", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Reset/Share/Send for Signature/Audit Trail/Word/PDF -- moved up
+              here from the form panel's own header (see
+              components/LOIForm.jsx etc.'s hideExportButtons prop) so every
+              document action lives in one row instead of being split
+              between this bar and the middle panel. Only meaningful once an
+              actual document is open. */}
+          {docSelected && config && (
+            <DocumentActionBar
+              readOnly={ledgerReadOnly}
+              onShare={() => setShareModalOpen(true)}
+              onSendForSignature={() => setSendForSignatureOpen(true)}
+              onAudit={() => setAuditPanelOpen(true)}
+              onExport={handleExport}
+              exportState={exportState}
+              onResetDraft={() => {
+                if (window.confirm("Reset this deal to a blank form? This can't be undone.")) {
+                  setLedgerData({ ...config.defaultData, currentDate: todayLabel() });
+                }
+              }}
+            />
+          )}
           <button
             type="button"
             onClick={() => setTasksPanelOpen(true)}

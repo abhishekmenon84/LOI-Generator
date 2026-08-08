@@ -50,7 +50,7 @@ function PdfIcon() {
 }
 
 /* ── Main form component ─────────────────────────────────── */
-export default function LOIForm({ data, onChange, onExport, onClearDraft, exportState, readOnly, actionBar }) {
+export default function LOIForm({ data, onChange, onExport, onClearDraft, exportState, readOnly, actionBar, hideExportButtons }) {
   function set(patch) {
     onChange({ ...data, ...patch });
   }
@@ -100,43 +100,53 @@ export default function LOIForm({ data, onChange, onExport, onClearDraft, export
           <h1 className="form-panel-title">LOI Workspace Engine</h1>
           <p className="form-panel-subtitle">
             Fill in the fields below — the document preview updates live and saves
-            automatically to your account.{" "}
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm("Reset this deal to a blank form? This can't be undone.")) {
-                  onClearDraft();
-                }
-              }}
-              style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-light)', fontSize: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Reset this deal
-            </button>
+            automatically to your account.
+            {!hideExportButtons && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm("Reset this deal to a blank form? This can't be undone.")) {
+                      onClearDraft();
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent-light)', fontSize: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Reset this deal
+                </button>
+              </>
+            )}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            className="btn-action btn-word"
-            style={{ padding: '8px 12px', fontSize: '0.75rem' }}
-            disabled={isLoading}
-            onClick={() => onExport("docx")}
-            title="Export Word"
-          >
-            {isLoading && exportState.format === "docx" ? <div className="spinner" /> : <><WordIcon /> Word</>}
-          </button>
-          <button
-            className="btn-action btn-pdf"
-            style={{ padding: '8px 12px', fontSize: '0.75rem' }}
-            disabled={isLoading}
-            onClick={() => onExport("pdf")}
-            title="Export PDF"
-          >
-            {isLoading && exportState.format === "pdf" ? <div className="spinner" /> : <><PdfIcon /> PDF</>}
-          </button>
-        </div>
+        {/* Reset/Share/Send/Audit/export consolidated into the folder
+            workspace's own top bar (next to Tasks/Comments/Activity) when
+            hideExportButtons is set -- see components/DocumentActionBar.jsx. */}
+        {!hideExportButtons && (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="btn-action btn-word"
+              style={{ padding: '8px 12px', fontSize: '0.75rem' }}
+              disabled={isLoading}
+              onClick={() => onExport("docx")}
+              title="Export Word"
+            >
+              {isLoading && exportState.format === "docx" ? <div className="spinner" /> : <><WordIcon /> Word</>}
+            </button>
+            <button
+              className="btn-action btn-pdf"
+              style={{ padding: '8px 12px', fontSize: '0.75rem' }}
+              disabled={isLoading}
+              onClick={() => onExport("pdf")}
+              title="Export PDF"
+            >
+              {isLoading && exportState.format === "pdf" ? <div className="spinner" /> : <><PdfIcon /> PDF</>}
+            </button>
+          </div>
+        )}
       </div>
 
-      {actionBar}
+      {!hideExportButtons && actionBar}
 
       {exportState.error && (
         <div className="status-banner status-error" style={{ marginBottom: 15 }} role="alert">
